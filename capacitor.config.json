@@ -1,0 +1,32 @@
+{
+  "appId": "com.spicey.app",
+  "appName": "Spicey",
+  "webDir": "dist",
+  "plugins": {
+    "PushNotifications": {
+      "presentationOptions": ["badge", "sound", "alert"],
+      "production": true
+    },
+    "CapacitorCookies": {
+      "enabled": true
+    },
+    "CapacitorHttp": {
+      "enabled": false
+    }
+  },
+  "ios": {
+    "contentInset": "automatic",
+    "scrollEnabled": true,
+    "allowsLinkPreview": false,
+    "scheme": "spicey",
+    "bundleIdentifier": "com.spicey.app",
+    "limitsNavigationsToAppBoundDomains": false,
+    "preferredContentMode": "mobile",
+    "webContentsDebuggingEnabled": true
+  },
+  "server": {
+    "iosScheme": "spicey",
+    "androidScheme": "https",
+    "cleartext": false
+  }
+}

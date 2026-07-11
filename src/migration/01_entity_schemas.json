@@ -1,0 +1,455 @@
+{
+  "_meta": {
+    "exported_at": "2026-07-01",
+    "source": "Base44 base44/entities/*.jsonc",
+    "entity_count": 20,
+    "note": "These are schema definitions only. Actual data records must be exported separately using 03_data_export_scripts.js"
+  },
+  "entities": {
+    "AdCampaign": {
+      "name": "AdCampaign",
+      "type": "object",
+      "properties": {
+        "user_id": { "type": "string", "description": "User ID who created the campaign" },
+        "campaign_name": { "type": "string", "description": "Name of the ad campaign" },
+        "budget": { "type": "number", "description": "Total budget in USD" },
+        "duration_days": { "type": "number", "description": "Campaign duration in days" },
+        "target_audience": {
+          "type": "object",
+          "properties": {
+            "age_range": { "type": "string" },
+            "locations": { "type": "array", "items": { "type": "string" } },
+            "interests": { "type": "array", "items": { "type": "string" } },
+            "gender": { "type": "string" }
+          }
+        },
+        "ad_content": {
+          "type": "object",
+          "properties": {
+            "post_id": { "type": "string" },
+            "headline": { "type": "string" },
+            "description": { "type": "string" },
+            "call_to_action": { "type": "string" }
+          }
+        },
+        "status": { "type": "string", "enum": ["draft","active","paused","completed","rejected"], "default": "draft" },
+        "created_at": { "type": "string", "format": "date-time" },
+        "expires_at": { "type": "string", "format": "date-time" },
+        "estimated_reach": { "type": "number" },
+        "impressions": { "type": "number", "default": 0 },
+        "clicks": { "type": "number", "default": 0 },
+        "conversions": { "type": "number", "default": 0 },
+        "spent": { "type": "number", "default": 0 }
+      },
+      "required": ["user_id", "campaign_name", "budget", "duration_days"]
+    },
+    "Block": {
+      "name": "Block",
+      "type": "object",
+      "properties": {
+        "blocker_id": { "type": "string", "description": "User ID of the person blocking" },
+        "blocked_id": { "type": "string", "description": "User ID of the person being blocked" },
+        "blocked_username": { "type": "string", "description": "Username of the blocked user (denormalized)" }
+      },
+      "required": ["blocker_id", "blocked_id"]
+    },
+    "CallSession": {
+      "name": "CallSession",
+      "type": "object",
+      "properties": {
+        "caller_id": { "type": "string" },
+        "receiver_id": { "type": "string" },
+        "type": { "type": "string", "enum": ["voice","video"] },
+        "status": { "type": "string", "enum": ["ringing","accepted","declined","ended","missed"], "default": "ringing" },
+        "offer_sdp": { "type": "string" },
+        "answer_sdp": { "type": "string" },
+        "caller_ice": { "type": "array", "items": { "type": "string" } },
+        "receiver_ice": { "type": "array", "items": { "type": "string" } },
+        "accepted_at": { "type": "string", "format": "date-time" },
+        "ended_at": { "type": "string", "format": "date-time" }
+      },
+      "required": ["caller_id", "receiver_id", "type"]
+    },
+    "Chat": {
+      "name": "Chat",
+      "type": "object",
+      "properties": {
+        "participant_ids": { "type": "array", "items": { "type": "string" } },
+        "participant_usernames": { "type": "array", "items": { "type": "string" } },
+        "last_message": { "type": "string" },
+        "last_message_time": { "type": "string", "format": "date-time" },
+        "is_group": { "type": "boolean", "default": false },
+        "group_name": { "type": "string" },
+        "group_avatar": { "type": "string" }
+      },
+      "required": ["participant_ids"]
+    },
+    "Comment": {
+      "name": "Comment",
+      "type": "object",
+      "properties": {
+        "post_id": { "type": "string" },
+        "author_id": { "type": "string" },
+        "text": { "type": "string" },
+        "author_name": { "type": "string" },
+        "author_username": { "type": "string" },
+        "author_avatar": { "type": "string" },
+        "likes_count": { "type": "number", "default": 0 }
+      },
+      "required": ["post_id", "author_id", "text", "author_name"]
+    },
+    "CuratedReel": {
+      "name": "CuratedReel",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "video_url": { "type": "string" },
+        "youtube_video_id": { "type": "string" },
+        "thumbnail_url": { "type": "string" },
+        "author_name": { "type": "string" },
+        "author_username": { "type": "string" },
+        "author_avatar": { "type": "string" },
+        "caption": { "type": "string" },
+        "source": { "type": "string", "enum": ["youtube_shorts","admin_upload","creator_permission"] },
+        "category": { "type": "string", "enum": ["trending","music","comedy","dance","sports","nature","tech","fashion","food","travel"] },
+        "is_active": { "type": "boolean", "default": true },
+        "views_count": { "type": "number", "default": 0 },
+        "likes_count": { "type": "number", "default": 0 },
+        "added_by_admin_id": { "type": "string" },
+        "added_at": { "type": "string", "format": "date-time" }
+      },
+      "required": ["title", "video_url", "author_name"]
+    },
+    "Follow": {
+      "name": "Follow",
+      "type": "object",
+      "properties": {
+        "follower_id": { "type": "string" },
+        "following_id": { "type": "string" },
+        "follower_username": { "type": "string" },
+        "following_username": { "type": "string" }
+      },
+      "required": ["follower_id", "following_id"]
+    },
+    "FollowRequest": {
+      "name": "FollowRequest",
+      "type": "object",
+      "properties": {
+        "requester_id": { "type": "string" },
+        "target_id": { "type": "string" },
+        "requester_username": { "type": "string" },
+        "requester_name": { "type": "string" },
+        "requester_avatar": { "type": "string" },
+        "status": { "type": "string", "enum": ["pending","approved","rejected"], "default": "pending" }
+      },
+      "required": ["requester_id", "target_id"]
+    },
+    "LegalConsent": {
+      "name": "LegalConsent",
+      "type": "object",
+      "properties": {
+        "user_id": { "type": "string" },
+        "accepted_at": { "type": "string", "format": "date-time" },
+        "ip_address": { "type": "string" },
+        "user_agent": { "type": "string" },
+        "platform": { "type": "string" },
+        "terms_version": { "type": "string", "default": "2.0" },
+        "privacy_version": { "type": "string", "default": "2.0" },
+        "guidelines_version": { "type": "string", "default": "2.0" },
+        "app_version": { "type": "string", "default": "1.0.0" },
+        "consent_method": { "type": "string", "default": "onboarding" },
+        "re_consent_reason": { "type": "string" }
+      },
+      "required": ["user_id", "accepted_at"]
+    },
+    "LiveSession": {
+      "name": "LiveSession",
+      "type": "object",
+      "properties": {
+        "broadcaster_id": { "type": "string" },
+        "broadcaster_name": { "type": "string" },
+        "broadcaster_username": { "type": "string" },
+        "broadcaster_avatar": { "type": "string" },
+        "title": { "type": "string" },
+        "status": { "type": "string", "enum": ["active","ended"], "default": "active" },
+        "viewer_count": { "type": "number", "default": 0 },
+        "started_at": { "type": "string", "format": "date-time" },
+        "ended_at": { "type": "string", "format": "date-time" },
+        "replay_url": { "type": "string" },
+        "replay_post_id": { "type": "string" },
+        "thumbnail_url": { "type": "string" }
+      },
+      "required": ["broadcaster_id", "broadcaster_username"]
+    },
+    "Message": {
+      "name": "Message",
+      "type": "object",
+      "properties": {
+        "chat_id": { "type": "string" },
+        "sender_id": { "type": "string" },
+        "sender_username": { "type": "string" },
+        "sender_avatar": { "type": "string" },
+        "text": { "type": "string" },
+        "image_url": { "type": "string" },
+        "read_by": { "type": "array", "items": { "type": "string" } },
+        "reactions": { "type": "object" }
+      },
+      "required": ["chat_id", "sender_id", "text"]
+    },
+    "MissedCall": {
+      "name": "MissedCall",
+      "type": "object",
+      "properties": {
+        "receiver_id": { "type": "string" },
+        "caller_id": { "type": "string" },
+        "caller_name": { "type": "string" },
+        "caller_avatar": { "type": "string" },
+        "call_type": { "type": "string", "enum": ["voice","video"] },
+        "call_session_id": { "type": "string" },
+        "seen": { "type": "boolean", "default": false }
+      },
+      "required": ["receiver_id", "caller_id", "call_type"]
+    },
+    "Notification": {
+      "name": "Notification",
+      "type": "object",
+      "properties": {
+        "user_id": { "type": "string" },
+        "type": { "type": "string", "enum": ["like","comment","follow","follow_request","message","share"] },
+        "actor_id": { "type": "string" },
+        "actor_username": { "type": "string" },
+        "actor_avatar": { "type": "string" },
+        "content_id": { "type": "string" },
+        "message": { "type": "string" },
+        "read": { "type": "boolean", "default": false }
+      },
+      "required": ["user_id", "type", "actor_id", "message"]
+    },
+    "Post": {
+      "name": "Post",
+      "type": "object",
+      "properties": {
+        "author_id": { "type": "string" },
+        "author_name": { "type": "string" },
+        "author_username": { "type": "string" },
+        "author_avatar": { "type": "string" },
+        "caption": { "type": "string" },
+        "post_type": { "type": "string", "enum": ["feed","reel","story"], "default": "feed" },
+        "visibility": { "type": "string", "enum": ["public","friends","private"], "default": "public" },
+        "image_url": { "type": "string" },
+        "image_urls": { "type": "array", "items": { "type": "string" } },
+        "video_url": { "type": "string" },
+        "video_link": { "type": "string" },
+        "location": { "type": "string" },
+        "map_visible": { "type": "boolean", "default": false },
+        "map_city": { "type": "string" },
+        "tags": { "type": "string" },
+        "likes_count": { "type": "number", "default": 0 },
+        "fire_count": { "type": "number", "default": 0 },
+        "wow_count": { "type": "number", "default": 0 },
+        "comments_count": { "type": "number", "default": 0 },
+        "shares_count": { "type": "number", "default": 0 },
+        "hashtags": { "type": "array", "items": { "type": "string" } },
+        "music_title": { "type": "string" },
+        "music_artist": { "type": "string" },
+        "music_preview_url": { "type": "string" },
+        "music_artwork_url": { "type": "string" }
+      },
+      "required": ["author_id", "author_name", "author_username"]
+    },
+    "PostBoost": {
+      "name": "PostBoost",
+      "type": "object",
+      "properties": {
+        "post_id": { "type": "string" },
+        "user_id": { "type": "string" },
+        "boost_amount": { "type": "number" },
+        "duration_days": { "type": "number" },
+        "target_audience": { "type": "string" },
+        "status": { "type": "string", "enum": ["active","completed","paused"], "default": "active" },
+        "started_at": { "type": "string", "format": "date-time" },
+        "expires_at": { "type": "string", "format": "date-time" },
+        "estimated_reach": { "type": "number" },
+        "actual_reach": { "type": "number", "default": 0 },
+        "impressions": { "type": "number", "default": 0 }
+      },
+      "required": ["post_id", "user_id", "boost_amount", "duration_days"]
+    },
+    "PresetAvatar": {
+      "name": "PresetAvatar",
+      "type": "object",
+      "properties": {
+        "image_url": { "type": "string" },
+        "label": { "type": "string" },
+        "gender": { "type": "string", "enum": ["male","female","unisex"], "default": "unisex" },
+        "sort_order": { "type": "number", "default": 0 },
+        "is_active": { "type": "boolean", "default": true }
+      },
+      "required": ["image_url"]
+    },
+    "ProfileCategory": {
+      "name": "ProfileCategory",
+      "type": "object",
+      "properties": {
+        "user_id": { "type": "string" },
+        "name": { "type": "string", "enum": ["Moments","Travel","Night","Food","Drip"] },
+        "description": { "type": "string" },
+        "cover_image_url": { "type": "string" },
+        "post_ids": { "type": "array", "items": { "type": "string" }, "default": [] },
+        "is_public": { "type": "boolean", "default": true }
+      },
+      "required": ["user_id", "name"]
+    },
+    "ProfilePhotoComment": {
+      "name": "ProfilePhotoComment",
+      "type": "object",
+      "properties": {
+        "user_id": { "type": "string" },
+        "photo_type": { "type": "string", "enum": ["avatar","cover"] },
+        "commenter_id": { "type": "string" },
+        "commenter_name": { "type": "string" },
+        "commenter_avatar": { "type": "string" },
+        "text": { "type": "string" }
+      },
+      "required": ["user_id", "photo_type", "commenter_id", "text"]
+    },
+    "ProfilePhotoReaction": {
+      "name": "ProfilePhotoReaction",
+      "type": "object",
+      "properties": {
+        "user_id": { "type": "string" },
+        "photo_type": { "type": "string", "enum": ["avatar","cover"] },
+        "reactor_id": { "type": "string" },
+        "type": { "type": "string", "enum": ["like","fire"] }
+      },
+      "required": ["user_id", "photo_type", "reactor_id", "type"]
+    },
+    "Reaction": {
+      "name": "Reaction",
+      "type": "object",
+      "properties": {
+        "post_id": { "type": "string" },
+        "user_id": { "type": "string" },
+        "type": { "type": "string", "enum": ["like","fire","wow","thinking","playful","cool","sparkle"] }
+      },
+      "required": ["post_id", "user_id", "type"]
+    },
+    "Report": {
+      "name": "Report",
+      "type": "object",
+      "properties": {
+        "reporter_id": { "type": "string" },
+        "reported_user_id": { "type": "string" },
+        "post_id": { "type": "string" },
+        "reason": { "type": "string", "enum": ["spam","harassment","hate_speech","nudity","violence","false_information","other"] },
+        "details": { "type": "string" },
+        "status": { "type": "string", "enum": ["pending","reviewed","actioned","dismissed"], "default": "pending" }
+      },
+      "required": ["reporter_id", "reason"]
+    },
+    "StockVideo": {
+      "name": "StockVideo",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "video_url": { "type": "string" },
+        "thumbnail_url": { "type": "string" },
+        "category": { "type": "string", "enum": ["comedy","cars","travel","food","sports","animals","technology","motivation","luxury","entertainment","nature","fashion","music","dance","fitness"] },
+        "source": { "type": "string", "enum": ["pexels","pixabay","mixkit","admin_upload"] },
+        "author_name": { "type": "string" },
+        "author_username": { "type": "string" },
+        "duration_seconds": { "type": "number" },
+        "is_active": { "type": "boolean", "default": true },
+        "is_featured": { "type": "boolean", "default": false },
+        "views_count": { "type": "number", "default": 0 },
+        "likes_count": { "type": "number", "default": 0 },
+        "added_by_admin_id": { "type": "string" },
+        "added_at": { "type": "string", "format": "date-time" },
+        "tags": { "type": "array", "items": { "type": "string" } }
+      },
+      "required": ["title", "video_url", "category", "source", "author_name"]
+    },
+    "Story": {
+      "name": "Story",
+      "type": "object",
+      "properties": {
+        "user_id": { "type": "string" },
+        "username": { "type": "string" },
+        "user_avatar": { "type": "string" },
+        "image_url": { "type": "string" },
+        "video_url": { "type": "string" },
+        "youtube_url": { "type": "string" },
+        "youtube_video_id": { "type": "string" },
+        "youtube_title": { "type": "string" },
+        "youtube_thumbnail": { "type": "string" },
+        "caption": { "type": "string" },
+        "location": { "type": "string" },
+        "tags": { "type": "string" },
+        "music_title": { "type": "string" },
+        "music_artist": { "type": "string" },
+        "music_preview_url": { "type": "string" },
+        "map_visible": { "type": "boolean", "default": false },
+        "map_city": { "type": "string" },
+        "expires_at": { "type": "string", "format": "date-time" },
+        "views": { "type": "array", "items": { "type": "string" }, "default": [] }
+      },
+      "required": ["user_id", "username"]
+    },
+    "Subscription": {
+      "name": "Subscription",
+      "type": "object",
+      "properties": {
+        "user_id": { "type": "string" },
+        "plan_type": { "type": "string", "enum": ["vip","creator","business"] },
+        "status": { "type": "string", "enum": ["active","cancelled","expired","pending"], "default": "pending" },
+        "stripe_subscription_id": { "type": "string" },
+        "stripe_customer_id": { "type": "string" },
+        "current_period_start": { "type": "string", "format": "date-time" },
+        "current_period_end": { "type": "string", "format": "date-time" },
+        "cancel_at_period_end": { "type": "boolean", "default": false },
+        "started_at": { "type": "string", "format": "date-time" },
+        "is_gifted": { "type": "boolean", "default": false },
+        "gifted_by": { "type": "string" },
+        "gifted_by_email": { "type": "string" },
+        "gift_message": { "type": "string" },
+        "duration_months": { "type": "number" },
+        "is_lifetime": { "type": "boolean", "default": false },
+        "granted_by_admin_id": { "type": "string" },
+        "granted_by_admin_email": { "type": "string" },
+        "grant_reason": { "type": "string" }
+      },
+      "required": ["user_id", "plan_type"]
+    },
+    "UserProfile": {
+      "name": "UserProfile",
+      "type": "object",
+      "properties": {
+        "user_id": { "type": "string" },
+        "username": { "type": "string" },
+        "full_name": { "type": "string" },
+        "bio": { "type": "string" },
+        "avatar_url": { "type": "string" },
+        "avatar_3d_url": { "type": "string" },
+        "cover_url": { "type": "string" },
+        "website": { "type": "string" },
+        "location": { "type": "string" },
+        "latitude": { "type": "number" },
+        "longitude": { "type": "number" },
+        "location_updated_at": { "type": "string", "format": "date-time" },
+        "share_location": { "type": "boolean", "default": false },
+        "followers_count": { "type": "number", "default": 0 },
+        "following_count": { "type": "number", "default": 0 },
+        "posts_count": { "type": "number", "default": 0 },
+        "verified": { "type": "boolean", "default": false },
+        "verification_badge": { "type": "string", "enum": ["vip","creator","business","verified"] },
+        "is_private": { "type": "boolean", "default": false },
+        "profile_theme": { "type": "string", "enum": ["default","midnight","aurora","crimson","galaxy","gold"], "default": "default" },
+        "stripe_customer_id": { "type": "string" },
+        "push_token": { "type": "string" },
+        "voip_push_token": { "type": "string" },
+        "platform": { "type": "string", "enum": ["ios","android","web"] }
+      },
+      "required": ["user_id", "username"]
+    }
+  }
+}

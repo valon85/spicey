@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Banuba SDK Files Check</title>
+  <style>
+    body { background: #000; color: #fff; font-family: monospace; padding: 20px; }
+    .success { color: #4ade80; }
+    .error { color: #f87171; }
+    .info { color: #60a5fa; }
+  </style>
+</head>
+<body>
+  <h1>Banuba SDK File Check</h1>
+  <div id="results"></div>
+  <script>
+    const files = [
+      '/banuba/BanubaSDK.js',
+      '/banuba/BanubaSDK.browser.js',
+      '/banuba/BanubaSDK.browser.esm.js',
+      '/banuba/BanubaSDK.d.ts'
+    ];
+
+    const results = document.getElementById('results');
+    
+    files.forEach(async (file) => {
+      const div = document.createElement('div');
+      div.style.margin = '10px 0';
+      
+      try {
+        const response = await fetch(file, { method: 'HEAD' });
+        if (response.ok) {
+          div.innerHTML = `<span class="success">✓</span> ${file} - EXISTS (${response.headers.get('content-length') || 'unknown'} bytes)`;
+        } else {
+          div.innerHTML = `<span class="error">✗</span> ${file} - NOT FOUND (404)`;
+        }
+      } catch (e) {
+        div.innerHTML = `<span class="error">✗</span> ${file} - ERROR: ${e.message}`;
+      }
+      
+      results.appendChild(div);
+    });
+  </script>
+</body>
+</html>

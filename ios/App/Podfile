@@ -1,0 +1,29 @@
+require_relative '../../../spicey-6-working/node_modules/@capacitor/ios/scripts/pods_helpers'
+
+platform :ios, '13.0'
+use_frameworks!
+
+# workaround to avoid Xcode caching of Pods that requires
+# Product -> Clean Build Folder after new Cordova plugins installed
+# Requires CocoaPods 1.6 or newer
+install! 'cocoapods', :disable_input_output_paths => true
+
+def capacitor_pods
+  pod 'Capacitor', :path => '../../../spicey-6-working/node_modules/@capacitor/ios'
+  pod 'CapacitorCordova', :path => '../../../spicey-6-working/node_modules/@capacitor/ios'
+  pod 'CapacitorApp', :path => '../../../spicey-6-working/node_modules/@capacitor/app'
+  pod 'CapacitorCamera', :path => '../../../spicey-6-working/node_modules/@capacitor/camera'
+  pod 'CapacitorFilesystem', :path => '../../../spicey-6-working/node_modules/@capacitor/filesystem'
+  pod 'CapacitorPreferences', :path => '../../../spicey-6-working/node_modules/@capacitor/preferences'
+  pod 'CapacitorPushNotifications', :path => '../../../spicey-6-working/node_modules/@capacitor/push-notifications'
+  pod 'CapacitorShare', :path => '../../../spicey-6-working/node_modules/@capacitor/share'
+end
+
+target 'App' do
+  capacitor_pods
+  # Add your Pods here
+end
+
+post_install do |installer|
+  assertDeploymentTarget(installer)
+end

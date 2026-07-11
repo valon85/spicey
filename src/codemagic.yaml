@@ -1,0 +1,68 @@
+workflow:
+  name: iOS TestFlight Build
+  id: ios-testflight
+  
+  triggers:
+    - push:
+        branches:
+          - main
+  
+  integrations:
+    - app_store_connect
+  
+  environment:
+    vars:
+      APP_STORE_CONNECT_ISSUER_ID: 4072ef1c-fdb7-4abc-945b-a9eb1cf15d35
+      APP_STORE_CONNECT_KEY_ID: UPN9483Y84
+      APPLE_APP_ID: ${{ secrets.APPLE_APP_ID }}
+      
+  scripts:
+    - name: Install Node.js
+      script: |
+        curl -fsSL https://deb.nodesource.com/setup_18.x | bash -
+        apt-get install -y nodejs
+    
+    - name: Install dependencies
+      script: |
+        npm install
+        npm run build
+        npx cap sync ios
+    
+    - name: Verify Firebase Config
+      script: |
+        if [ ! -f "ios/App/App/GoogleService-Info.plist" ]; then
+          echo "❌ GoogleService-Info.plist not found!"
+          exit 1
+        fi
+        echo "✅ Firebase config found"
+    
+    - name: Archive iOS App
+      script: |
+        cd ios/App
+        xcodebuild -workspace App.xcworkspace \
+          -scheme App \
+          -configuration Release \
+          -archivePath build/App.xcarchive \
+          -allowProvisioningUpdates \
+          archive
+    
+    - name: Export IPA
+      script: |
+        cd ios/App
+        xcodebuild -exportArchive \
+          -archivePath build/App.xcarchive \
+          -exportPath build/ipa \
+          -exportOptionsPlist exportOptions.plist \
+          -allowProvisioningUpdates
+    
+    - name: Upload to TestFlight
+      script: |
+        xcrun altool --upload-app \
+          -f ios/App/build/ipa/App.ipa \
+          --type ios \
+          --apiKey $APP_STORE_CONNECT_API_KEY \
+          --apiIssuer $APP_STORE_CONNECT_API_KEY_ISSUER
+  
+  artifacts:
+    - ios/App/build/App.xcarchive
+    - ios/App/build/ipa/App.ipa

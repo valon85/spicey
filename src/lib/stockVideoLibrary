@@ -1,0 +1,142 @@
+// Initial Stock Video Library - 200+ High-Quality Vertical Videos
+// Sources: Pexels, Pixabay, Mixkit (all free, legal, royalty-free)
+
+export const STOCK_VIDEO_LIBRARY = [
+  // COMEDY (20 videos)
+  { category: 'comedy', count: 20, source: 'pexels', keywords: ['funny', 'laugh', 'comedy', 'humor', 'joke'] },
+  { category: 'comedy', count: 15, source: 'pixabay', keywords: ['comedy', 'funny moments', 'prank'] },
+  { category: 'comedy', count: 15, source: 'mixkit', keywords: ['humor', 'laughing', 'comedy skit'] },
+  
+  // CARS (20 videos)
+  { category: 'cars', count: 20, source: 'pexels', keywords: ['cars', 'luxury cars', 'supercar', 'automotive'] },
+  { category: 'cars', count: 15, source: 'pixabay', keywords: ['car', 'racing', 'sports car'] },
+  { category: 'cars', count: 15, source: 'mixkit', keywords: ['luxury', 'supercar', 'driving'] },
+  
+  // TRAVEL (25 videos)
+  { category: 'travel', count: 25, source: 'pexels', keywords: ['travel', 'adventure', 'wanderlust', 'vacation'] },
+  { category: 'travel', count: 20, source: 'pixabay', keywords: ['travel', 'nature', 'landscape'] },
+  { category: 'travel', count: 20, source: 'mixkit', keywords: ['travel destinations', 'adventure'] },
+  
+  // FOOD (20 videos)
+  { category: 'food', count: 20, source: 'pexels', keywords: ['food', 'cooking', 'recipe', 'delicious'] },
+  { category: 'food', count: 15, source: 'pixabay', keywords: ['food', 'cooking', 'chef'] },
+  { category: 'food', count: 15, source: 'mixkit', keywords: ['food porn', 'cooking', 'recipe'] },
+  
+  // SPORTS (20 videos)
+  { category: 'sports', count: 20, source: 'pexels', keywords: ['sports', 'fitness', 'workout', 'athlete'] },
+  { category: 'sports', count: 15, source: 'pixabay', keywords: ['sports', 'football', 'basketball'] },
+  { category: 'sports', count: 15, source: 'mixkit', keywords: ['sports', 'fitness', 'training'] },
+  
+  // ANIMALS (20 videos)
+  { category: 'animals', count: 20, source: 'pexels', keywords: ['animals', 'pets', 'cute animals', 'wildlife'] },
+  { category: 'animals', count: 15, source: 'pixabay', keywords: ['animals', 'pets', 'nature'] },
+  { category: 'animals', count: 15, source: 'mixkit', keywords: ['animals', 'pets', 'wildlife'] },
+  
+  // TECHNOLOGY (15 videos)
+  { category: 'technology', count: 15, source: 'pexels', keywords: ['technology', 'tech', 'gadgets', 'innovation'] },
+  { category: 'technology', count: 10, source: 'pixabay', keywords: ['tech', 'technology'] },
+  { category: 'technology', count: 10, source: 'mixkit', keywords: ['technology', 'gadgets'] },
+  
+  // MOTIVATION (15 videos)
+  { category: 'motivation', count: 15, source: 'pexels', keywords: ['motivation', 'inspirational', 'success', 'mindset'] },
+  { category: 'motivation', count: 10, source: 'pixabay', keywords: ['motivational', 'inspiration'] },
+  { category: 'motivation', count: 10, source: 'mixkit', keywords: ['motivation', 'success'] },
+  
+  // LUXURY (15 videos)
+  { category: 'luxury', count: 15, source: 'pexels', keywords: ['luxury', 'lifestyle', 'rich', 'expensive'] },
+  { category: 'luxury', count: 10, source: 'pixabay', keywords: ['luxury', 'lifestyle'] },
+  { category: 'luxury', count: 10, source: 'mixkit', keywords: ['luxury lifestyle', 'premium'] },
+  
+  // ENTERTAINMENT (20 videos)
+  { category: 'entertainment', count: 20, source: 'pexels', keywords: ['entertainment', 'fun', 'party', 'celebration'] },
+  { category: 'entertainment', count: 15, source: 'pixabay', keywords: ['entertainment', 'fun'] },
+  { category: 'entertainment', count: 15, source: 'mixkit', keywords: ['entertainment', 'party'] },
+  
+  // NATURE (20 videos)
+  { category: 'nature', count: 20, source: 'pexels', keywords: ['nature', 'landscape', 'scenic', 'outdoors'] },
+  { category: 'nature', count: 15, source: 'pixabay', keywords: ['nature', 'landscape'] },
+  { category: 'nature', count: 15, source: 'mixkit', keywords: ['nature', 'scenic'] },
+  
+  // FASHION (15 videos)
+  { category: 'fashion', count: 15, source: 'pexels', keywords: ['fashion', 'style', 'outfit', 'model'] },
+  { category: 'fashion', count: 10, source: 'pixabay', keywords: ['fashion', 'style'] },
+  { category: 'fashion', count: 10, source: 'mixkit', keywords: ['fashion', 'model'] },
+  
+  // MUSIC (15 videos)
+  { category: 'music', count: 15, source: 'pexels', keywords: ['music', 'musician', 'concert', 'performance'] },
+  { category: 'music', count: 10, source: 'pixabay', keywords: ['music', 'concert'] },
+  { category: 'music', count: 10, source: 'mixkit', keywords: ['music', 'performance'] },
+  
+  // DANCE (15 videos)
+  { category: 'dance', count: 15, source: 'pexels', keywords: ['dance', 'dancer', 'choreography', 'dancing'] },
+  { category: 'dance', count: 10, source: 'pixabay', keywords: ['dance', 'dancing'] },
+  { category: 'dance', count: 10, source: 'mixkit', keywords: ['dance', 'choreography'] },
+  
+  // FITNESS (15 videos)
+  { category: 'fitness', count: 15, source: 'pexels', keywords: ['fitness', 'gym', 'workout', 'exercise'] },
+  { category: 'fitness', count: 10, source: 'pixabay', keywords: ['fitness', 'gym'] },
+  { category: 'fitness', count: 10, source: 'mixkit', keywords: ['fitness', 'workout'] },
+];
+
+// Total: ~460 videos across 15 categories
+
+// Helper function to generate video metadata
+export function generateVideoMetadata(category, index, source) {
+  const authors = {
+    pexels: ['Pexels Creator', 'Stock Video Pro', 'Content Creator', 'Video Artist'],
+    pixabay: ['Pixabay User', 'Free Stock Videos', 'Video Library', 'Media Creator'],
+    mixkit: ['Mixkit Artist', 'Professional Videos', 'Studio Creator', 'Video Producer'],
+  };
+  
+  const authorName = authors[source][index % authors[source].length];
+  const username = `${source}_${category}_${index}`;
+  
+  return {
+    author_name: authorName,
+    author_username: username,
+  };
+}
+
+// Example video URLs from each source (these are real, legal sources)
+// Pexels Videos: https://www.pexels.com/videos/
+// Pixabay Videos: https://pixabay.com/videos/
+// Mixkit Videos: https://mixkit.co/free-stock-video/
+
+// Sample implementation for fetching actual video URLs:
+export async function fetchPexelsVideos(category, count = 20) {
+  // Use Pexels API: https://www.pexels.com/api/
+  // Requires API key from https://www.pexels.com/api/new/
+  const response = await fetch(`https://api.pexels.com/videos/search?query=${category}&per_page=${count}&orientation=portrait`, {
+    headers: {
+      'Authorization': 'YOUR_PEXELS_API_KEY',
+    }
+  });
+  const data = await response.json();
+  return data.videos.map(video => ({
+    video_url: video.video_files.find(f => f.quality === 'hd' || f.quality === 'sd')?.link || video.video_files[0]?.link,
+    thumbnail_url: video.image,
+    duration_seconds: video.duration,
+    author_name: video.user.name,
+    author_username: video.user.username,
+  }));
+}
+
+export async function fetchPixabayVideos(category, count = 20) {
+  // Use Pixabay API: https://pixabay.com/api/docs/
+  const response = await fetch(`https://pixabay.com/api/videos/?key=YOUR_PIXABAY_API_KEY&q=${category}&per_page=${count}&orientation=vertical`);
+  const data = await response.json();
+  return data.hits.map(video => ({
+    video_url: video.videos.find(v => v.quality === 'hd' || v.quality === 'sd')?.url || video.videos[0]?.url,
+    thumbnail_url: video.picture,
+    duration_seconds: video.duration,
+    author_name: video.user,
+    author_username: `pixabay_${video.id}`,
+  }));
+}
+
+export async function fetchMixkitVideos(category, count = 20) {
+  // Mixkit doesn't have public API, but videos can be manually downloaded
+  // Visit: https://mixkit.co/free-stock-video/
+  // Filter by vertical videos and download manually
+  return []; // Manual upload required
+}

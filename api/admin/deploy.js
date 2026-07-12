@@ -3,6 +3,15 @@ import { getSupabaseUser } from '../_lib/supabaseRest.js';
 
 const ADMIN_EMAILS = new Set(['info@spicey.live', 'valondervishi13@gmail.com']);
 
+function getDeployErrorMessage(data, status) {
+  const value = data?.message || data?.error;
+  if (typeof value === 'string') return value;
+  if (value && typeof value === 'object') {
+    return value.message || value.code || JSON.stringify(value);
+  }
+  return `Deploy hook failed (${status})`;
+}
+
 async function requireAdmin(req) {
   const { user } = await getSupabaseUser(req);
   if (!ADMIN_EMAILS.has(String(user.email || '').toLowerCase())) {
@@ -54,7 +63,7 @@ export default async function handler(req, res) {
 
     if (!response.ok) {
       return sendJson(res, response.status, {
-        error: data.error || data.message || `Deploy hook failed (${response.status})`,
+        error: getDeployErrorMessage(data, response.status),
         details: data,
       });
     }

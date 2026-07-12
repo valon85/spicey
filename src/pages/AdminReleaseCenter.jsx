@@ -91,8 +91,20 @@ async function releaseApi(path, options = {}) {
   const text = await response.text();
   let data = {};
   try { data = text ? JSON.parse(text) : {}; } catch (_) {}
-  if (!response.ok) throw new Error(data.message || data.error || `Release request failed (${response.status})`);
+  if (!response.ok) throw new Error(getReleaseErrorMessage(data, response.status));
   return data;
+}
+
+function getReleaseErrorMessage(data, status) {
+  const value = data?.message || data?.error || data?.details?.message || data?.details?.error;
+  if (typeof value === 'string') return value;
+  if (value && typeof value === 'object') {
+    return value.message || value.code || JSON.stringify(value);
+  }
+  if (data?.details && typeof data.details === 'object') {
+    return data.details.message || data.details.code || JSON.stringify(data.details);
+  }
+  return `Release request failed (${status})`;
 }
 
 function ReleaseCard({ action, copiedKey, onCopy, onPublish, busy, releaseConfig }) {

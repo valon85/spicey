@@ -11,7 +11,7 @@ import AuthLoader from '@/components/AuthLoader';
 import SpiceyAuthModal from '@/components/SpiceyAuthModal';
 import Feed from './pages/Feed';
 import Explore from './pages/Explore';
-import Profile from './pages/Profile';
+import Profile from './pages/Profile.jsx?v=profile-reference-layout1';
 import Messages from './pages/Messages';
 import ContactsMap from './pages/ContactsMap';
 import SpiceyReels from './pages/SpiceyReels';
@@ -35,6 +35,7 @@ import NotificationPermissionBanner from '@/components/panels/NotificationPermis
 import PushNotificationProvider from '@/components/PushNotificationProvider';
 import VoIPProvider from '@/components/VoIPProvider';
 import BottomNav from '@/components/feed/BottomNav';
+import WebLayout from '@/components/shared/WebLayout';
 import IOSDebug from './pages/IOSDebug';
 import SupabaseTest from './pages/SupabaseTest';
 import SpiceyVIP from './pages/SpiceyVIP';
@@ -108,6 +109,9 @@ function AppContent() {
 
   // ── DIAGNOSTIC LOGS ──────────────────────────────────────────────────────
   const isNativeIOS = typeof window !== 'undefined' && ['capacitor:', 'spicey:'].includes(window.location.protocol);
+  const isDesktopWeb = typeof window !== 'undefined'
+    && !isNativeIOS
+    && window.matchMedia('(min-width: 1024px)').matches;
   const lsToken = typeof window !== 'undefined' && (localStorage.getItem('spicey_session') || localStorage.getItem('token'));
   const isLocalFeedPreview = typeof window !== 'undefined'
     && import.meta.env.DEV
@@ -271,9 +275,9 @@ function AppContent() {
   // FORCE FEED - no profile completion, no onboarding, no intermediate screens
   if (isAuth) {
     console.log('RETURN_FEED - Normal authenticated path with Routes');
-    return (
-      <div style={{ display: 'flex', flexDirection: 'column', height: '100dvh', width: '100vw', overscrollBehavior: 'none', position: 'relative', zIndex: 0 }}>
-        <div id="main-scroll" style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', WebkitOverflowScrolling: 'touch', overscrollBehavior: 'contain', paddingBottom: hideNav ? 0 : 'calc(72px + env(safe-area-inset-bottom, 0px))', position: 'relative', zIndex: 1 }}>
+    const authenticatedShell = (
+      <div style={{ display: 'flex', flexDirection: 'column', height: '100dvh', width: isDesktopWeb ? '100%' : '100vw', overscrollBehavior: 'none', position: 'relative', zIndex: 0 }}>
+        <div id="main-scroll" style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', WebkitOverflowScrolling: 'touch', overscrollBehavior: 'contain', paddingBottom: (hideNav || isDesktopWeb) ? 0 : 'calc(72px + env(safe-area-inset-bottom, 0px))', position: 'relative', zIndex: 1 }}>
           <Routes>
             <Route path="/" element={<Feed />} />
             <Route path="/explore" element={<Explore />} />
@@ -337,9 +341,10 @@ function AppContent() {
             img: activeCall.isIncoming ? (activeCall.callerAvatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(activeCall.callerName || 'U')}&background=1a0a2e&color=fff&size=120`) : (activeCall.receiverAvatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(activeCall.receiverName || 'U')}&background=1a0a2e&color=fff&size=120`),
           }} isVideo={activeCall.type === 'video'} isIncoming={activeCall.isIncoming} callSession={{ id: activeCall.id, status: activeCall.status }} />
         )}
-        {!hideNav && <BottomNav />}
+        {!hideNav && !isDesktopWeb && <BottomNav />}
       </div>
     );
+    return isDesktopWeb ? <WebLayout>{authenticatedShell}</WebLayout> : authenticatedShell;
   } else {
     console.log('RETURN_AUTH - Showing SpiceyAuthModal', { userId: user?.id, lsToken: !!lsToken, authChecked, isLoadingAuth });
     return <SpiceyAuthModal />;

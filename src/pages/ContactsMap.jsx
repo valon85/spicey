@@ -1484,6 +1484,7 @@ export default function ContactsMap() {
   // ── Init Mapbox ──────────────────────────────────────────────────────────────
   useEffect(() => {
     if (mapRef.current || !mapContainer.current) return;
+    if (!MAPBOX_TOKEN) return;
 
     const startLight = getIsLightMapTheme();
     setIsLight(startLight);
@@ -2126,6 +2127,35 @@ export default function ContactsMap() {
 
       <div className="spicey-map-shell" style={{ position: 'absolute', inset: 0, overflow: 'hidden' }}>
         <div ref={mapContainer} style={{ position: 'absolute', inset: 0, overflow: 'hidden' }} />
+        {!MAPBOX_TOKEN && (
+          <div style={{
+            position: 'absolute',
+            inset: 0,
+            zIndex: 20,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: 24,
+            background: 'radial-gradient(circle at 50% 35%, rgba(233,30,140,0.18), transparent 34%), #050208',
+            color: 'white',
+            textAlign: 'center',
+          }}>
+            <div style={{
+              width: 'min(360px, 100%)',
+              borderRadius: 28,
+              padding: 24,
+              border: '1px solid rgba(255,255,255,0.14)',
+              background: 'rgba(255,255,255,0.06)',
+              boxShadow: '0 20px 60px rgba(0,0,0,0.45)',
+            }}>
+              <div style={{ fontSize: 28, marginBottom: 10 }}>📍</div>
+              <h2 style={{ fontSize: 22, fontWeight: 900, margin: 0 }}>Map key missing</h2>
+              <p style={{ margin: '10px 0 0', color: 'rgba(255,255,255,0.62)', lineHeight: 1.5 }}>
+                Add VITE_MAPBOX_TOKEN in Vercel Environment Variables, then redeploy.
+              </p>
+            </div>
+          </div>
+        )}
         <div style={{
           position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 3,
           background: ui.topShade,

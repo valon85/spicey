@@ -80,6 +80,18 @@ jobs:
             printf 'keyPassword=%s\n' "${ANDROID_KEY_PASSWORD}"
           } > keystore.properties
 
+      - name: Validate Android signing key
+        working-directory: android
+        env:
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+        run: |
+          set -euo pipefail
+          keytool -list \
+            -keystore app/spicey-release-key.jks \
+            -storepass "${ANDROID_KEYSTORE_PASSWORD}" \
+            -alias "${ANDROID_KEY_ALIAS}"
+
       - name: Configure Android release signing
         run: |
           set -euo pipefail

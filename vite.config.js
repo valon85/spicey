@@ -7,17 +7,19 @@ function localApiPlugin() {
     name: 'spicey-local-api',
     configureServer(server) {
       const routes = {
-        '/api/auth/login': () => import('./api/auth/login.js'),
-        '/api/auth/signup': () => import('./api/auth/signup.js'),
-        '/api/auth/forgot-password': () => import('./api/auth/forgot-password.js'),
-        '/api/auth/update-password': () => import('./api/auth/update-password.js'),
-        '/api/auth/me': () => import('./api/auth/me.js'),
-        '/api/openai/realtime-session': () => import('./api/openai/realtime-session.js'),
-        '/api/openai/voice-chat': () => import('./api/openai/voice-chat.js'),
-        '/api/openai/text': () => import('./api/openai/text.js'),
-        '/api/openai/image-edit': () => import('./api/openai/image-edit.js'),
-        '/api/openai/image': () => import('./api/openai/image.js'),
-        '/api/admin/deploy': () => import('./api/admin/deploy.js'),
+        '/api/auth/login': () => import('./server/api-routes/auth/login.js'),
+        '/api/auth/signup': () => import('./server/api-routes/auth/signup.js'),
+        '/api/auth/forgot-password': () => import('./server/api-routes/auth/forgot-password.js'),
+        '/api/auth/update-password': () => import('./server/api-routes/auth/update-password.js'),
+        '/api/auth/me': () => import('./server/api-routes/auth/me.js'),
+        '/api/openai/realtime-session': () => import('./server/api-routes/openai/realtime-session.js'),
+        '/api/openai/voice-chat': () => import('./server/api-routes/openai/voice-chat.js'),
+        '/api/openai/text': () => import('./server/api-routes/openai/text.js'),
+        '/api/openai/image-edit': () => import('./server/api-routes/openai/image-edit.js'),
+        '/api/openai/image': () => import('./server/api-routes/openai/image.js'),
+        '/api/admin/deploy': () => import('./server/api-routes/admin/deploy.js'),
+        '/api/admin/mobile-artifacts/download': () => import('./server/api-routes/admin/mobile-artifacts/download.js'),
+        '/api/admin/mobile-artifacts': () => import('./server/api-routes/admin/mobile-artifacts.js'),
       };
 
       Object.entries(routes).forEach(([route, loadHandler]) => {
@@ -39,19 +41,29 @@ function localApiPlugin() {
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '');
   Object.assign(process.env, env);
+  const reactPath = fileURLToPath(new URL('./node_modules/react', import.meta.url));
+  const reactDomPath = fileURLToPath(new URL('./node_modules/react-dom', import.meta.url));
 
   return {
-  base: '/',
-  cacheDir: '.vite-cache',
-  logLevel: 'error',
-  resolve: {
-    alias: {
-      '@': fileURLToPath(new URL('./src', import.meta.url)),
+    base: '/',
+    logLevel: 'error',
+    resolve: {
+      dedupe: ['react', 'react-dom', 'react-router-dom'],
+      alias: {
+        '@': fileURLToPath(new URL('./src', import.meta.url)),
+        react: reactPath,
+        'react-dom': reactDomPath,
+      },
     },
-  },
-  plugins: [
-    react(),
-    localApiPlugin(),
-  ],
+    optimizeDeps: {
+      include: ['react', 'react-dom', 'react-dom/client', 'react/jsx-runtime', 'react/jsx-dev-runtime'],
+    },
+    server: {
+      hmr: false,
+    },
+    plugins: [
+      react(),
+      localApiPlugin(),
+    ],
   };
 });

@@ -78,14 +78,21 @@ export default async function handler(req, res) {
       const receiverIds = (chat.participant_ids || []).filter((id) => id !== user.id);
       if (receiverIds.length) {
         const ids = receiverIds.map((id) => `"${id}"`).join(',');
+        const devices = await supabaseTable('push_devices', {
+          serviceRole: true,
+          query: `?select=user_id,token&user_id=in.(${ids})&token_type=eq.apns&enabled=eq.true`,
+        }).catch(() => []);
         const receivers = await supabaseTable('profiles', {
           serviceRole: true,
           query: `?select=user_id,push_token&user_id=in.(${ids})`,
         }).catch(() => []);
-        await Promise.all(receivers
-          .filter((receiverProfile) => receiverProfile.push_token)
+        const tokens = Array.from(new Set([
+          ...devices.map((device) => device.token).filter(Boolean),
+          ...receivers.map((receiverProfile) => receiverProfile.push_token).filter(Boolean),
+        ]));
+        await Promise.all(tokens
           .map((receiverProfile) => sendRegularPush({
-            token: receiverProfile.push_token,
+            token: receiverProfile,
             title: profile.full_name || profile.username || user.email?.split('@')[0] || 'Spicey',
             body: body.text || 'sent you a message',
             data: {

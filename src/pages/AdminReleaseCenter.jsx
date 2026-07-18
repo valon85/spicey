@@ -104,6 +104,9 @@ function getReleaseErrorMessage(data, status) {
   if (data?.details && typeof data.details === 'object') {
     return data.details.message || data.details.code || JSON.stringify(data.details);
   }
+  if (status === 404) {
+    return 'Release API is not available here. Open Release Center on the dev server or deployed Vercel site, not static preview.';
+  }
   return `Release request failed (${status})`;
 }
 
@@ -220,13 +223,159 @@ function ReleaseCard({ action, copiedKey, onCopy, onPublish, busy, releaseConfig
   );
 }
 
+function formatBytes(bytes = 0) {
+  if (!bytes) return '';
+  const units = ['B', 'KB', 'MB', 'GB'];
+  let size = Number(bytes);
+  let unit = 0;
+  while (size >= 1024 && unit < units.length - 1) {
+    size /= 1024;
+    unit += 1;
+  }
+  return `${size.toFixed(size >= 10 || unit === 0 ? 0 : 1)} ${units[unit]}`;
+}
+
+function MobileArtifactsPanel({ artifactState, onRefresh }) {
+  const [downloadingKey, setDownloadingKey] = useState('');
+  const [downloadError, setDownloadError] = useState('');
+
+  const handleDownload = async (artifact) => {
+    setDownloadError('');
+    if (!artifact?.available || !artifact?.download_url) {
+      setDownloadError(`${artifact?.label || 'Build'} nuk eshte gati akoma. Run GitHub Action dhe pastaj shtyp Refresh.`);
+      return;
+    }
+
+    const downloadWindow = window.open('about:blank', '_blank');
+    setDownloadingKey(artifact.key);
+    try {
+      const result = await releaseApi(artifact.download_url);
+      if (result.download_url) {
+        if (downloadWindow) {
+          downloadWindow.location.href = result.download_url;
+        } else {
+          window.location.href = result.download_url;
+        }
+      } else {
+        if (downloadWindow) downloadWindow.close();
+        setDownloadError('GitHub nuk ktheu download link. Provoje perseri pas Refresh.');
+      }
+    } catch (error) {
+      if (downloadWindow) downloadWindow.close();
+      setDownloadError(error.message || 'Download nuk u hap. Provoje perseri.');
+    } finally {
+      setDownloadingKey('');
+    }
+  };
+
+  return (
+    <div
+      className="rounded-3xl p-4"
+      style={{
+        background: 'linear-gradient(145deg, rgba(255,255,255,0.09), rgba(255,255,255,0.035))',
+        border: '1px solid rgba(255,255,255,0.1)',
+        boxShadow: '0 18px 42px rgba(0,0,0,0.24)',
+      }}
+    >
+      <div className="flex items-start gap-3">
+        <div className="w-11 h-11 rounded-2xl flex items-center justify-center" style={{ background: 'rgba(255,85,0,0.15)', border: '1px solid rgba(255,85,0,0.28)' }}>
+          <Download className="w-5 h-5 text-orange-300" />
+        </div>
+        <div className="flex-1">
+          <p className="text-white font-extrabold text-sm">Direct GitHub Downloads</p>
+          <p className="text-white/45 text-xs mt-1">
+            Download direkt nga build artifacts: .ipa, .apk dhe .aab.
+          </p>
+          {artifactState.repository && (
+            <p className="text-white/30 text-[11px] mt-1">{artifactState.repository}</p>
+          )}
+        </div>
+        <button
+          type="button"
+          onClick={onRefresh}
+          disabled={artifactState.loading}
+          className="h-9 px-3 rounded-2xl text-xs font-bold text-white active:scale-95 transition-transform disabled:opacity-60"
+          style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.12)' }}
+        >
+          {artifactState.loading ? 'Loading' : 'Refresh'}
+        </button>
+      </div>
+
+      {artifactState.error && (
+        <p className="mt-3 text-orange-200/85 text-xs leading-relaxed">
+          {artifactState.error}
+        </p>
+      )}
+      {downloadError && (
+        <p className="mt-3 text-orange-200/85 text-xs leading-relaxed">
+          {downloadError}
+        </p>
+      )}
+
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mt-4">
+        {(artifactState.artifacts || []).map((artifact) => (
+          <button
+            key={artifact.key}
+            type="button"
+            disabled={downloadingKey === artifact.key}
+            onClick={() => handleDownload(artifact)}
+            className="min-h-[82px] rounded-2xl p-3 text-left active:scale-95 transition-transform disabled:opacity-45"
+            style={{
+              background: artifact.available
+                ? 'linear-gradient(135deg, rgba(255,85,0,0.24), rgba(233,30,140,0.18), rgba(139,92,246,0.18))'
+                : 'rgba(255,255,255,0.055)',
+              border: artifact.available ? '1px solid rgba(255,85,0,0.28)' : '1px solid rgba(255,255,255,0.08)',
+            }}
+          >
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-white font-extrabold text-sm">{artifact.label}</span>
+              {downloadingKey === artifact.key ? <Loader2 className="w-4 h-4 animate-spin text-white" /> : <Download className="w-4 h-4 text-white/75" />}
+            </div>
+            <p className="text-white/45 text-xs mt-2">
+              {artifact.available ? `${formatBytes(artifact.size_in_bytes)} ready` : 'Run GitHub Action first'}
+            </p>
+            {artifact.created_at && (
+              <p className="text-white/30 text-[11px] mt-1">
+                {new Date(artifact.created_at).toLocaleString()}
+              </p>
+            )}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export default function AdminReleaseCenter() {
   const navigate = useNavigate();
   const [checking, setChecking] = useState(true);
   const [copiedKey, setCopiedKey] = useState('');
   const [busyKey, setBusyKey] = useState('');
+  const [savingLinks, setSavingLinks] = useState(false);
   const [releaseConfig, setReleaseConfig] = useState(null);
+  const [artifactState, setArtifactState] = useState({ loading: true, error: '', configured: false, repository: '', artifacts: [] });
+  const [mobileLinks, setMobileLinks] = useState({ ios_download_url: '', android_download_url: '' });
   const [notice, setNotice] = useState(null);
+
+  const loadMobileArtifacts = async () => {
+    setArtifactState((current) => ({ ...current, loading: true, error: '' }));
+    try {
+      const artifacts = await releaseApi('/api/admin/mobile-artifacts');
+      setArtifactState({
+        loading: false,
+        error: '',
+        configured: Boolean(artifacts.configured),
+        repository: artifacts.repository || '',
+        artifacts: artifacts.artifacts || [],
+      });
+    } catch (error) {
+      setArtifactState((current) => ({
+        ...current,
+        loading: false,
+        error: error.message || 'Could not load GitHub artifacts.',
+      }));
+    }
+  };
 
   useEffect(() => {
     let alive = true;
@@ -245,10 +394,17 @@ export default function AdminReleaseCenter() {
       }
       try {
         const config = await releaseApi('/api/admin/deploy');
-        if (alive) setReleaseConfig(config);
+        if (alive) {
+          setReleaseConfig(config);
+          setMobileLinks({
+            ios_download_url: config.ios_download_url || '',
+            android_download_url: config.android_download_url || '',
+          });
+        }
       } catch (error) {
         if (alive) setNotice({ type: 'error', text: error.message || 'Release status is not available.' });
       }
+      if (alive) await loadMobileArtifacts();
       if (alive) setChecking(false);
     }).catch((error) => {
       if (alive) {
@@ -285,6 +441,44 @@ export default function AdminReleaseCenter() {
       });
     } finally {
       setBusyKey('');
+    }
+  };
+
+  const handleSaveMobileLinks = async () => {
+    setSavingLinks(true);
+    setNotice(null);
+    try {
+      const result = await releaseApi('/api/admin/deploy', {
+        method: 'POST',
+        body: JSON.stringify({
+          action: 'save_mobile_links',
+          ios_download_url: mobileLinks.ios_download_url,
+          android_download_url: mobileLinks.android_download_url,
+        }),
+      });
+      setReleaseConfig((previous) => ({
+        ...(previous || {}),
+        ios_download_configured: Boolean(result.ios_download_url),
+        android_download_configured: Boolean(result.android_download_url),
+        ios_download_url: result.ios_download_url || '',
+        android_download_url: result.android_download_url || '',
+        release_settings_saved: true,
+        release_settings_updated_at: result.updated_at || '',
+        release_settings_updated_by: result.updated_by || '',
+        release_settings_error: '',
+      }));
+      setMobileLinks({
+        ios_download_url: result.ios_download_url || '',
+        android_download_url: result.android_download_url || '',
+      });
+      setNotice({ type: 'success', text: result.message || 'Download links saved.' });
+    } catch (error) {
+      setNotice({
+        type: 'error',
+        text: error.message || 'Could not save mobile download links.',
+      });
+    } finally {
+      setSavingLinks(false);
     }
   };
 
@@ -337,9 +531,68 @@ export default function AdminReleaseCenter() {
             <p className="text-white font-bold text-sm">Admin-only release buttons</p>
           </div>
           <p className="text-white/55 text-sm leading-relaxed">
-            Publish punon direkt vetëm kur është vendosur Vercel Deploy Hook në server. iOS/Android shfaqin download vetëm nëse ekziston URL reale për build-in; ndryshe japin komandat për Xcode/Android Studio.
+            Publish punon direkt kur është vendosur Vercel Deploy Hook. iOS/Android shfaqin Download kur admini ruan linkun real të .ipa, TestFlight, .apk ose .aab.
           </p>
         </div>
+
+        <div
+          className="rounded-3xl p-4"
+          style={{
+            background: 'linear-gradient(145deg, rgba(255,255,255,0.09), rgba(255,255,255,0.035))',
+            border: '1px solid rgba(255,255,255,0.1)',
+            boxShadow: '0 18px 42px rgba(0,0,0,0.24)',
+          }}
+        >
+          <div className="flex items-center gap-2 mb-3">
+            <Download className="w-4 h-4 text-pink-300" />
+            <p className="text-white font-bold text-sm">Mobile download links</p>
+          </div>
+          <div className="space-y-3">
+            <label className="block">
+              <span className="text-white/55 text-xs font-bold">iOS link (.ipa / TestFlight)</span>
+              <input
+                value={mobileLinks.ios_download_url}
+                onChange={(event) => setMobileLinks((current) => ({ ...current, ios_download_url: event.target.value }))}
+                placeholder="https://..."
+                className="mt-1 w-full h-12 rounded-2xl px-4 text-sm font-semibold text-white outline-none"
+                style={{ background: 'rgba(0,0,0,0.34)', border: '1px solid rgba(255,255,255,0.1)' }}
+              />
+            </label>
+            <label className="block">
+              <span className="text-white/55 text-xs font-bold">Android link (.apk / .aab)</span>
+              <input
+                value={mobileLinks.android_download_url}
+                onChange={(event) => setMobileLinks((current) => ({ ...current, android_download_url: event.target.value }))}
+                placeholder="https://..."
+                className="mt-1 w-full h-12 rounded-2xl px-4 text-sm font-semibold text-white outline-none"
+                style={{ background: 'rgba(0,0,0,0.34)', border: '1px solid rgba(255,255,255,0.1)' }}
+              />
+            </label>
+          </div>
+          {releaseConfig?.release_settings_updated_at && (
+            <p className="text-white/35 text-xs mt-3">
+              Saved {new Date(releaseConfig.release_settings_updated_at).toLocaleString()}
+              {releaseConfig.release_settings_updated_by ? ` by ${releaseConfig.release_settings_updated_by}` : ''}
+            </p>
+          )}
+          {releaseConfig?.release_settings_error && (
+            <p className="text-orange-200/80 text-xs mt-3 leading-relaxed">
+              Storage setup needed: {releaseConfig.release_settings_error}
+            </p>
+          )}
+          <button
+            type="button"
+            onClick={handleSaveMobileLinks}
+            disabled={savingLinks}
+            className="w-full mt-4 h-11 rounded-2xl flex items-center justify-center gap-2 text-sm font-bold text-white active:scale-95 transition-transform disabled:opacity-60"
+            style={{ background: 'linear-gradient(135deg, #ff5500, #e91e8c, #8b5cf6)' }}
+          >
+            {savingLinks ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+            {savingLinks ? 'Saving' : 'Save Links'}
+          </button>
+        </div>
+
+        <MobileArtifactsPanel artifactState={artifactState} onRefresh={loadMobileArtifacts} />
 
         {notice && (
           <div

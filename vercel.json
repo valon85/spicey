@@ -5,6 +5,270 @@
   "framework": "vite",
   "rewrites": [
     {
+      "source": "/api/profile",
+      "destination": "/api/profiles-users?__spicey_route=/api/profile"
+    },
+    {
+      "source": "/api/profile/:path*",
+      "destination": "/api/profiles-users?__spicey_route=/api/profile/:path*"
+    },
+    {
+      "source": "/api/profile-categories",
+      "destination": "/api/profiles-users?__spicey_route=/api/profile-categories"
+    },
+    {
+      "source": "/api/profile-categories/:path*",
+      "destination": "/api/profiles-users?__spicey_route=/api/profile-categories/:path*"
+    },
+    {
+      "source": "/api/preset-avatars",
+      "destination": "/api/profiles-users?__spicey_route=/api/preset-avatars"
+    },
+    {
+      "source": "/api/preset-avatars/:path*",
+      "destination": "/api/profiles-users?__spicey_route=/api/preset-avatars/:path*"
+    },
+    {
+      "source": "/api/users",
+      "destination": "/api/profiles-users?__spicey_route=/api/users"
+    },
+    {
+      "source": "/api/users/:path*",
+      "destination": "/api/profiles-users?__spicey_route=/api/users/:path*"
+    },
+    {
+      "source": "/api/blocks",
+      "destination": "/api/profiles-users?__spicey_route=/api/blocks"
+    },
+    {
+      "source": "/api/blocks/:path*",
+      "destination": "/api/profiles-users?__spicey_route=/api/blocks/:path*"
+    },
+    {
+      "source": "/api/chats",
+      "destination": "/api/chats-messages?__spicey_route=/api/chats"
+    },
+    {
+      "source": "/api/chats/:path*",
+      "destination": "/api/chats-messages?__spicey_route=/api/chats/:path*"
+    },
+    {
+      "source": "/api/messages",
+      "destination": "/api/chats-messages?__spicey_route=/api/messages"
+    },
+    {
+      "source": "/api/messages/:path*",
+      "destination": "/api/chats-messages?__spicey_route=/api/messages/:path*"
+    },
+    {
+      "source": "/api/call-sessions",
+      "destination": "/api/calls-live?__spicey_route=/api/call-sessions"
+    },
+    {
+      "source": "/api/call-sessions/:path*",
+      "destination": "/api/calls-live?__spicey_route=/api/call-sessions/:path*"
+    },
+    {
+      "source": "/api/live-sessions",
+      "destination": "/api/calls-live?__spicey_route=/api/live-sessions"
+    },
+    {
+      "source": "/api/live-sessions/:path*",
+      "destination": "/api/calls-live?__spicey_route=/api/live-sessions/:path*"
+    },
+    {
+      "source": "/api/missed-calls",
+      "destination": "/api/calls-live?__spicey_route=/api/missed-calls"
+    },
+    {
+      "source": "/api/missed-calls/:path*",
+      "destination": "/api/calls-live?__spicey_route=/api/missed-calls/:path*"
+    },
+    {
+      "source": "/api/follows",
+      "destination": "/api/follows-requests?__spicey_route=/api/follows"
+    },
+    {
+      "source": "/api/follows/:path*",
+      "destination": "/api/follows-requests?__spicey_route=/api/follows/:path*"
+    },
+    {
+      "source": "/api/follow-requests",
+      "destination": "/api/follows-requests?__spicey_route=/api/follow-requests"
+    },
+    {
+      "source": "/api/follow-requests/:path*",
+      "destination": "/api/follows-requests?__spicey_route=/api/follow-requests/:path*"
+    },
+    {
+      "source": "/api/notifications",
+      "destination": "/api/notifications-reports?__spicey_route=/api/notifications"
+    },
+    {
+      "source": "/api/notifications/:path*",
+      "destination": "/api/notifications-reports?__spicey_route=/api/notifications/:path*"
+    },
+    {
+      "source": "/api/reports",
+      "destination": "/api/notifications-reports?__spicey_route=/api/reports"
+    },
+    {
+      "source": "/api/reports/:path*",
+      "destination": "/api/notifications-reports?__spicey_route=/api/reports/:path*"
+    },
+    {
+      "source": "/api/openai",
+      "destination": "/api/openai?__spicey_route=/api/openai"
+    },
+    {
+      "source": "/api/openai/:path*",
+      "destination": "/api/openai?__spicey_route=/api/openai/:path*"
+    },
+    {
+      "source": "/api/media",
+      "destination": "/api/media?__spicey_route=/api/media"
+    },
+    {
+      "source": "/api/media/:path*",
+      "destination": "/api/media?__spicey_route=/api/media/:path*"
+    },
+    {
+      "source": "/api/banuba",
+      "destination": "/api/media?__spicey_route=/api/banuba"
+    },
+    {
+      "source": "/api/banuba/:path*",
+      "destination": "/api/media?__spicey_route=/api/banuba/:path*"
+    },
+    {
+      "source": "/api/music",
+      "destination": "/api/media?__spicey_route=/api/music"
+    },
+    {
+      "source": "/api/music/:path*",
+      "destination": "/api/media?__spicey_route=/api/music/:path*"
+    },
+    {
+      "source": "/api/youtube",
+      "destination": "/api/media?__spicey_route=/api/youtube"
+    },
+    {
+      "source": "/api/youtube/:path*",
+      "destination": "/api/media?__spicey_route=/api/youtube/:path*"
+    },
+    {
+      "source": "/api/map",
+      "destination": "/api/map?__spicey_route=/api/map"
+    },
+    {
+      "source": "/api/map/:path*",
+      "destination": "/api/map?__spicey_route=/api/map/:path*"
+    },
+    {
+      "source": "/api/account",
+      "destination": "/api/account-legal?__spicey_route=/api/account"
+    },
+    {
+      "source": "/api/account/:path*",
+      "destination": "/api/account-legal?__spicey_route=/api/account/:path*"
+    },
+    {
+      "source": "/api/auth",
+      "destination": "/api/account-legal?__spicey_route=/api/auth"
+    },
+    {
+      "source": "/api/auth/:path*",
+      "destination": "/api/account-legal?__spicey_route=/api/auth/:path*"
+    },
+    {
+      "source": "/api/legal",
+      "destination": "/api/account-legal?__spicey_route=/api/legal"
+    },
+    {
+      "source": "/api/legal/:path*",
+      "destination": "/api/account-legal?__spicey_route=/api/legal/:path*"
+    },
+    {
+      "source": "/api/admin",
+      "destination": "/api/admin-push?__spicey_route=/api/admin"
+    },
+    {
+      "source": "/api/admin/:path*",
+      "destination": "/api/admin-push?__spicey_route=/api/admin/:path*"
+    },
+    {
+      "source": "/api/push",
+      "destination": "/api/admin-push?__spicey_route=/api/push"
+    },
+    {
+      "source": "/api/push/:path*",
+      "destination": "/api/admin-push?__spicey_route=/api/push/:path*"
+    },
+    {
+      "source": "/api/posts",
+      "destination": "/api/content-social?__spicey_route=/api/posts"
+    },
+    {
+      "source": "/api/posts/:path*",
+      "destination": "/api/content-social?__spicey_route=/api/posts/:path*"
+    },
+    {
+      "source": "/api/comments",
+      "destination": "/api/content-social?__spicey_route=/api/comments"
+    },
+    {
+      "source": "/api/comments/:path*",
+      "destination": "/api/content-social?__spicey_route=/api/comments/:path*"
+    },
+    {
+      "source": "/api/comment-reactions",
+      "destination": "/api/content-social?__spicey_route=/api/comment-reactions"
+    },
+    {
+      "source": "/api/comment-reactions/:path*",
+      "destination": "/api/content-social?__spicey_route=/api/comment-reactions/:path*"
+    },
+    {
+      "source": "/api/reactions",
+      "destination": "/api/content-social?__spicey_route=/api/reactions"
+    },
+    {
+      "source": "/api/reactions/:path*",
+      "destination": "/api/content-social?__spicey_route=/api/reactions/:path*"
+    },
+    {
+      "source": "/api/stories",
+      "destination": "/api/content-social?__spicey_route=/api/stories"
+    },
+    {
+      "source": "/api/stories/:path*",
+      "destination": "/api/content-social?__spicey_route=/api/stories/:path*"
+    },
+    {
+      "source": "/api/reels",
+      "destination": "/api/content-social?__spicey_route=/api/reels"
+    },
+    {
+      "source": "/api/reels/:path*",
+      "destination": "/api/content-social?__spicey_route=/api/reels/:path*"
+    },
+    {
+      "source": "/api/ad-campaigns",
+      "destination": "/api/content-social?__spicey_route=/api/ad-campaigns"
+    },
+    {
+      "source": "/api/ad-campaigns/:path*",
+      "destination": "/api/content-social?__spicey_route=/api/ad-campaigns/:path*"
+    },
+    {
+      "source": "/api/subscriptions",
+      "destination": "/api/subscriptions?__spicey_route=/api/subscriptions"
+    },
+    {
+      "source": "/api/subscriptions/:path*",
+      "destination": "/api/subscriptions?__spicey_route=/api/subscriptions/:path*"
+    },
+    {
       "source": "/((?!api/).*)",
       "destination": "/index.html"
     }

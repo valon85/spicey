@@ -1,0 +1,164 @@
+name: Build Android
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+      - master
+    paths:
+      - "android/**"
+      - "src/**"
+      - "public/**"
+      - "scripts/**"
+      - "capacitor.config.*"
+      - "package.json"
+      - "package-lock.json"
+      - ".github/workflows/build-android.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: spicey-android-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: "22"
+  JAVA_VERSION: "17"
+
+jobs:
+  build-android:
+    name: Signed APK and AAB
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: ${{ env.JAVA_VERSION }}
+          cache: gradle
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build web app
+        run: npm run build
+
+      - name: Sync Capacitor Android
+        run: npx cap sync android
+
+      - name: Restore Android signing key
+        working-directory: android
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          test -n "${ANDROID_KEYSTORE_BASE64}"
+          test -n "${ANDROID_KEYSTORE_PASSWORD}"
+          test -n "${ANDROID_KEY_ALIAS}"
+          test -n "${ANDROID_KEY_PASSWORD}"
+
+          python3 -c 'import base64, os, sys; sys.stdout.buffer.write(base64.b64decode(os.environ["ANDROID_KEYSTORE_BASE64"]))' > app/spicey-release-key.jks
+          {
+            printf '%s\n' 'storeFile=spicey-release-key.jks'
+            printf 'storePassword=%s\n' "${ANDROID_KEYSTORE_PASSWORD}"
+            printf 'keyAlias=%s\n' "${ANDROID_KEY_ALIAS}"
+            printf 'keyPassword=%s\n' "${ANDROID_KEY_PASSWORD}"
+          } > keystore.properties
+
+      - name: Configure Android release signing
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+
+          path = Path("android/app/build.gradle")
+          text = path.read_text()
+
+          if "def spiceyKeystorePropertiesFile" not in text:
+              text = text.replace(
+                  "android {\n",
+                  "\n".join([
+                      "android {",
+                      "    def spiceyKeystorePropertiesFile = rootProject.file(\"keystore.properties\")",
+                      "    def spiceyKeystoreProperties = new Properties()",
+                      "    if (spiceyKeystorePropertiesFile.exists()) {",
+                      "        spiceyKeystoreProperties.load(new FileInputStream(spiceyKeystorePropertiesFile))",
+                      "    }",
+                      "",
+                  ]),
+                  1,
+              )
+
+          if "signingConfigs {" not in text:
+              text = text.replace(
+                  "    buildTypes {\n",
+                  "\n".join([
+                      "    signingConfigs {",
+                      "        release {",
+                      "            storeFile file(spiceyKeystoreProperties[\"storeFile\"])",
+                      "            storePassword spiceyKeystoreProperties[\"storePassword\"]",
+                      "            keyAlias spiceyKeystoreProperties[\"keyAlias\"]",
+                      "            keyPassword spiceyKeystoreProperties[\"keyPassword\"]",
+                      "        }",
+                      "    }",
+                      "    buildTypes {",
+                      "",
+                  ]),
+                  1,
+              )
+
+          if "signingConfig signingConfigs.release" not in text:
+              text = text.replace(
+                  "        release {\n",
+                  "        release {\n            signingConfig signingConfigs.release\n",
+                  1,
+              )
+
+          path.write_text(text)
+          PY
+
+      - name: Build signed APK and AAB
+        working-directory: android
+        run: |
+          set -euo pipefail
+          chmod +x ./gradlew
+          ./gradlew --no-daemon clean assembleRelease bundleRelease
+
+      - name: Collect Android artifacts
+        run: |
+          set -euo pipefail
+          mkdir -p build/artifacts/android
+          cp android/app/build/outputs/apk/release/*.apk build/artifacts/android/Spicey-release.apk
+          cp android/app/build/outputs/bundle/release/*.aab build/artifacts/android/Spicey-release.aab
+
+      - name: Upload signed APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: spicey-signed-apk
+          path: build/artifacts/android/Spicey-release.apk
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Upload signed AAB
+        uses: actions/upload-artifact@v4
+        with:
+          name: spicey-signed-aab
+          path: build/artifacts/android/Spicey-release.aab
+          if-no-files-found: error
+          retention-days: 30

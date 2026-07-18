@@ -19,13 +19,13 @@ export default async function handler(req, res) {
     }
 
     const [pushRows, voipRows, profileRows] = await Promise.all([
-      supabaseTable('profiles', {
+      supabaseTable('push_devices', {
         serviceRole: true,
-        query: '?select=user_id&push_token=not.is.null&limit=10000',
+        query: '?select=user_id&token_type=eq.apns&enabled=eq.true&limit=10000',
       }).catch(() => []),
-      supabaseTable('profiles', {
+      supabaseTable('push_devices', {
         serviceRole: true,
-        query: '?select=user_id&voip_push_token=not.is.null&limit=10000',
+        query: '?select=user_id&token_type=eq.voip&enabled=eq.true&limit=10000',
       }).catch(() => []),
       supabaseTable('profiles', {
         serviceRole: true,

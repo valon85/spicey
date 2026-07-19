@@ -30,12 +30,11 @@ function LeftSidebar() {
         style={{ background: 'radial-gradient(circle, rgba(255,80,0,0.08) 0%, transparent 70%)' }} />
 
       {/* Logo */}
-      <div className="px-6 pt-8 pb-8">
+      <div className="spicey-web-sidebar-logo-wrap">
         <img
-          src="https://media.base44.com/images/public/69fe90d3bbe7ad47925e4a0a/f7e33989f_SpiceyLogo.png"
+          src="/spicey-assets/spicey-sidebar-neon-logo.png"
           alt="SPICEY"
-          className="h-10 object-contain"
-          style={{ filter: 'drop-shadow(0 0 12px rgba(255,100,0,0.5))' }}
+          className="spicey-web-sidebar-logo"
         />
       </div>
 

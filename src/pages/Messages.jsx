@@ -141,8 +141,9 @@ export default function Messages() {
   const { data: chatsData, refetch: refetchChats } = useQuery({
     queryKey: ['chats', currentUser?.id],
     queryFn: async () => {
-      const all = await base44.entities.Chat.list('-last_message_time', 100);
-      return all.filter(c => Array.isArray(c.participant_ids) && c.participant_ids.includes(currentUser.id));
+      const response = await base44.functions.invoke('getUserChats', {});
+      const rows = response.data?.chats || response.data || [];
+      return rows.filter(c => Array.isArray(c.participant_ids) && c.participant_ids.includes(currentUser.id));
     },
     enabled: !!currentUser?.id,
     staleTime: 120000,

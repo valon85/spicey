@@ -344,28 +344,8 @@ export default function ChatView({ convo, onBack }) {
     };
     loadChat();
 
-    // Real-time subscription for new messages in this chat
-    let unsubscribe = null;
-    const subscribeToMessages = () => {
-      unsubscribe = base44.entities.Message.subscribe((event) => {
-        const cid = chatIdRef.current;
-        const usr = currentUserRef.current;
-        if (!cid || !usr) return;
-        if (event.type === 'create' && event.data?.chat_id === cid && event.data?.sender_id !== usr.id) {
-          // New incoming message — play sound + vibration + show notification
-          playMessageSound(false);
-          showBrowserNotification(convo.name || 'New Message', event.data.text || '📷 Image');
-          // Fetch fresh messages
-          base44.functions.invoke('getChatMessages', { chat_id: cid }).then(res => {
-            const msgs = res.data?.messages || [];
-            setMessages(prev => mapMessages(msgs, usr.id, prev));
-          }).catch(() => {});
-        }
-      });
-    };
-    subscribeToMessages();
-
-    // Fallback poll every 15s in case subscription misses anything
+    // Fetch only through the membership-checked endpoint. A global message
+    // subscription can expose payloads from conversations the user is not in.
     const interval = setInterval(async () => {
       const cid = chatIdRef.current;
       const usr = currentUserRef.current;
@@ -377,7 +357,7 @@ export default function ChatView({ convo, onBack }) {
       } catch (_) {}
     }, 15000);
 
-    return () => { if (unsubscribe) unsubscribe(); clearInterval(interval); };
+    return () => { clearInterval(interval); };
   }, [convo.userId, convo.chatId]);
 
   const scrollContainerRef = useRef(null);

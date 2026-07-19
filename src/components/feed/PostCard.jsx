@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import VideoWithHLS from './VideoWithHLS';
-import { Heart, MessageCircle, Share2, MoreHorizontal, EyeOff, Flame, BarChart2, UserPlus, Trash2, Flag, Ban, Volume2, VolumeX, Zap, Shield, AlertTriangle, Lock, Edit3, Globe, Users } from 'lucide-react';
+import { Heart, MessageCircle, Share2, MoreHorizontal, EyeOff, Flame, BarChart2, UserPlus, Trash2, Flag, Ban, Volume2, VolumeX, Zap, Shield, AlertTriangle, Lock, Edit3, Globe, Users, Bookmark } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
-import SideAction from './SideAction';
+import SideAction from './SideAction.jsx';
 import { motion, AnimatePresence } from 'framer-motion';
 import ReactionsSheet from '../panels/ReactionsSheet.jsx';
 import ShareSheet from '../panels/ShareSheet.jsx';
@@ -23,6 +23,49 @@ import EditPostModal from './EditPostModal';
 
 // Utility to ensure array safety
 const asArray = (v) => Array.isArray(v) ? v : [];
+const REACTION_STORE_KEY = 'spicey_feed_reactions_v1';
+const SAVED_POST_STORE_KEY = 'spicey_saved_posts_v1';
+
+function getReactionPostKey(post) {
+  const raw = post?.id || post?.image_url || post?.video_url || post?.caption || post?.author_username || 'post';
+  return String(raw).replace(/\s+/g, '-').slice(0, 180);
+}
+
+function readReactionStore() {
+  try {
+    return JSON.parse(localStorage.getItem(REACTION_STORE_KEY) || '{}') || {};
+  } catch {
+    return {};
+  }
+}
+
+function writeReactionState(postKey, state) {
+  try {
+    const store = readReactionStore();
+    store[postKey] = { ...(store[postKey] || {}), ...state, updatedAt: Date.now() };
+    localStorage.setItem(REACTION_STORE_KEY, JSON.stringify(store));
+  } catch {
+    // Ignore private-mode storage failures; the UI still updates for this session.
+  }
+}
+
+function readSavedPostStore() {
+  try {
+    return JSON.parse(localStorage.getItem(SAVED_POST_STORE_KEY) || '{}') || {};
+  } catch {
+    return {};
+  }
+}
+
+function writeSavedPostState(postKey, saved) {
+  try {
+    const store = readSavedPostStore();
+    store[postKey] = { saved, updatedAt: Date.now() };
+    localStorage.setItem(SAVED_POST_STORE_KEY, JSON.stringify(store));
+  } catch {
+    // Local save fallback can fail in private mode; the visible UI still updates.
+  }
+}
 
 function timeAgo(dateStr) {
   if (!dateStr) return '';
@@ -50,7 +93,7 @@ function HashtagLine({ tags }) {
   };
 
   return (
-    <p className="text-[12px] mt-0.5 font-semibold">
+    <p className="text-[12px] mt-0.5 font-extrabold tracking-[0.01em]" style={{ textShadow: 'none' }}>
       {asArray(tags).map((tag, index) => {
         const clean = String(tag || '').replace(/^#/, '');
         return (
@@ -65,15 +108,25 @@ function HashtagLine({ tags }) {
 
 function CaptionOverlayText({ caption }) {
   const text = String(caption || '').trim();
-  const emojiIndex = text.search(/[✨☀️🌅🔥🚀😍❤️💖🌃🌇🌊]/u);
-  const words = text.split(/\s+/);
-  const title = emojiIndex > 0 ? text.slice(0, emojiIndex).trim() : words.slice(0, 3).join(' ');
-  const rest = emojiIndex > 0 ? text.slice(emojiIndex).trim() : words.slice(3).join(' ');
+  if (!text) return null;
+
+  const cleanText = text.replace(/\s+/g, ' ').trim();
+  const words = cleanText.split(' ').filter(Boolean);
+  const titleWords = words.slice(0, Math.min(2, words.length));
+  const titleLines = titleWords.map(word => word.replace(/[^\p{L}\p{N}]+/gu, '').toUpperCase()).filter(Boolean);
+  const rest = words.slice(titleWords.length).join(' ');
 
   return (
-    <div className="text-white">
-      <p className="text-[15px] font-bold leading-tight line-clamp-1">{title}</p>
-      {rest && <p className="text-[10px] font-medium leading-tight mt-0.5 line-clamp-1">{rest}</p>}
+    <div className="spicey-photo-title-overlay">
+      <div className="spicey-photo-title-kicker">
+        <span>A MOMENT.</span>
+        <span>A STORY.</span>
+        <span>A MOVIE.</span>
+      </div>
+      <p className="spicey-photo-title-main">
+        {titleLines.map((line) => <span key={line}>{line}</span>)}
+      </p>
+      {rest && <p className="spicey-photo-title-sub">{rest}</p>}
     </div>
   );
 }
@@ -115,28 +168,43 @@ function TextAction({ icon: Icon, label, onClick, active, activeColor, activeBg,
   );
 }
 
-function SpiceyStatPill({ fireCount, likesCount, wowCount, sharesCount, onClick, overlay = false }) {
-  const showShares = (sharesCount || 0) > 0;
+function SpiceyStatPill({ fireCount, likesCount, wowCount, onLike, onFire, onWow, overlay = false }) {
+  const stats = [
+    { emoji: '❤️', count: likesCount, className: 'spicey-stat-pill-emoji-heart', onClick: onLike },
+    { icon: Flame, count: fireCount, className: 'spicey-stat-pill-emoji-fire', onClick: onFire },
+    { emoji: '😮', count: wowCount, className: 'spicey-stat-pill-emoji-wow', onClick: onWow },
+  ];
+
   return (
-    <motion.button
-      onClick={onClick}
+    <motion.div
       className={`spicey-stat-pill ${overlay ? 'spicey-stat-pill-inside' : ''} active:scale-95 transition-all`}
       whileHover={overlay ? undefined : { scale: 1.02 }}
     >
       <div className="spicey-stat-pill-content">
-        <div className="spicey-stat-pill-item"><span className="spicey-stat-pill-emoji">🔥</span><span>{formatCount(fireCount)}</span></div>
-        <div className="spicey-stat-pill-divider" />
-        <div className="spicey-stat-pill-item"><span className="spicey-stat-pill-emoji">❤️</span><span>{formatCount(likesCount)}</span></div>
-        <div className="spicey-stat-pill-divider" />
-        <div className="spicey-stat-pill-item"><span className="spicey-stat-pill-emoji">😮</span><span>{formatCount(wowCount)}</span></div>
-        {showShares && (
-          <>
-            <div className="spicey-stat-pill-divider" />
-            <div className="spicey-stat-pill-item"><span className="spicey-stat-pill-emoji">↗</span><span>{formatCount(sharesCount)}</span></div>
-          </>
-        )}
+        {stats.map((item) => {
+          const StatIcon = item.icon;
+          return (
+          <button
+            key={item.className}
+            type="button"
+            className="spicey-stat-pill-item"
+            onPointerDown={(event) => {
+              event.stopPropagation();
+            }}
+            onClick={(event) => {
+              event.preventDefault();
+              event.stopPropagation();
+              item.onClick?.();
+            }}
+          >
+            <span className={`spicey-stat-pill-emoji ${item.className}`}>
+              {StatIcon ? <StatIcon size={19} strokeWidth={2.35} /> : item.emoji}
+            </span>
+            <span className="spicey-stat-pill-count">{formatCount(item.count || 0)}</span>
+          </button>
+        );})}
       </div>
-    </motion.button>
+    </motion.div>
   );
 }
 
@@ -269,14 +337,14 @@ function getLikePreviewUsers(post) {
   return [...normalized, ...rotated].slice(0, 3);
 }
 
-function LikedByRow({ post, likesCount, commentsCount, isLight, onLikesClick, onCommentsClick }) {
+function LikedByRow({ post, likesCount, commentsCount, sharesCount, isLight, onLikesClick, onCommentsClick, onSharesClick }) {
   const users = getLikePreviewUsers(post);
   const names = users.map((user) => user.name).join(', ');
   const textColor = isLight ? '#5f5a68' : 'rgba(214,210,224,0.78)';
   const subColor = isLight ? 'rgba(95,90,104,0.66)' : 'rgba(214,210,224,0.48)';
 
   return (
-    <div className="spicey-liked-row">
+    <div className={`spicey-liked-row ${isLight ? 'spicey-liked-row--light' : 'spicey-liked-row--dark'}`}>
       <button type="button" onClick={onLikesClick} className="spicey-liked-stack" aria-label="View likes">
         {users.map((user, index) => (
           <img
@@ -294,17 +362,46 @@ function LikedByRow({ post, likesCount, commentsCount, isLight, onLikesClick, on
         </span>
       </button>
       <button type="button" onClick={onCommentsClick} className="spicey-liked-comments" style={{ color: subColor }}>
-        {formatCount(commentsCount || 0)} comments
+        💬 {formatCount(commentsCount || 0)}
+      </button>
+      <button type="button" onClick={onSharesClick} className="spicey-liked-shares" style={{ color: subColor }}>
+        ↗ {formatCount(sharesCount || 0)}
+      </button>
+    </div>
+  );
+}
+
+function LightPostAuthorHeader({ post, avatarSrc, authorBadgeType, onMenuClick }) {
+  return (
+    <div className="spicey-light-post-author-header">
+      <Link to={`/profile/${post.author_id}`} className="spicey-light-post-author-link">
+        <span className="spicey-light-post-avatar-ring">
+          <img src={avatarSrc} alt={post.author_name} className="spicey-light-post-avatar" />
+        </span>
+        <span className="spicey-light-post-author-copy">
+          <span className="spicey-light-post-name">
+            {post.author_name || 'User'}
+            {authorBadgeType && <VerifiedBadge type={authorBadgeType} size="sm" />}
+          </span>
+          <span className="spicey-light-post-location">{post.location || post.author_location || `@${post.author_username}`}</span>
+        </span>
+      </Link>
+      <button type="button" onClick={onMenuClick} className="spicey-light-post-menu" aria-label="Post options">
+        <MoreHorizontal className="w-5 h-5" />
       </button>
     </div>
   );
 }
 
 export default function PostCard({ post, onCommentClick, currentUser: parentCurrentUser }) {
+  const authorBadgeType = post.author_verification_badge || post.verification_badge || post.author_badge_type || post.badge_type
+    || ((post.author_is_vip || post.is_vip) ? 'vip' : ((post.author_verified || post.verified) ? 'verified' : null));
+  const reactionPostKey = getReactionPostKey(post);
   const [currentUser, setCurrentUser] = useState(parentCurrentUser || null);
   const [liked, setLiked] = useState(false);
   const [fireReacted, setFireReacted] = useState(false);
   const [wowReacted, setWowReacted] = useState(false);
+  const [savedPost, setSavedPost] = useState(false);
   const [likesCount, setLikesCount] = useState(post.likes_count || 0);
   const [fireCount, setFireCount] = useState(post.fire_count || 0);
   const [wowCount, setWowCount] = useState(post.wow_count || 0);
@@ -327,8 +424,8 @@ export default function PostCard({ post, onCommentClick, currentUser: parentCurr
   const [isLightMode, setIsLightMode] = useState(document.documentElement.classList.contains('light-mode'));
   const [isMuted, setIsMuted] = useState(false);
   const [zoomed, setZoomed] = useState(false);
-  const [authorIsVip, setAuthorIsVip] = useState(false);
-  const [authorIsVerified, setAuthorIsVerified] = useState(false);
+  const authorIsVip = authorBadgeType === 'vip';
+  const authorIsVerified = Boolean(authorBadgeType);
   const [carouselIndex, setCarouselIndex] = useState(0);
   const [showPhotoReel, setShowPhotoReel] = useState(false);
   const [showAdminMenu, setShowAdminMenu] = useState(false);
@@ -397,8 +494,19 @@ export default function PostCard({ post, onCommentClick, currentUser: parentCurr
     }
   }, [parentCurrentUser]);
 
-  // VIP check disabled to prevent rate limiting
-  // All users show as non-VIP by default
+  useEffect(() => {
+    const saved = readReactionStore()[reactionPostKey];
+    setLiked(!!saved?.liked);
+    setFireReacted(!!saved?.fireReacted);
+    setWowReacted(!!saved?.wowReacted);
+    setLikesCount(Number.isFinite(saved?.likesCount) ? saved.likesCount : (post.likes_count || 0));
+    setFireCount(Number.isFinite(saved?.fireCount) ? saved.fireCount : (post.fire_count || 0));
+    setWowCount(Number.isFinite(saved?.wowCount) ? saved.wowCount : (post.wow_count || 0));
+  }, [reactionPostKey, post.likes_count, post.fire_count, post.wow_count]);
+
+  useEffect(() => {
+    setSavedPost(!!readSavedPostStore()[reactionPostKey]?.saved);
+  }, [reactionPostKey]);
 
   // Use refs so DB updates always use the latest count, not stale closure values
   const likesCountRef = useRef(likesCount);
@@ -409,42 +517,48 @@ export default function PostCard({ post, onCommentClick, currentUser: parentCurr
   useEffect(() => { wowCountRef.current = wowCount; }, [wowCount]);
 
   const toggleReaction = async (type, pending, setPending, setReacted, setCount, countRef) => {
+    if (pending) return;
+    const wasActive = type === 'like' ? liked : type === 'fire' ? fireReacted : wowReacted;
+    const nextActive = !wasActive;
+    const currentCount = Number(countRef.current || 0);
+    const nextCount = nextActive ? currentCount + 1 : Math.max(0, currentCount - 1);
+    const nextSavedState = {
+      liked: type === 'like' ? nextActive : liked,
+      fireReacted: type === 'fire' ? nextActive : fireReacted,
+      wowReacted: type === 'wow' ? nextActive : wowReacted,
+      likesCount: type === 'like' ? nextCount : likesCountRef.current,
+      fireCount: type === 'fire' ? nextCount : fireCountRef.current,
+      wowCount: type === 'wow' ? nextCount : wowCountRef.current,
+    };
+
+    setReacted(nextActive);
+    setCount(nextCount);
+    writeReactionState(reactionPostKey, nextSavedState);
+
     const isLocalPost = !post.id || post.id?.startsWith('demo') || post.id?.startsWith('DEMO');
     if (isLocalPost) {
-      const wasActive = type === 'like' ? liked : type === 'fire' ? fireReacted : wowReacted;
-      setReacted(!wasActive);
-      setCount(prev => wasActive ? Math.max(0, prev - 1) : prev + 1);
       return;
     }
     let activeUser = currentUser;
     if (!activeUser) {
       try { activeUser = await base44.auth.me(); if (activeUser) { PostCard._cachedUser = activeUser; setCurrentUser(activeUser); } } catch (e) {}
     }
-    if (!activeUser) { toast.error('Please login to react'); return; }
-    if (pending) return;
+    if (!activeUser) return;
     setPending(true);
-    // Optimistic update
-    const wasActive = type === 'like' ? liked : type === 'fire' ? fireReacted : wowReacted;
-    if (wasActive) {
-      setReacted(false);
-      setCount(prev => Math.max(0, prev - 1));
-    } else {
-      setReacted(true);
-      setCount(prev => prev + 1);
-    }
     try {
       const res = await base44.functions.invoke('toggleReaction', { post_id: post.id, user_id: activeUser.id, type });
       const data = res?.data;
       if (data?.newCount !== undefined) {
         setCount(data.newCount);
         setReacted(data.action === 'added');
+        writeReactionState(reactionPostKey, {
+          ...nextSavedState,
+          [type === 'like' ? 'liked' : type === 'fire' ? 'fireReacted' : 'wowReacted']: data.action === 'added',
+          [type === 'like' ? 'likesCount' : type === 'fire' ? 'fireCount' : 'wowCount']: data.newCount,
+        });
       }
     } catch (error) {
       console.error('Reaction error:', error);
-      // Revert optimistic update
-      setReacted(wasActive);
-      setCount(countRef.current);
-      toast.error('Failed to react');
     } finally {
       setPending(false);
     }
@@ -495,6 +609,13 @@ export default function PostCard({ post, onCommentClick, currentUser: parentCurr
       triggerPhotoWowEffect();
     }
     return toggleReaction('wow', wowPending, setWowPending, setWowReacted, setWowCount, wowCountRef);
+  };
+
+  const handleSavePost = () => {
+    const next = !savedPost;
+    setSavedPost(next);
+    writeSavedPostState(reactionPostKey, next);
+    toast.success(next ? 'Saved' : 'Removed from saved');
   };
 
 
@@ -575,7 +696,7 @@ export default function PostCard({ post, onCommentClick, currentUser: parentCurr
               <div>
                 <div className="flex items-center gap-1.5">
                   <p className="font-bold text-[13px]" style={{ color: isLightMode ? '#111111' : '#ffffff', textShadow: isLightMode ? 'none' : '0 1px 6px rgba(0,0,0,0.4)', fontWeight: 700 }}>{post.author_name || 'User'}</p>
-                  {authorIsVerified && <VerifiedBadge type="verified" size="sm" />}
+                  {authorBadgeType && <VerifiedBadge type={authorBadgeType} size="sm" />}
                 </div>
                 <p className="text-[11px]" style={{ color: isLightMode ? '#8E8E93' : 'rgba(255,255,255,0.9)', textShadow: isLightMode ? 'none' : '0 1px 4px rgba(0,0,0,0.35)', fontWeight: 500 }}>@{post.author_username} · {timeAgo(post.created_date)}</p>
               </div>
@@ -639,6 +760,14 @@ export default function PostCard({ post, onCommentClick, currentUser: parentCurr
       {/* ── CAROUSEL POST (multi-photo) ── */}
       {asArray(post.image_urls).length > 1 && !isVideoPost && (
         <>
+          {isLightMode && (
+            <LightPostAuthorHeader
+              post={post}
+              avatarSrc={avatarSrc}
+              authorBadgeType={authorBadgeType}
+              onMenuClick={() => setShowMenu(true)}
+            />
+          )}
           <motion.div
             className="relative mx-4 mt-4 overflow-visible group spicey-post-card"
             style={spiceyCardShell}>
@@ -649,14 +778,15 @@ export default function PostCard({ post, onCommentClick, currentUser: parentCurr
                 images={post.image_urls} 
                 onDoubleTap={() => setShowPhotoReel(true)}
                 onIndexChange={setCarouselIndex}
+                autoAdvanceMs={asArray(post.image_urls).length > 3 ? 40000 : 0}
               />
               <PremiumPhotoLikeEffect show={photoLikeBurst} />
               <PremiumPhotoFireEffect burst={photoFireBurst} active={fireReacted} />
               <PremiumPhotoWowEffect burst={photoWowBurst} active={wowReacted} />
               {/* Author header */}
-              <div className="absolute top-0 left-0 right-0 h-20 pointer-events-none z-10"
+              <div className="absolute top-0 left-0 right-0 h-20 pointer-events-none z-10 spicey-post-top-gradient"
                 style={{ background: isLightMode ? 'linear-gradient(to bottom, rgba(255,255,255,0.85), transparent)' : 'linear-gradient(to bottom, rgba(0,0,0,0.7), transparent)' }} />
-              <div className="absolute top-3.5 left-3.5 flex items-center gap-2.5 z-20">
+              <div className="absolute top-3.5 left-3.5 flex items-center gap-2.5 z-20 spicey-post-overlay-author">
                 <Link to={`/profile/${post.author_id}`} className="flex items-center gap-2.5">
                   <div className="p-0.5 rounded-full flex-shrink-0"
                     style={{ background: 'linear-gradient(135deg, #ff5500, #ee1e8c)' }}>
@@ -669,15 +799,15 @@ export default function PostCard({ post, onCommentClick, currentUser: parentCurr
                   </div>
                   <div>
                     <div className="flex items-center gap-1.5">
-                      <p className="font-bold text-[13px] leading-tight text-white" style={{ textShadow: '0 1px 3px rgba(0,0,0,0.5)' }}>{post.author_name || 'User'}</p>
-                      {authorIsVerified && <VerifiedBadge type="verified" size="sm" />}
+                      <p className="font-bold text-[13px] leading-tight text-white" style={{ textShadow: 'none' }}>{post.author_name || 'User'}</p>
+                      {authorBadgeType && <VerifiedBadge type={authorBadgeType} size="sm" />}
                     </div>
                     <p className="text-[11px] leading-tight text-white/75">@{post.author_username} · {timeAgo(post.created_date)}</p>
                   </div>
                 </Link>
               </div>
               <button onClick={() => setShowMenu(true)}
-                className="absolute top-3.5 right-3.5 w-8 h-8 rounded-full flex items-center justify-center z-20"
+                className="absolute top-3.5 right-3.5 w-8 h-8 rounded-full flex items-center justify-center z-20 spicey-post-overlay-menu"
                 style={{ background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(8px)', border: '1px solid rgba(255,255,255,0.1)' }}>
                 <MoreHorizontal className="w-4 h-4 text-white" />
               </button>
@@ -695,7 +825,7 @@ export default function PostCard({ post, onCommentClick, currentUser: parentCurr
 
               {/* Bottom gradient + caption */}
               <div className="absolute bottom-0 left-0 right-0 h-32 pointer-events-none spicey-post-bottom-gradient" />
-              <div className="absolute bottom-[62px] left-3 right-20 z-10">
+              <div className="absolute left-5 right-20 z-10 spicey-photo-title-stack">
                 {post.music_title && (
                   <div className="flex items-center gap-1.5 mb-1.5 max-w-[180px]"
                     style={{ background: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(8px)', borderRadius: 20, padding: '3px 10px 3px 7px', border: '1px solid rgba(255,255,255,0.15)' }}>
@@ -714,8 +844,9 @@ export default function PostCard({ post, onCommentClick, currentUser: parentCurr
                 fireCount={fireCount}
                 likesCount={likesCount}
                 wowCount={wowCount}
-                sharesCount={post.shares_count}
-                onClick={() => setShowStats(true)}
+                onLike={handleLike}
+                onFire={handleFireReact}
+                onWow={handleWow}
               />
             </div>
 
@@ -724,6 +855,8 @@ export default function PostCard({ post, onCommentClick, currentUser: parentCurr
               <SideAction icon={Flame} count={fireCount} onClick={handleFireReact} active={fireReacted} type="fire" />
               <SideAction icon={MessageCircle} count={post.comments_count || 0} onClick={() => onCommentClick?.(post)} type="comment" />
               <SideAction icon={Zap} count={wowCount} onClick={handleWow} active={wowReacted} type="wow" />
+              <SideAction icon={Share2} count={post.shares_count || 0} onClick={() => setShowShare(true)} type="share" />
+              <SideAction icon={Bookmark} count={0} onClick={handleSavePost} active={savedPost} type="save" />
             </div>
 
           </motion.div>
@@ -732,9 +865,11 @@ export default function PostCard({ post, onCommentClick, currentUser: parentCurr
             post={post}
             likesCount={likesCount}
             commentsCount={post.comments_count}
+            sharesCount={post.shares_count}
             isLight={isLightMode}
             onLikesClick={() => setShowReactions(true)}
             onCommentsClick={() => onCommentClick?.(post)}
+            onSharesClick={() => setShowShare(true)}
           />
 
           {/* Photo Reel Viewer */}
@@ -793,7 +928,7 @@ export default function PostCard({ post, onCommentClick, currentUser: parentCurr
                   <img src={avatarSrc} alt={post.author_name} className="w-9 h-9 rounded-full object-cover" />
                 </div>
                 <div>
-                  <p className="font-bold text-[13px] leading-tight text-white" style={{ textShadow: '0 1px 3px rgba(0,0,0,0.5)' }}>{post.author_name || 'User'}</p>
+                  <p className="font-bold text-[13px] leading-tight text-white" style={{ textShadow: 'none' }}>{post.author_name || 'User'}</p>
                   <p className="text-[11px] leading-tight text-white/75">@{post.author_username} · {timeAgo(post.created_date)}</p>
                 </div>
               </Link>
@@ -807,11 +942,13 @@ export default function PostCard({ post, onCommentClick, currentUser: parentCurr
               <SideAction icon={Flame} count={fireCount} onClick={handleFireReact} active={fireReacted} type="fire" />
               <SideAction icon={MessageCircle} count={post.comments_count} onClick={() => onCommentClick?.(post)} active={false} type="comment" />
               <SideAction icon={Zap} count={wowCount} onClick={handleWow} active={wowReacted} type="wow" />
+              <SideAction icon={Share2} count={post.shares_count || 0} onClick={() => setShowShare(true)} type="share" />
+              <SideAction icon={Bookmark} count={0} onClick={handleSavePost} active={savedPost} type="save" />
             </div>
             <div className="absolute bottom-0 left-0 right-20 h-32 pointer-events-none spicey-post-bottom-gradient"
               style={{ background: 'transparent' }} />
             <div className="absolute bottom-3 left-3 right-20">
-              {post.caption && <p className="text-[13px] font-semibold leading-snug line-clamp-2 text-white" style={{ textShadow: '0 1px 4px rgba(0,0,0,0.8)' }}>{post.caption}</p>}
+              {post.caption && <p className="text-[13px] font-semibold leading-snug line-clamp-2 text-white" style={{ textShadow: 'none' }}>{post.caption}</p>}
             </div>
             <AnimatePresence>
               {doubleTapHeart && (
@@ -842,6 +979,14 @@ export default function PostCard({ post, onCommentClick, currentUser: parentCurr
       {/* ── IMAGE/VIDEO POST ── */}
       {post.image_url && !isVideoPost && !asArray(post.image_urls).length > 1 && (
         <>
+          {isLightMode && (
+            <LightPostAuthorHeader
+              post={post}
+              avatarSrc={avatarSrc}
+              authorBadgeType={authorBadgeType}
+              onMenuClick={() => setShowMenu(true)}
+            />
+          )}
           <motion.div
             className="relative mx-4 mt-4 overflow-visible group spicey-post-card"
             style={spiceyCardShell}>
@@ -849,12 +994,12 @@ export default function PostCard({ post, onCommentClick, currentUser: parentCurr
               {post.image_url.match(/\.(mp4|webm|mov|avi)$/i) || post.image_url.includes('.m3u8') ? (
                 <>
                   {post.image_url.includes('.m3u8') ? (
-                    <VideoWithHLS src={post.image_url} className="w-full object-cover" style={{ aspectRatio: '4/5', display: 'block' }} autoPlay loop muted={isMuted} onDoubleClick={handleDoubleTap} />
+                    <VideoWithHLS src={post.image_url} className="w-full object-cover spicey-wow-photo" style={{ aspectRatio: '4/5', display: 'block' }} autoPlay loop muted={isMuted} onDoubleClick={handleDoubleTap} />
                   ) : (
                     <video
                       ref={videoRef}
                       src={post.image_url}
-                      className="w-full object-cover"
+                      className="w-full object-cover spicey-wow-photo"
                       style={{ aspectRatio: '4/5', display: 'block' }}
                       autoPlay
                       loop
@@ -950,13 +1095,13 @@ export default function PostCard({ post, onCommentClick, currentUser: parentCurr
             </AnimatePresence>
 
             {/* Top gradient — always visible for readability */}
-            <div className="absolute top-0 left-0 right-0 h-32 pointer-events-none"
+            <div className="absolute top-0 left-0 right-0 h-32 pointer-events-none spicey-post-top-gradient"
               style={{ zIndex: 6, background: isLightMode
                 ? 'linear-gradient(to bottom, rgba(255,255,255,0.85) 0%, rgba(255,255,255,0.4) 50%, transparent 100%)'
                 : 'linear-gradient(to bottom, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.7) 50%, transparent 100%)' }} />
 
             {/* Author header */}
-            <div className="absolute top-3.5 left-3.5 flex items-center gap-2.5" style={{ zIndex: 10 }}>
+            <div className="absolute top-3.5 left-3.5 flex items-center gap-2.5 spicey-post-overlay-author" style={{ zIndex: 10 }}>
               <Link to={`/profile/${post.author_id}`} className="flex items-center gap-2.5">
                 <div className="p-0.5 rounded-full flex-shrink-0"
                   style={{ background: 'linear-gradient(135deg, #ff5500, #ee1e8c)' }}>
@@ -966,7 +1111,7 @@ export default function PostCard({ post, onCommentClick, currentUser: parentCurr
                 <div>
                   <div className="flex items-center gap-1.5">
                     <p className="font-bold text-[13px] leading-tight" style={{ color: '#ffffff', textShadow: '0 1px 8px rgba(0,0,0,0.8), 0 2px 12px rgba(0,0,0,0.6)' }}>{post.author_name || 'User'}</p>
-                    {authorIsVerified && <VerifiedBadge type="verified" size="sm" />}
+                    {authorBadgeType && <VerifiedBadge type={authorBadgeType} size="sm" />}
                   </div>
                   <p className="text-[11px] leading-tight" style={{ color: 'rgba(255,255,255,0.9)', textShadow: '0 1px 6px rgba(0,0,0,0.8)' }}>@{post.author_username} · {timeAgo(post.created_date)}</p>
                 </div>
@@ -975,14 +1120,14 @@ export default function PostCard({ post, onCommentClick, currentUser: parentCurr
 
             {/* 3-dot menu — top right, separate from side actions */}
             <button onClick={() => setShowMenu(true)}
-              className="absolute top-3.5 right-3.5 w-8 h-8 rounded-full flex items-center justify-center"
+              className="absolute top-3.5 right-3.5 w-8 h-8 rounded-full flex items-center justify-center spicey-post-overlay-menu"
               style={{ zIndex: 10, background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(8px)', border: '1px solid rgba(255,255,255,0.1)', cursor: 'pointer' }}>
               <MoreHorizontal className="w-4 h-4 text-white" />
             </button>
 
             {/* Bottom gradient */}
             <div className="absolute bottom-0 left-0 right-0 h-36 pointer-events-none spicey-post-bottom-gradient" />
-            <div className="absolute bottom-[62px] left-3 right-20">
+            <div className="absolute left-5 right-20 spicey-photo-caption-stack spicey-photo-title-stack">
               {post.music_title && (
                 <div className="flex items-center gap-1.5 mb-1.5 max-w-[180px]"
                   style={{ background: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(8px)', borderRadius: 20, padding: '3px 10px 3px 7px', border: '1px solid rgba(255,255,255,0.15)' }}>
@@ -1001,8 +1146,9 @@ export default function PostCard({ post, onCommentClick, currentUser: parentCurr
               fireCount={fireCount}
               likesCount={likesCount}
               wowCount={wowCount}
-              sharesCount={post.shares_count}
-              onClick={() => setShowStats(true)}
+              onLike={handleLike}
+              onFire={handleFireReact}
+              onWow={handleWow}
             />
 
             {/* Side action buttons — inside overflow-visible motion.div, outside the overflow-hidden inner div */}
@@ -1011,15 +1157,19 @@ export default function PostCard({ post, onCommentClick, currentUser: parentCurr
               <SideAction icon={Flame} count={fireCount} onClick={handleFireReact} active={fireReacted} type="fire" />
               <SideAction icon={MessageCircle} count={post.comments_count || 0} onClick={() => onCommentClick?.(post)} type="comment" />
               <SideAction icon={Zap} count={wowCount} onClick={handleWow} active={wowReacted} type="wow" />
+              <SideAction icon={Share2} count={post.shares_count || 0} onClick={() => setShowShare(true)} type="share" />
+              <SideAction icon={Bookmark} count={0} onClick={handleSavePost} active={savedPost} type="save" />
             </div>
           </motion.div>
           <LikedByRow
             post={post}
             likesCount={likesCount}
             commentsCount={post.comments_count}
+            sharesCount={post.shares_count}
             isLight={isLightMode}
             onLikesClick={() => setShowReactions(true)}
             onCommentsClick={() => onCommentClick?.(post)}
+            onSharesClick={() => setShowShare(true)}
           />
         </>
       )}

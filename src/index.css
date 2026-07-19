@@ -213,6 +213,52 @@
   display: none;
 }
 
+@media (max-width: 600px) {
+  html {
+    font-size: 14.5px;
+  }
+
+  #main-scroll,
+  .spicey-feed-page,
+  .messages-page,
+  .messages-page-light,
+  .profile-page,
+  .settings-page,
+  .contacts-map-page,
+  .ai-page,
+  .spicey-ai-page {
+    font-size: 14px;
+  }
+
+  .spicey-premium-feed-shell {
+    padding-left: 12px !important;
+    padding-right: 12px !important;
+  }
+
+  .spicey-premium-header {
+    min-height: 62px !important;
+  }
+
+  .spicey-premium-story {
+    flex-basis: 62px !important;
+    width: 62px !important;
+  }
+
+  .spicey-premium-story .ring {
+    width: 58px !important;
+    height: 58px !important;
+  }
+
+  .spicey-premium-story img {
+    width: 52px !important;
+    height: 52px !important;
+  }
+
+  .spicey-premium-story small {
+    font-size: 10px !important;
+  }
+}
+
 [data-placeholder]:empty:before {
   content: attr(data-placeholder);
   color: rgba(255, 255, 255, 0.75);
@@ -225,13 +271,13 @@
 }
 
 @keyframes pulse-glow {
-  0%, 100% { 
-    transform: scale(1); 
+  0%, 100% {
+    transform: scale(1);
     opacity: 0.4;
     box-shadow: 0 0 60px rgba(255,106,0,0.4), 0 0 120px rgba(255,45,85,0.2);
   }
-  50% { 
-    transform: scale(1.05); 
+  50% {
+    transform: scale(1.05);
     opacity: 0.7;
     box-shadow: 0 0 80px rgba(255,106,0,0.6), 0 0 160px rgba(255,45,85,0.35);
   }
@@ -379,10 +425,10 @@
 }
 
 @keyframes neon-pulse {
-  0%, 100% { 
+  0%, 100% {
     box-shadow: 0 0 24px rgba(160,32,240,0.7), 0 0 48px rgba(255,80,0,0.4), inset 0 0 20px rgba(255,100,0,0.15);
   }
-  50% { 
+  50% {
     box-shadow: 0 0 36px rgba(160,32,240,0.9), 0 0 72px rgba(255,80,0,0.6), inset 0 0 30px rgba(255,100,0,0.25);
   }
 }
@@ -429,10 +475,31 @@
 }
 
 .light-mode .feed-header-bar {
-  background: rgba(255,255,255,0.94) !important;
-  backdrop-filter: blur(20px) !important;
-  border-bottom: 1px solid rgba(21,18,28,0.08) !important;
-  box-shadow: 0 2px 14px rgba(20,18,28,0.05) !important;
+  background: linear-gradient(180deg, rgba(255,255,255,0.94), rgba(255,255,255,0.62)) !important;
+  backdrop-filter: blur(24px) saturate(1.18) !important;
+  -webkit-backdrop-filter: blur(24px) saturate(1.18) !important;
+  border-bottom: 0 !important;
+  box-shadow: none !important;
+}
+
+.light-mode .feed-header-bar .w-7.h-7 {
+  color: #11131c !important;
+  filter: none !important;
+}
+
+.light-mode .feed-header-bar .h-12.rounded-full:not(.spicey-home-settings-button) {
+  background: rgba(255,255,255,0.76) !important;
+  color: #777481 !important;
+  border: 1px solid rgba(21, 18, 28, 0.07) !important;
+  box-shadow: 0 14px 34px rgba(40, 20, 70, 0.08), inset 0 1px 0 rgba(255,255,255,0.92) !important;
+}
+
+.light-mode .feed-header-bar .h-12.rounded-full:not(.spicey-home-settings-button) span {
+  color: rgba(35, 30, 45, 0.48) !important;
+}
+
+.light-mode .feed-header-bar .h-12.rounded-full:not(.spicey-home-settings-button) svg {
+  color: #15121c !important;
 }
 
 .light-mode .bottom-nav-bg {
@@ -440,6 +507,12 @@
   backdrop-filter: blur(20px) !important;
   border-top: 1px solid rgba(21,18,28,0.08) !important;
   box-shadow: 0 -3px 18px rgba(20,18,28,0.06) !important;
+}
+
+.light-mode #bottom-nav > div {
+  background: rgba(255,255,255,0.84) !important;
+  border: 1px solid rgba(255,255,255,0.92) !important;
+  box-shadow: 0 18px 42px rgba(35, 21, 48, 0.13), inset 0 1px 0 rgba(255,255,255,0.94) !important;
 }
 
 .light-mode .messages-topbar {
@@ -582,6 +655,53 @@
   color: rgba(255,255,255,0.75) !important;
 }
 
+.spicey-home-settings-button {
+  background:
+    radial-gradient(circle at 76% 16%, rgba(255, 118, 32, 0.18), transparent 34%),
+    linear-gradient(145deg, rgba(20, 18, 24, 0.96), rgba(4, 4, 8, 0.98)) !important;
+  border-color: rgba(255,255,255,0.12) !important;
+  box-shadow:
+    0 10px 22px rgba(0,0,0,0.42),
+    inset 0 1px 0 rgba(255,255,255,0.14),
+    inset 0 -9px 16px rgba(0,0,0,0.42) !important;
+}
+
+.spicey-home-settings-button > span[aria-hidden="true"] {
+  background: linear-gradient(180deg, rgba(255,255,255,0.18), rgba(255,255,255,0.03)) !important;
+  filter: none !important;
+}
+
+.spicey-home-settings-button svg {
+  color: #ffffff !important;
+  stroke: #ffffff !important;
+}
+
+html.light-mode .spicey-home-settings-button,
+body.light-mode .spicey-home-settings-button,
+[data-theme="light"] .spicey-home-settings-button {
+  background: linear-gradient(145deg, #ff6a00 0%, #ff2d8e 52%, #8b2cff 100%) !important;
+  border-color: rgba(255,123,24,0.58) !important;
+  box-shadow:
+    0 12px 24px rgba(255,45,133,0.24),
+    0 5px 16px rgba(255,106,0,0.18),
+    inset 0 1px 0 rgba(255,210,165,0.58),
+    inset 0 -9px 16px rgba(74,0,90,0.24) !important;
+}
+
+html.light-mode .spicey-home-settings-button > span[aria-hidden="true"],
+body.light-mode .spicey-home-settings-button > span[aria-hidden="true"],
+[data-theme="light"] .spicey-home-settings-button > span[aria-hidden="true"] {
+  background: linear-gradient(180deg, rgba(255,184,70,0.92), rgba(255,106,0,0.20)) !important;
+  filter: blur(0.15px) drop-shadow(0 0 6px rgba(255,106,0,0.35)) !important;
+}
+
+html.light-mode .spicey-home-settings-button svg,
+body.light-mode .spicey-home-settings-button svg,
+[data-theme="light"] .spicey-home-settings-button svg {
+  color: #ffffff !important;
+  stroke: #ffffff !important;
+}
+
 /* BANUBA CAMERA - NO BLUR FILTERS */
 [data-prevent-light-mode="true"] [ref],
 [data-prevent-light-mode="true"] div[ref],
@@ -613,12 +733,12 @@
 }
 
 .spicey-wow-photo {
-  filter: saturate(1.18) contrast(1.07) brightness(1.025) sepia(0.035);
+  filter: saturate(1.34) contrast(1.13) brightness(0.96) sepia(0.075) hue-rotate(-4deg);
   transform: translateZ(0);
 }
 
 .light-mode .spicey-wow-photo {
-  filter: saturate(1.12) contrast(1.045) brightness(1.015) sepia(0.025);
+  filter: saturate(1.34) contrast(1.08) brightness(1.02) sepia(0.04) hue-rotate(-5deg);
 }
 
 .spicey-photo-like-premium {
@@ -937,6 +1057,111 @@
   background: linear-gradient(180deg, transparent 0%, rgba(255, 255, 255, 0.16) 28%, rgba(255, 255, 255, 0.78) 100%);
 }
 
+.spicey-photo-title-stack {
+  top: auto;
+  bottom: 30px;
+  max-width: min(74%, 330px);
+  pointer-events: none;
+}
+
+.spicey-photo-title-overlay {
+  width: 100%;
+  color: #fff;
+  text-shadow: none;
+}
+
+.spicey-photo-title-kicker {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  margin: 0 0 24px;
+  color: rgba(255,255,255,0.70);
+  font-size: clamp(12px, 3vw, 16px);
+  line-height: 1;
+  font-weight: 650;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  text-shadow: 0 2px 12px rgba(0,0,0,0.72);
+}
+
+.spicey-photo-title-main {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  max-width: 100%;
+  font-family: "Inter", "Arial Black", sans-serif;
+  font-size: clamp(24px, 7.2vw, 39px);
+  line-height: 0.78;
+  font-weight: 760;
+  letter-spacing: 0;
+  text-transform: uppercase;
+  transform: scaleX(0.8);
+  transform-origin: left center;
+  background: linear-gradient(180deg, #ff25b8 0%, #ff356c 46%, #ff8b2a 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 3px 6px rgba(0,0,0,0.46));
+}
+
+.spicey-photo-title-main span {
+  display: block;
+}
+
+.spicey-photo-title-sub {
+  margin: 12px 0 0;
+  max-width: 84%;
+  color: rgba(255,255,255,0.90);
+  font-size: clamp(9px, 2.4vw, 12px);
+  line-height: 1.18;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  text-shadow: 0 2px 10px rgba(0,0,0,0.72);
+}
+
+.light-mode .spicey-photo-title-main {
+  filter: drop-shadow(0 2px 4px rgba(60,24,54,0.12));
+}
+
+.light-mode .spicey-photo-title-sub {
+  max-width: 76%;
+  margin-top: 9px;
+  color: rgba(255,255,255,0.82);
+  font-family: "Inter", "Helvetica Neue", Arial, sans-serif;
+  font-size: clamp(7px, 1.75vw, 9px);
+  line-height: 1.32;
+  font-weight: 250;
+  letter-spacing: 0.075em;
+  text-transform: uppercase;
+  text-shadow: 0 1px 7px rgba(0,0,0,0.58);
+}
+
+.light-mode .spicey-photo-title-kicker {
+  color: rgba(35, 20, 46, 0.66);
+  text-shadow: none;
+}
+
+@media (max-width: 380px) {
+  .spicey-photo-title-stack {
+    top: auto;
+    bottom: 26px;
+    max-width: 74%;
+  }
+  .spicey-photo-title-kicker {
+    gap: 8px;
+    margin-bottom: 20px;
+    font-size: 11px;
+  }
+  .spicey-photo-title-main {
+    font-size: clamp(21px, 6.8vw, 34px);
+  }
+  .spicey-photo-title-sub {
+    font-size: 9px;
+  }
+}
+
 @keyframes spicey-wow-active-breathe {
   from {
     opacity: 0.24;
@@ -961,14 +1186,61 @@
 
 .spicey-reaction-rail {
   position: absolute;
-  right: 12px;
-  bottom: 84px;
+  right: 14px;
+  top: 82px;
   z-index: 30;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 10px;
+  gap: 7px;
+  pointer-events: none;
+}
+
+.spicey-fluid-side-action {
+  width: 48px;
+  min-width: 48px;
+  max-width: 48px;
+  min-height: 40px;
   pointer-events: auto;
+  touch-action: manipulation;
+}
+
+.spicey-fluid-side-action > div:nth-child(2) {
+  width: 42px;
+  height: 30px;
+  border-radius: 999px;
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+.spicey-fluid-side-action svg {
+  width: 25px;
+  height: 25px;
+}
+
+.spicey-fluid-side-action span {
+  font-size: 11px;
+  font-weight: 750;
+  text-shadow: none;
+  filter: none;
+}
+
+.spicey-reaction-rail,
+.spicey-reaction-rail *,
+.spicey-reaction-rail *::before,
+.spicey-reaction-rail *::after {
+  filter: none !important;
+  box-shadow: none !important;
+  text-shadow: none !important;
+}
+
+.light-mode .spicey-fluid-side-action > div:nth-child(2) {
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
 }
 
 .spicey-talk-action {
@@ -992,24 +1264,28 @@
 
 .spicey-stat-pill {
   display: flex;
-  width: fit-content;
-  max-width: calc(100% - 52px);
-  margin: 10px auto 4px;
-  padding: 7px 15px;
+  width: min(224px, calc(100% - 94px));
+  max-width: calc(100% - 72px);
+  margin: 7px auto 2px;
+  padding: 6px 15px;
   border-radius: 999px;
   position: relative;
   overflow: hidden;
   background:
-    radial-gradient(circle at 12% 50%, rgba(255, 191, 70, 0.52), transparent 28%),
-    linear-gradient(100deg, rgba(255, 106, 0, 0.82) 0%, rgba(255, 45, 143, 0.54) 46%, rgba(123, 47, 255, 0.42) 100%);
-  border: 1px solid rgba(255, 255, 255, 0.22);
+    radial-gradient(ellipse at -7% 50%, rgba(255, 126, 20, 0.34) 0%, rgba(255, 72, 24, 0.16) 24%, transparent 46%),
+    radial-gradient(ellipse at 106% 52%, rgba(151, 65, 255, 0.32) 0%, rgba(176, 60, 255, 0.15) 25%, transparent 48%),
+    linear-gradient(100deg, rgba(42, 14, 12, 0.42) 0%, rgba(8, 7, 13, 0.50) 38%, rgba(7, 7, 13, 0.48) 68%, rgba(18, 10, 34, 0.46) 100%);
+  border: 0;
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.28),
-    inset 0 -12px 22px rgba(11, 2, 20, 0.36),
-    0 8px 22px rgba(0, 0, 0, 0.34),
-    0 0 14px rgba(255, 45, 143, 0.2);
-  backdrop-filter: blur(18px) saturate(1.25);
-  -webkit-backdrop-filter: blur(18px) saturate(1.25);
+    inset 0 1px 0 rgba(255, 255, 255, 0.18),
+    inset 0 -8px 16px rgba(8, 2, 22, 0.34),
+    0 7px 14px rgba(0, 0, 0, 0.24),
+    0 0 10px rgba(165, 74, 255, 0.14),
+    -6px 0 12px rgba(255, 98, 24, 0.13),
+    6px 0 12px rgba(151, 65, 255, 0.13);
+  backdrop-filter: blur(14px) saturate(1.14);
+  -webkit-backdrop-filter: blur(14px) saturate(1.14);
+  pointer-events: auto;
 }
 
 .spicey-stat-pill::before {
@@ -1017,9 +1293,9 @@
   position: absolute;
   inset: 0;
   border-radius: inherit;
-  padding: 1px;
+  padding: 1.2px;
   pointer-events: none;
-  background: linear-gradient(90deg, #ffb13b, #ff2d8f 56%, #9d4dff);
+  background: linear-gradient(90deg, #ff7a18 0%, #ff375f 25%, rgba(255,255,255,0.42) 50%, #8b4dff 100%);
   -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
   -webkit-mask-composite: xor;
   mask-composite: exclude;
@@ -1030,8 +1306,8 @@
   position: absolute;
   left: 10px;
   right: 10px;
-  top: 2px;
-  height: 42%;
+  top: 3px;
+  height: 38%;
   border-radius: 999px;
   pointer-events: none;
   background: linear-gradient(180deg, rgba(255,255,255,0.22), transparent);
@@ -1045,8 +1321,7 @@
   z-index: 28;
   margin: 0;
   transform: translateX(-50%);
-  max-width: calc(100% - 92px);
-  min-height: 34px;
+  min-height: 46px;
   pointer-events: auto;
 }
 
@@ -1055,25 +1330,42 @@
   z-index: 1;
   display: flex;
   align-items: center;
-  gap: 10px;
-  transform: translateY(2px);
+  justify-content: space-between;
+  width: 100%;
+  gap: 11px;
+  transform: translateY(0);
+  pointer-events: auto;
 }
 
 .spicey-stat-pill-item {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 3px;
   color: #ffffff;
   font-size: 9px;
   font-weight: 700;
   line-height: 1;
   text-shadow: 0 1px 8px rgba(0, 0, 0, 0.56);
+  appearance: none;
+  background: transparent;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  pointer-events: auto;
+  touch-action: manipulation;
+  position: relative;
+  z-index: 3;
 }
 
 .spicey-stat-pill-emoji {
-  font-size: 11px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
   line-height: 1;
-  filter: drop-shadow(0 0 8px rgba(255, 96, 40, 0.38));
+  filter: drop-shadow(0 2px 5px rgba(0, 0, 0, 0.34));
+  transform: translateZ(0);
 }
 
 .spicey-stat-pill-divider {
@@ -1089,12 +1381,13 @@
 
 @media (max-width: 390px) {
   .spicey-stat-pill-inside {
-    max-width: calc(100% - 100px);
-    padding: 7px 12px;
+    width: min(248px, calc(100% - 78px));
+    max-width: calc(100% - 78px);
+    padding: 8px 20px;
   }
 
   .spicey-stat-pill-content {
-    gap: 10px;
+    gap: 16px;
   }
 }
 
@@ -1111,7 +1404,7 @@
 .spicey-liked-row {
   display: flex;
   align-items: center;
-  gap: 5px;
+  gap: 7px;
   min-height: 22px;
   margin: 3px 18px 0;
   padding: 0;
@@ -1156,6 +1449,7 @@
   font-weight: 600;
   line-height: 1.2;
   cursor: pointer;
+  max-width: min(56%, 250px);
 }
 
 .spicey-liked-copy span {
@@ -1175,8 +1469,50 @@
   cursor: pointer;
 }
 
+.spicey-liked-shares {
+  flex-shrink: 0;
+  border: 0;
+  background: transparent;
+  padding: 0;
+  font-size: 9.5px;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+/* Activity below photo: intentionally shared by dark and light feeds. */
+html body .spicey-liked-row {
+  display: flex !important;
+  visibility: visible !important;
+  align-items: center !important;
+  min-height: 24px !important;
+}
+
+html body .spicey-liked-comments,
+html body .spicey-liked-shares {
+  display: inline-flex !important;
+  visibility: visible !important;
+  align-items: center !important;
+  gap: 2px !important;
+}
+
+html body .spicey-liked-row--dark .spicey-liked-copy span,
+html body .spicey-liked-row--dark .spicey-liked-comments,
+html body .spicey-liked-row--dark .spicey-liked-shares {
+  color: rgba(238, 235, 244, 0.86) !important;
+}
+
+html body .spicey-liked-row--light .spicey-liked-copy span,
+html body .spicey-liked-row--light .spicey-liked-comments,
+html body .spicey-liked-row--light .spicey-liked-shares {
+  color: #4f4958 !important;
+  text-shadow: none !important;
+}
+
 .light-mode .spicey-stat-pill {
-  box-shadow: 0 10px 24px rgba(255, 45, 143, 0.18), 0 6px 20px rgba(255, 106, 0, 0.12);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.34),
+    0 8px 18px rgba(0, 0, 0, 0.16),
+    0 0 13px rgba(168, 74, 255, 0.18);
 }
 
 .spicey-video-avatar-frame {
@@ -1198,4 +1534,2842 @@
 .spicey-video-avatar-crop--soft {
   height: 104%;
   transform: translateY(-1.75%) scale(1.01);
+}
+
+.relative.z-10.px-4.pt-2.pb-2 > div[class*="top-[106px]"][class*="gap-2"] {
+  position: relative !important;
+  inset: auto !important;
+  display: flex !important;
+  justify-content: flex-end !important;
+  margin: 0 0 1rem !important;
+  width: 100% !important;
+}
+
+div.absolute.right-4.top-\[106px\].flex.gap-2 {
+  position: relative !important;
+  top: auto !important;
+  right: auto !important;
+  left: auto !important;
+  bottom: auto !important;
+  display: flex !important;
+  justify-content: flex-end !important;
+  margin: 0 0 1rem !important;
+  width: 100% !important;
+}
+
+/* Force final feed reaction pill style, even if an older module is cached. */
+html body .spicey-stat-pill.spicey-stat-pill-inside {
+  width: min(208px, calc(100% - 104px)) !important;
+  max-width: calc(100% - 104px) !important;
+  min-height: 34px !important;
+  padding: 5px 12px !important;
+  border: 0 !important;
+  background:
+    radial-gradient(ellipse at -8% 50%, rgba(255, 126, 20, 0.58) 0%, rgba(255, 92, 18, 0.32) 24%, transparent 48%),
+    radial-gradient(ellipse at 50% 115%, rgba(255, 45, 157, 0.34) 0%, rgba(255, 45, 157, 0.18) 28%, transparent 58%),
+    radial-gradient(ellipse at 108% 52%, rgba(139, 77, 255, 0.54) 0%, rgba(176, 60, 255, 0.30) 25%, transparent 50%),
+    linear-gradient(100deg, rgba(78, 22, 13, 0.46) 0%, rgba(16, 9, 22, 0.52) 38%, rgba(19, 8, 28, 0.50) 68%, rgba(35, 15, 66, 0.48) 100%) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.22),
+    inset 0 -7px 14px rgba(8, 2, 22, 0.32),
+    0 6px 12px rgba(0, 0, 0, 0.24),
+    0 0 12px rgba(255, 45, 157, 0.20),
+    -6px 0 12px rgba(255, 98, 24, 0.18),
+    6px 0 12px rgba(151, 65, 255, 0.18) !important;
+}
+
+html body .spicey-stat-pill.spicey-stat-pill-inside::before {
+  padding: 0.8px !important;
+  background: linear-gradient(90deg, rgba(255,122,24,0.90) 0%, rgba(255,55,95,0.78) 34%, rgba(255,45,157,0.70) 58%, rgba(139,77,255,0.82) 100%) !important;
+}
+
+html body .spicey-stat-pill.spicey-stat-pill-inside .spicey-stat-pill-content {
+  justify-content: space-between !important;
+  width: 100% !important;
+  gap: 8px !important;
+}
+
+html body .spicey-stat-pill.spicey-stat-pill-inside .spicey-stat-pill-divider {
+  display: none !important;
+}
+
+html body .spicey-stat-pill.spicey-stat-pill-inside .spicey-stat-pill-count {
+  display: inline-block !important;
+  color: rgba(255, 255, 255, 0.92) !important;
+  font-size: 9px !important;
+  font-weight: 750 !important;
+  line-height: 1 !important;
+  letter-spacing: 0 !important;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.58) !important;
+}
+
+html body .spicey-stat-pill.spicey-stat-pill-inside .spicey-stat-pill-emoji {
+  font-size: 18px !important;
+  line-height: 1 !important;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.28)) !important;
+}
+
+@media (max-width: 390px) {
+  html body .spicey-stat-pill.spicey-stat-pill-inside {
+    width: min(190px, calc(100% - 112px)) !important;
+    max-width: calc(100% - 112px) !important;
+    padding: 5px 10px !important;
+  }
+}
+
+/* Light feed reference pass. Scoped to home feed light mode only; dark mode is untouched. */
+.spicey-light-reference-feed {
+  --spicey-light-text: #111118;
+  --spicey-light-muted: #70707d;
+  --spicey-light-pink: #ff2d8f;
+  --spicey-light-purple: #8b2cff;
+  --spicey-light-orange: #ff7a00;
+  background: #ffffff !important;
+}
+
+.spicey-light-reference-feed .spicey-feed-shell,
+.spicey-light-reference-feed .spicey-fluid-feed-shell {
+  width: min(100%, 430px) !important;
+  margin: 0 auto !important;
+  padding: 0 !important;
+}
+
+.spicey-light-reference-feed .feed-header-bar {
+  padding: 0 14px 0 !important;
+  background: #ffffff !important;
+}
+
+.spicey-light-reference-feed .spicey-ng-topbar {
+  min-height: 64px !important;
+  padding-top: max(8px, env(safe-area-inset-top)) !important;
+}
+
+.spicey-light-reference-feed .spicey-ng-logo-slot {
+  width: 0 !important;
+  min-width: 0 !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
+.spicey-light-reference-feed .spicey-reference-logo {
+  position: absolute !important;
+  left: 0 !important;
+  top: 50% !important;
+  transform: translateY(-50%) !important;
+  justify-content: flex-start !important;
+  width: auto !important;
+}
+
+.spicey-light-script-logo {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 36px;
+  font-weight: 700;
+  font-style: italic;
+  line-height: 1;
+  letter-spacing: 0;
+  background: linear-gradient(120deg, #ff7a00 0%, #ff3e78 52%, #8b2cff 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.spicey-light-script-star {
+  font-size: 22px;
+  font-style: normal;
+  color: #ff7a00;
+  background: linear-gradient(135deg, #ff7a00, #ff2d8f);
+  -webkit-background-clip: text;
+  background-clip: text;
+}
+
+.spicey-light-reference-feed .spicey-fluid-header-actions {
+  gap: 12px !important;
+}
+
+.spicey-light-reference-feed .spicey-light-icon-button,
+.spicey-light-reference-feed .spicey-header-bell {
+  width: 32px !important;
+  height: 32px !important;
+  min-width: 32px !important;
+  display: grid !important;
+  place-items: center !important;
+  border-radius: 18px !important;
+  color: #101018 !important;
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+.spicey-light-reference-feed .spicey-header-bell svg {
+  color: #101018 !important;
+  filter: none !important;
+}
+
+.spicey-light-reference-feed .spicey-light-settings-button {
+  color: #101018 !important;
+}
+
+.spicey-light-reference-feed .spicey-light-settings-button svg {
+  color: #101018 !important;
+  filter: none !important;
+}
+
+.spicey-light-reference-feed .spicey-ng-search-row {
+  display: none !important;
+}
+
+.spicey-light-reference-feed .spicey-light-story-row {
+  display: flex;
+  gap: 14px;
+  overflow-x: auto;
+  padding: 4px 10px 22px;
+  scrollbar-width: none;
+}
+
+.spicey-light-reference-feed .spicey-light-story-row::-webkit-scrollbar,
+.spicey-light-reference-feed .spicey-trending-now .overflow-x-auto::-webkit-scrollbar {
+  display: none;
+}
+
+.spicey-light-reference-feed .spicey-light-story-item {
+  width: 66px;
+  flex: 0 0 66px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 7px;
+  color: #111118;
+  background: transparent;
+  border: 0;
+  padding: 0;
+}
+
+.spicey-light-reference-feed .spicey-light-story-ring {
+  width: 64px;
+  height: 64px;
+  position: relative;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: conic-gradient(from 210deg, #ff7a00, #ff2d8f, #8b2cff, #ff7a00);
+  box-shadow: 0 8px 18px rgba(255,45,143,0.18);
+}
+
+.spicey-light-reference-feed .spicey-light-story-avatar {
+  width: 56px;
+  height: 56px;
+  object-fit: cover;
+  border-radius: 50%;
+  border: 3px solid #ffffff;
+  display: block;
+}
+
+.spicey-light-reference-feed .spicey-light-story-label {
+  max-width: 70px;
+  color: #15151b;
+  font-size: 10.5px;
+  font-weight: 600;
+  line-height: 1.1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.spicey-light-reference-feed .spicey-light-story-plus,
+.spicey-light-reference-feed .spicey-light-story-live-dot {
+  position: absolute;
+  right: 0;
+  bottom: 2px;
+  width: 19px;
+  height: 19px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  color: #ffffff;
+  background: linear-gradient(135deg, #ff7a00, #ff2d8f);
+  border: 2px solid #ffffff;
+}
+
+.spicey-light-reference-feed .spicey-light-story-live-dot {
+  width: 12px;
+  height: 12px;
+  right: 5px;
+  bottom: 5px;
+  background: #ff7a00;
+}
+
+.spicey-light-reference-feed .spicey-trending-now {
+  padding: 6px 10px 18px !important;
+}
+
+.spicey-light-reference-feed .spicey-trending-title {
+  font-size: 17px !important;
+  font-weight: 900 !important;
+  text-transform: none !important;
+}
+
+.spicey-light-reference-feed .spicey-trending-see-all {
+  font-size: 13px !important;
+  font-weight: 600 !important;
+}
+
+.spicey-light-reference-feed .spicey-top-search {
+  height: 42px !important;
+  border-radius: 22px !important;
+  background: rgba(255,255,255,0.82) !important;
+  border: 1px solid rgba(232, 226, 236, 0.96) !important;
+  box-shadow: 0 10px 22px rgba(30, 20, 42, 0.07), inset 0 1px 0 rgba(255,255,255,0.96) !important;
+}
+
+.spicey-light-reference-feed .spicey-filter-button {
+  width: 42px !important;
+  height: 42px !important;
+  min-width: 42px !important;
+  border-radius: 21px !important;
+  transform: none !important;
+  background: rgba(255,255,255,0.82) !important;
+  border: 1px solid rgba(232, 226, 236, 0.96) !important;
+  box-shadow: 0 10px 22px rgba(30, 20, 42, 0.08), inset 0 1px 0 rgba(255,255,255,0.96) !important;
+}
+
+.spicey-light-reference-feed .spicey-filter-button svg {
+  color: #111118 !important;
+  filter: none !important;
+}
+
+.spicey-light-reference-feed [class*="tracking-widest"],
+.spicey-light-reference-feed [class*="tracking-wide"] {
+  letter-spacing: 0 !important;
+}
+
+.spicey-light-reference-feed .spicey-post-card {
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+  margin-top: 0 !important;
+  border-radius: 6px !important;
+  filter: none !important;
+  box-shadow: none !important;
+}
+
+.spicey-light-reference-feed .spicey-fluid-posts > div[id^="post-"] {
+  margin-bottom: 22px !important;
+  background: #ffffff !important;
+}
+
+.spicey-light-reference-feed .spicey-fluid-posts > div[id^="post-"] + div[id^="post-"] {
+  padding-top: 12px !important;
+  border-top: 8px solid #f7f7f9 !important;
+}
+
+.spicey-light-reference-feed .spicey-post-media {
+  border-radius: 6px !important;
+  border: 0 !important;
+  background: #ffffff !important;
+  box-shadow: none !important;
+}
+
+.spicey-light-reference-feed .spicey-post-media img,
+.spicey-light-reference-feed .spicey-post-media video {
+  border-radius: 6px !important;
+  filter: saturate(1.2) contrast(1.05) brightness(1.02) !important;
+}
+
+.spicey-light-reference-feed .spicey-post-bottom-gradient {
+  background: linear-gradient(180deg, transparent 0%, rgba(0,0,0,0.10) 32%, rgba(0,0,0,0.70) 100%) !important;
+}
+
+.spicey-light-reference-feed .spicey-photo-caption-stack {
+  bottom: 70px !important;
+  left: 10px !important;
+  right: 82px !important;
+}
+
+.spicey-light-reference-feed .spicey-post-overlay-author,
+.spicey-light-reference-feed .spicey-post-overlay-menu,
+.spicey-light-reference-feed .spicey-post-top-gradient {
+  display: none !important;
+}
+
+.spicey-light-reference-feed .spicey-light-post-author-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 68px;
+  padding: 12px 10px 10px;
+  background: #ffffff;
+  border-top: 1px solid rgba(16,16,24,0.05);
+}
+
+.spicey-light-reference-feed .spicey-light-post-author-link {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.spicey-light-reference-feed .spicey-light-post-avatar-ring {
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #ff7a00, #ff2d8f);
+}
+
+.spicey-light-reference-feed .spicey-light-post-avatar {
+  width: 39px;
+  height: 39px;
+  object-fit: cover;
+  border-radius: 50%;
+  border: 2px solid #ffffff;
+}
+
+.spicey-light-reference-feed .spicey-light-post-author-copy {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  gap: 1px;
+}
+
+.spicey-light-reference-feed .spicey-light-post-name {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  color: #111118;
+  font-size: 14px;
+  font-weight: 900;
+  line-height: 1.15;
+}
+
+.spicey-light-reference-feed .spicey-light-post-location {
+  color: #686672;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.15;
+}
+
+.spicey-light-reference-feed .spicey-light-post-menu {
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  color: #111118;
+  background: transparent;
+  border: 0;
+}
+
+.spicey-light-reference-feed .spicey-reaction-rail {
+  right: 12px !important;
+  top: 48px !important;
+  width: 54px !important;
+  padding: 10px 0 !important;
+  border-radius: 28px !important;
+  background: rgba(255,255,255,0.68) !important;
+  border: 0 !important;
+  box-shadow: 0 14px 30px rgba(35, 20, 45, 0.12) !important;
+  backdrop-filter: blur(18px) saturate(1.08) !important;
+  -webkit-backdrop-filter: blur(18px) saturate(1.08) !important;
+}
+
+.spicey-light-reference-feed .spicey-fluid-side-action,
+.spicey-light-reference-feed .spicey-reaction-rail button {
+  background: transparent !important;
+  box-shadow: none !important;
+  filter: none !important;
+}
+
+.spicey-light-reference-feed .spicey-reaction-rail svg {
+  color: #17171f !important;
+  filter: none !important;
+}
+
+.spicey-light-reference-feed .spicey-reaction-rail span,
+.spicey-light-reference-feed .spicey-reaction-rail p {
+  color: #17171f !important;
+  text-shadow: none !important;
+}
+
+.spicey-light-reference-feed .spicey-reaction-rail button[data-active="true"][data-reaction-type="heart"] svg,
+html body .spicey-reaction-rail button[data-active="true"][data-reaction-type="heart"] svg {
+  color: #FF2D55 !important;
+  fill: #FF2D55 !important;
+}
+
+.spicey-light-reference-feed .spicey-reaction-rail button[data-active="true"][data-reaction-type="fire"] svg,
+html body .spicey-reaction-rail button[data-active="true"][data-reaction-type="fire"] svg {
+  color: #FF6A00 !important;
+  fill: #FF6A00 !important;
+}
+
+.spicey-light-reference-feed .spicey-reaction-rail button[data-active="true"][data-reaction-type="wow"] span,
+html body .spicey-reaction-rail button[data-active="true"][data-reaction-type="wow"] span {
+  color: #FFD166 !important;
+}
+
+.spicey-light-reference-feed .spicey-reaction-rail button[data-active="true"][data-reaction-type="heart"] span,
+html body .spicey-reaction-rail button[data-active="true"][data-reaction-type="heart"] span {
+  color: #FF2D55 !important;
+}
+
+.spicey-light-reference-feed .spicey-reaction-rail button[data-active="true"][data-reaction-type="fire"] span,
+html body .spicey-reaction-rail button[data-active="true"][data-reaction-type="fire"] span {
+  color: #FF6A00 !important;
+}
+
+.spicey-light-reference-feed .spicey-liked-by-row,
+.spicey-light-reference-feed .spicey-post-meta-row {
+  color: #24242d !important;
+}
+
+.spicey-light-reference-feed .spicey-liked-row {
+  margin: -52px 10px 28px !important;
+  position: relative !important;
+  z-index: 4 !important;
+  justify-content: flex-start !important;
+}
+
+.spicey-light-reference-feed .spicey-liked-copy span {
+  color: #ffffff !important;
+  text-shadow: 0 2px 10px rgba(0,0,0,0.72) !important;
+}
+
+.spicey-light-reference-feed .spicey-liked-comments {
+  display: inline-flex !important;
+}
+
+.spicey-light-reference-feed .spicey-liked-shares {
+  display: inline-flex !important;
+}
+
+.spicey-light-reference-feed .spicey-post-separator {
+  display: none !important;
+}
+
+.spicey-light-reference-feed .spicey-stat-pill.spicey-stat-pill-inside {
+  display: none !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
+html.light-mode body .spicey-stat-pill.spicey-stat-pill-inside,
+body.light-mode .spicey-stat-pill.spicey-stat-pill-inside,
+[data-theme="light"] .spicey-stat-pill.spicey-stat-pill-inside {
+  display: none !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
+.spicey-light-reference-feed #bottom-nav > div {
+  width: 100% !important;
+  max-width: 430px !important;
+  height: 66px !important;
+  justify-content: space-around !important;
+  border-radius: 0 !important;
+  background: rgba(255,255,255,0.96) !important;
+  border: 0 !important;
+  border-top: 1px solid rgba(16,16,24,0.08) !important;
+  box-shadow: 0 -12px 34px rgba(45, 30, 60, 0.10) !important;
+}
+
+@media (min-width: 768px) {
+  #bottom-nav {
+    display: flex !important;
+  }
+
+  .spicey-light-reference-feed #bottom-nav {
+    left: 50% !important;
+    right: auto !important;
+    width: min(430px, 100vw) !important;
+    transform: translateX(-50%) translate3d(0,0,0) !important;
+  }
+}
+
+@media (min-width: 1024px) {
+  html.light-mode body,
+  html.light-mode #root,
+  html.light-mode .spicey-web-layout {
+    background: #f6f6f8 !important;
+  }
+
+  .spicey-web-main {
+    min-height: 100dvh;
+    width: calc(100vw - 16rem);
+    max-width: 900px;
+    margin-left: auto;
+    margin-right: auto;
+    background: #ffffff;
+    box-shadow: 0 0 0 1px rgba(16,16,24,0.06);
+  }
+
+  .spicey-web-main > div,
+  .spicey-web-main #main-scroll,
+  .spicey-web-main .spicey-feed-page {
+    width: 100% !important;
+  }
+
+  .spicey-web-main #main-scroll {
+    background: #ffffff !important;
+  }
+
+  .spicey-light-reference-feed .spicey-feed-shell,
+  .spicey-light-reference-feed .spicey-fluid-feed-shell {
+    width: 100% !important;
+    max-width: 900px !important;
+    margin: 0 auto !important;
+  }
+
+  .spicey-light-reference-feed .spicey-trending-now,
+  .spicey-light-reference-feed .spicey-light-story-row,
+  .spicey-light-reference-feed .feed-header-bar,
+  .spicey-light-reference-feed .spicey-light-post-author-header {
+    padding-left: 24px !important;
+    padding-right: 24px !important;
+  }
+
+  .spicey-light-reference-feed .spicey-post-card {
+    margin-left: 24px !important;
+    margin-right: 24px !important;
+    border-radius: 8px !important;
+    overflow: visible !important;
+  }
+
+  .spicey-light-reference-feed .spicey-post-media,
+  .spicey-light-reference-feed .spicey-post-media img,
+  .spicey-light-reference-feed .spicey-post-media video {
+    border-radius: 8px !important;
+  }
+
+  .spicey-light-reference-feed .spicey-liked-row {
+    margin-left: 34px !important;
+    margin-right: 34px !important;
+  }
+
+  .spicey-light-reference-feed #bottom-nav {
+    left: calc(50% + 8rem) !important;
+    width: min(900px, calc(100vw - 16rem)) !important;
+  }
+}
+
+@media (min-width: 1280px) {
+  .spicey-web-main {
+    width: calc(100vw - 34rem);
+    max-width: 900px;
+  }
+
+  .spicey-light-reference-feed #bottom-nav {
+    left: calc(50% - 1rem) !important;
+    width: min(900px, calc(100vw - 34rem)) !important;
+  }
+}
+
+@media (max-width: 430px) {
+  .spicey-light-reference-feed .spicey-feed-shell,
+  .spicey-light-reference-feed .spicey-fluid-feed-shell {
+    padding-left: 10px !important;
+    padding-right: 10px !important;
+  }
+
+  .spicey-light-script-logo {
+    font-size: 30px;
+  }
+}
+
+/* Premium light feed reference polish */
+.spicey-light-reference-feed {
+  background:
+    radial-gradient(circle at 88% 5%, rgba(255, 118, 76, 0.32), transparent 25%),
+    radial-gradient(circle at 92% 50%, rgba(255, 45, 143, 0.22), transparent 30%),
+    radial-gradient(circle at 74% 96%, rgba(139, 53, 255, 0.22), transparent 34%),
+    linear-gradient(180deg, #fffaf7 0%, #fff1f8 52%, #ffe3ef 100%) !important;
+}
+
+.spicey-light-reference-feed .spicey-feed-shell,
+.spicey-light-reference-feed .spicey-fluid-feed-shell {
+  width: min(100%, 430px) !important;
+  max-width: 430px !important;
+  padding: 0 18px 126px !important;
+  margin: 0 auto !important;
+}
+
+.spicey-light-reference-feed .feed-header-bar {
+  padding: 12px 0 0 !important;
+  background: transparent !important;
+}
+
+.spicey-light-reference-feed .spicey-ng-topbar {
+  min-height: 74px !important;
+}
+
+.spicey-light-reference-feed .spicey-ng-logo-slot {
+  width: 58px !important;
+  min-width: 58px !important;
+  opacity: 1 !important;
+  pointer-events: auto !important;
+}
+
+.spicey-light-reference-feed .spicey-ng-logo-slot > div {
+  width: 58px !important;
+  height: 58px !important;
+}
+
+.spicey-light-reference-feed .spicey-ng-logo-slot img {
+  width: 55px !important;
+  height: 55px !important;
+  padding: 3px !important;
+  border-radius: 999px !important;
+  object-fit: cover !important;
+  background: linear-gradient(135deg, #ff6a00, #ff2d8f 56%, #8b2cff) !important;
+  box-shadow: 0 8px 18px rgba(255, 45, 143, 0.22) !important;
+}
+
+.spicey-header-online-dot {
+  position: absolute;
+  right: 2px;
+  bottom: 4px;
+  width: 14px;
+  height: 14px;
+  border-radius: 999px;
+  background: #2bd315;
+  border: 2px solid #fff;
+  box-shadow: 0 3px 8px rgba(27, 183, 22, 0.32);
+}
+
+.spicey-light-reference-feed .spicey-light-script-logo {
+  font-size: 36px !important;
+  transform: translateY(1px) !important;
+}
+
+.spicey-light-reference-feed .spicey-ng-header-actions {
+  gap: 10px !important;
+}
+
+.spicey-light-reference-feed .spicey-ng-header-actions .spicey-light-icon-button,
+.spicey-light-reference-feed .spicey-header-bell {
+  width: 54px !important;
+  height: 54px !important;
+  border-radius: 27px !important;
+  display: grid !important;
+  place-items: center !important;
+  background: rgba(255, 255, 255, 0.74) !important;
+  border: 1px solid rgba(255, 255, 255, 0.82) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.92), 0 12px 24px rgba(74, 30, 56, 0.12) !important;
+  backdrop-filter: blur(18px) saturate(1.1) !important;
+  -webkit-backdrop-filter: blur(18px) saturate(1.1) !important;
+}
+
+.spicey-light-reference-feed .spicey-light-settings-button svg {
+  color: #ff5b18 !important;
+  fill: rgba(255, 106, 0, 0.12) !important;
+}
+
+.spicey-light-reference-feed .spicey-ng-header-actions .spicey-light-icon-button:not(.spicey-light-settings-button) {
+  display: none !important;
+}
+
+.spicey-light-reference-feed .spicey-header-bell span {
+  top: 4px !important;
+  right: 4px !important;
+  width: 19px !important;
+  height: 19px !important;
+  font-size: 10px !important;
+  background: linear-gradient(135deg, #ff2d55, #f61fc8) !important;
+}
+
+.spicey-light-reference-feed .spicey-ng-search-row {
+  display: block !important;
+  padding: 8px 0 18px !important;
+}
+
+.spicey-light-reference-feed .spicey-ng-search-wrap {
+  height: 65px !important;
+  gap: 10px !important;
+  padding: 0 10px 0 18px !important;
+  border-radius: 24px !important;
+  background: rgba(255, 255, 255, 0.78) !important;
+  border: 1px solid rgba(255,255,255,0.86) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.95), 0 16px 32px rgba(66, 34, 55, 0.10) !important;
+  backdrop-filter: blur(20px) saturate(1.12) !important;
+  -webkit-backdrop-filter: blur(20px) saturate(1.12) !important;
+}
+
+.spicey-light-reference-feed .spicey-top-search {
+  height: 65px !important;
+  padding-left: 42px !important;
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  font-size: 15px !important;
+  font-weight: 600 !important;
+}
+
+.spicey-light-reference-feed .spicey-top-search::placeholder {
+  color: #6f6881 !important;
+  opacity: 0.92 !important;
+}
+
+.spicey-light-reference-feed .spicey-filter-button {
+  width: 49px !important;
+  height: 49px !important;
+  min-width: 49px !important;
+  border-radius: 17px !important;
+  background: linear-gradient(135deg, #ff6a00 0%, #ff2d8f 55%, #8b2cff 100%) !important;
+  border: 0 !important;
+  box-shadow: 0 14px 26px rgba(255, 45, 143, 0.28) !important;
+}
+
+.spicey-light-reference-feed .spicey-filter-button svg {
+  color: #fff !important;
+  filter: drop-shadow(0 2px 6px rgba(0,0,0,0.18)) !important;
+}
+
+.spicey-light-reference-feed .spicey-light-story-row {
+  padding: 2px 0 18px !important;
+}
+
+.spicey-light-reference-feed .spicey-story-item,
+.spicey-light-reference-feed .spicey-light-story-item {
+  width: 76px !important;
+}
+
+.spicey-light-reference-feed .spicey-story-avatar,
+.spicey-light-reference-feed .spicey-light-story-avatar,
+.spicey-light-reference-feed .spicey-story-ring {
+  width: 74px !important;
+  height: 74px !important;
+}
+
+.spicey-light-reference-feed .spicey-story-ring,
+.spicey-light-reference-feed .spicey-light-story-ring {
+  padding: 3px !important;
+  background: linear-gradient(135deg, #ff6a00 0%, #ff2d8f 54%, #8b2cff 100%) !important;
+  box-shadow: 0 9px 18px rgba(255, 45, 143, 0.18) !important;
+}
+
+.spicey-feed-ai-card {
+  display: grid;
+  grid-template-columns: 86px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 14px;
+  min-height: 116px;
+  margin: 8px 0 16px;
+  padding: 18px 18px 18px 20px;
+  border-radius: 28px;
+  background: rgba(255, 255, 255, 0.74);
+  border: 1px solid rgba(255, 255, 255, 0.84);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.96), 0 18px 38px rgba(80, 35, 68, 0.12);
+  backdrop-filter: blur(22px) saturate(1.12);
+  -webkit-backdrop-filter: blur(22px) saturate(1.12);
+}
+
+.spicey-feed-ai-orb {
+  width: 72px;
+  height: 72px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: linear-gradient(145deg, #ff6a00, #ff2d8f 56%, #8b2cff);
+  box-shadow: 0 14px 26px rgba(255, 45, 143, 0.30);
+}
+
+.spicey-feed-ai-orb img {
+  width: 50px;
+  height: 50px;
+  object-fit: contain;
+  filter: drop-shadow(0 5px 12px rgba(0,0,0,0.24));
+}
+
+.spicey-feed-ai-copy {
+  min-width: 0;
+}
+
+.spicey-feed-ai-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.spicey-feed-ai-title strong {
+  color: #100d19;
+  font-size: 22px;
+  line-height: 1;
+  font-weight: 900;
+}
+
+.spicey-feed-ai-title span {
+  padding: 4px 8px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #9d35ff, #7c20ff);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.spicey-feed-ai-copy p {
+  margin: 0;
+  color: #3f3a55;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+.spicey-feed-ai-try {
+  height: 46px;
+  min-width: 102px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 18px;
+  color: #fff;
+  font-weight: 900;
+  background: linear-gradient(135deg, #ff5b18 0%, #ff2d8f 58%, #8b2cff 100%);
+  box-shadow: 0 16px 28px rgba(255, 45, 143, 0.32);
+}
+
+.spicey-feed-tabs {
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  margin: 0 20px 10px;
+}
+
+.spicey-feed-tabs button {
+  position: relative;
+  padding: 0 0 10px;
+  border: 0;
+  background: transparent;
+  color: #59536b;
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.spicey-feed-tabs button.active {
+  color: #111118;
+}
+
+.spicey-feed-tabs button.active::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: 2px;
+  width: 54px;
+  height: 2px;
+  border-radius: 999px;
+  background: #ff5b18;
+  transform: translateX(-50%);
+}
+
+.spicey-light-reference-feed .spicey-light-post-author-header {
+  margin: 0 !important;
+  padding: 17px 18px 10px !important;
+  border-radius: 28px 28px 0 0 !important;
+  background: rgba(255, 255, 255, 0.74) !important;
+  border: 1px solid rgba(255, 255, 255, 0.84) !important;
+  border-bottom: 0 !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.94), 0 10px 24px rgba(80, 35, 68, 0.08) !important;
+}
+
+.spicey-light-reference-feed .spicey-light-post-avatar {
+  width: 46px !important;
+  height: 46px !important;
+  padding: 2px !important;
+  border: 0 !important;
+  background: linear-gradient(135deg, #ff6a00, #ff2d8f, #8b2cff) !important;
+}
+
+.spicey-light-reference-feed .spicey-light-post-name {
+  font-size: 14px !important;
+  color: #111118 !important;
+}
+
+.spicey-light-reference-feed .spicey-light-post-location {
+  color: #676171 !important;
+  font-size: 12px !important;
+}
+
+.spicey-light-reference-feed .spicey-post-card {
+  margin: 0 0 16px !important;
+  padding: 0 16px 18px !important;
+  overflow: hidden !important;
+  border-radius: 0 0 28px 28px !important;
+  background: rgba(255, 255, 255, 0.74) !important;
+  border: 1px solid rgba(255, 255, 255, 0.84) !important;
+  border-top: 0 !important;
+  box-shadow: 0 18px 42px rgba(80, 35, 68, 0.13) !important;
+  backdrop-filter: blur(22px) saturate(1.12) !important;
+  -webkit-backdrop-filter: blur(22px) saturate(1.12) !important;
+}
+
+.spicey-light-reference-feed .spicey-post-media,
+.spicey-light-reference-feed .spicey-post-media img,
+.spicey-light-reference-feed .spicey-post-media video {
+  border-radius: 18px !important;
+}
+
+.spicey-light-reference-feed .spicey-reaction-rail {
+  position: relative !important;
+  inset: auto !important;
+  width: 100% !important;
+  height: 42px !important;
+  margin: 10px 0 6px !important;
+  padding: 0 !important;
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+  gap: 16px !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+.spicey-light-reference-feed .spicey-reaction-rail button:last-child {
+  margin-left: auto !important;
+}
+
+.spicey-light-reference-feed .spicey-reaction-rail svg {
+  width: 27px !important;
+  height: 27px !important;
+  color: #121018 !important;
+}
+
+.spicey-light-reference-feed .spicey-reaction-rail span,
+.spicey-light-reference-feed .spicey-reaction-rail p {
+  display: none !important;
+}
+
+.spicey-light-reference-feed .spicey-liked-row {
+  margin: 6px 0 8px !important;
+  justify-content: flex-start !important;
+}
+
+.spicey-light-reference-feed .spicey-liked-copy span {
+  color: #16131f !important;
+  text-shadow: none !important;
+}
+
+.spicey-light-reference-feed .spicey-post-meta-row,
+.spicey-light-reference-feed .spicey-liked-by-row {
+  color: #16131f !important;
+}
+
+.spicey-light-reference-feed .spicey-trending-now {
+  margin: 10px 0 24px !important;
+  padding: 15px 14px 16px !important;
+  border-radius: 24px !important;
+  background: rgba(255, 255, 255, 0.66) !important;
+  border: 1px solid rgba(255, 255, 255, 0.82) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.94), 0 16px 32px rgba(80, 35, 68, 0.11) !important;
+  backdrop-filter: blur(20px) saturate(1.1) !important;
+  -webkit-backdrop-filter: blur(20px) saturate(1.1) !important;
+}
+
+.spicey-light-reference-feed .spicey-trending-now button {
+  width: 124px !important;
+  height: 72px !important;
+  border-radius: 18px !important;
+  color: #fff !important;
+  text-align: left !important;
+  box-shadow: 0 12px 24px rgba(255, 45, 143, 0.20) !important;
+}
+
+.spicey-light-reference-feed .spicey-trending-now button:nth-of-type(1) {
+  background: linear-gradient(135deg, #ff5b18 0%, #ff2d8f 100%) !important;
+}
+
+.spicey-light-reference-feed .spicey-trending-now button:nth-of-type(2) {
+  background: linear-gradient(135deg, #ff2d8f 0%, #ff7a19 100%) !important;
+}
+
+.spicey-light-reference-feed .spicey-trending-now button:nth-of-type(3) {
+  background: linear-gradient(135deg, #8b2cff 0%, #ff2d8f 50%, #ff7a19 100%) !important;
+}
+
+.spicey-light-reference-feed #bottom-nav {
+  bottom: 14px !important;
+  padding: 0 18px max(8px, env(safe-area-inset-bottom)) !important;
+}
+
+.spicey-light-reference-feed #bottom-nav > div {
+  width: 100% !important;
+  max-width: 394px !important;
+  height: 75px !important;
+  border-radius: 28px !important;
+  background: rgba(255, 255, 255, 0.82) !important;
+  border: 1px solid rgba(255,255,255,0.9) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.94), 0 18px 44px rgba(80, 35, 68, 0.18) !important;
+  backdrop-filter: blur(22px) saturate(1.14) !important;
+  -webkit-backdrop-filter: blur(22px) saturate(1.14) !important;
+}
+
+.spicey-light-reference-feed #bottom-nav [data-plus-button],
+.spicey-light-reference-feed #bottom-nav .spicey-plus-button,
+.spicey-light-reference-feed #bottom-nav button[aria-label="Create"] {
+  width: 74px !important;
+  height: 74px !important;
+  border-radius: 50% !important;
+  background: linear-gradient(135deg, #ff6a00 0%, #ff2d8f 58%, #8b2cff 100%) !important;
+  box-shadow: 0 16px 30px rgba(255, 45, 143, 0.38) !important;
+}
+
+@media (min-width: 1024px) {
+  .spicey-light-reference-feed .spicey-feed-shell,
+  .spicey-light-reference-feed .spicey-fluid-feed-shell {
+    max-width: 720px !important;
+    padding-left: 24px !important;
+    padding-right: 24px !important;
+  }
+
+  .spicey-light-reference-feed .spicey-post-card,
+  .spicey-light-reference-feed .spicey-light-post-author-header,
+  .spicey-light-reference-feed .spicey-trending-now {
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+  }
+
+  .spicey-light-reference-feed #bottom-nav {
+    left: 50% !important;
+    width: min(720px, calc(100vw - 34rem)) !important;
+    transform: translateX(-50%) translate3d(0,0,0) !important;
+  }
+}
+
+@media (max-width: 430px) {
+  .spicey-light-reference-feed .spicey-feed-shell,
+  .spicey-light-reference-feed .spicey-fluid-feed-shell {
+    padding-left: 16px !important;
+    padding-right: 16px !important;
+  }
+
+  .spicey-feed-ai-card {
+    grid-template-columns: 74px minmax(0, 1fr);
+    padding: 16px;
+  }
+
+  .spicey-feed-ai-try {
+    grid-column: 2;
+    width: max-content;
+    min-width: 92px;
+    height: 40px;
+  }
+}
+
+/* Dedicated premium light feed, matched to the annotated reference */
+.spicey-premium-feed-page {
+  min-height: 100dvh;
+  height: 100dvh;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-bottom: calc(138px + env(safe-area-inset-bottom, 0px));
+  color: #101018;
+  background:
+    radial-gradient(circle at 88% 2%, rgba(255, 117, 78, 0.42), transparent 24%),
+    radial-gradient(circle at 95% 52%, rgba(255, 45, 143, 0.24), transparent 31%),
+    radial-gradient(circle at 78% 100%, rgba(139, 53, 255, 0.28), transparent 34%),
+    linear-gradient(180deg, #fffaf8 0%, #fff1f8 54%, #ffe0ef 100%);
+  -webkit-overflow-scrolling: touch;
+}
+
+.spicey-premium-feed-shell {
+  width: min(100%, 430px);
+  margin: 0 auto;
+  padding: max(14px, env(safe-area-inset-top)) 18px 20px;
+}
+
+.spicey-premium-header {
+  display: grid;
+  grid-template-columns: 28px 1fr minmax(166px, auto);
+  align-items: center;
+  gap: 10px;
+  min-height: 74px;
+}
+
+.spicey-premium-corner-logo {
+  position: relative;
+  width: 26px;
+  height: 26px;
+  overflow: hidden;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.spicey-premium-corner-logo img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  filter: drop-shadow(0 5px 10px rgba(255,45,143,0.18));
+}
+
+.spicey-premium-avatar-wrap {
+  position: relative;
+  width: 58px;
+  height: 58px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #ff6a00 0%, #ff2d8f 58%, #8b2cff 100%);
+  box-shadow: 0 10px 22px rgba(255, 45, 143, 0.24);
+}
+
+.spicey-premium-avatar-wrap img {
+  width: 51px;
+  height: 51px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid #fff;
+}
+
+.spicey-premium-avatar-wrap span {
+  position: absolute;
+  right: 1px;
+  bottom: 5px;
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  background: #2bd315;
+  border: 2px solid #fff;
+  box-shadow: 0 3px 8px rgba(42, 185, 20, 0.34);
+}
+
+.spicey-premium-wordmark {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  height: 34px;
+  color: transparent;
+  font-family: "Inter", "Avenir Next", sans-serif;
+  font-size: clamp(20px, 6vw, 30px);
+  font-style: italic;
+  font-weight: 900;
+  line-height: 1;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  transform: skewX(-10deg);
+  filter: drop-shadow(0 0 10px rgba(255,91,24,0.26)) drop-shadow(0 0 18px rgba(255,45,143,0.24));
+}
+
+.spicey-premium-wordmark span {
+  position: relative;
+  z-index: 2;
+  display: inline-block;
+  padding-left: 0.18em;
+  background: linear-gradient(96deg, #fff7df 0%, #ff8a00 18%, #ff2d55 48%, #ff45d8 68%, #8d4dff 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+}
+
+.spicey-premium-wordmark::before,
+.spicey-premium-wordmark::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  width: min(176px, 42vw);
+  height: 1px;
+  transform: translateX(-50%);
+  pointer-events: none;
+  background: linear-gradient(90deg, transparent, rgba(255,122,0,0.72), rgba(255,45,180,0.72), rgba(122,43,255,0.58), transparent);
+}
+
+.spicey-premium-wordmark::before {
+  top: 4px;
+  opacity: 0.52;
+}
+
+.spicey-premium-wordmark::after {
+  bottom: 3px;
+  opacity: 0.34;
+}
+
+.spicey-premium-wordmark .bolt {
+  margin-right: 8px;
+  font-size: 48px;
+  transform: skewX(-9deg);
+}
+
+.spicey-premium-wordmark i {
+  color: #ff2d55;
+  font-size: 17px;
+  font-style: normal;
+  transform: translate(-2px, -18px);
+}
+
+.spicey-premium-actions {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 10px;
+}
+
+.spicey-premium-actions button {
+  position: relative;
+  width: 54px;
+  height: 54px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 27px;
+  color: #14111c;
+  background: rgba(255,255,255,0.76);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.96), 0 12px 26px rgba(74, 30, 56, 0.13);
+  backdrop-filter: blur(18px) saturate(1.12);
+  -webkit-backdrop-filter: blur(18px) saturate(1.12);
+}
+
+.spicey-premium-actions button:first-child {
+  color: #ff5b18;
+}
+
+.spicey-premium-actions b {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 19px;
+  height: 19px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 900;
+  background: linear-gradient(135deg, #ff2d55, #f61fc8);
+}
+
+.spicey-premium-search {
+  height: 65px;
+  display: grid;
+  grid-template-columns: 34px 1fr 49px;
+  align-items: center;
+  gap: 8px;
+  margin: 10px 0 18px;
+  padding: 0 10px 0 19px;
+  border-radius: 24px;
+  background: rgba(255, 255, 255, 0.80);
+  border: 1px solid rgba(255,255,255,0.88);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.96), 0 16px 32px rgba(66, 34, 55, 0.11);
+  backdrop-filter: blur(22px) saturate(1.12);
+  -webkit-backdrop-filter: blur(22px) saturate(1.12);
+  cursor: pointer;
+  pointer-events: auto;
+}
+
+.spicey-premium-search > svg {
+  color: #ff5b18;
+}
+
+.spicey-premium-search span {
+  min-width: 0;
+  color: #67607a;
+  font-size: 15px;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.spicey-premium-search button {
+  position: relative;
+  z-index: 3;
+  width: 49px;
+  height: 49px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 17px;
+  color: #fff;
+  background: linear-gradient(135deg, #ff6a00 0%, #ff2d8f 55%, #8b2cff 100%);
+  box-shadow: 0 14px 26px rgba(255, 45, 143, 0.28);
+}
+
+.spicey-premium-stories {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin: 0 -6px 18px;
+  padding: 2px 6px 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.spicey-premium-stories::-webkit-scrollbar {
+  display: none;
+}
+
+.spicey-premium-story {
+  flex: 0 0 74px;
+  width: 74px;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  text-align: center;
+}
+
+.spicey-premium-story .ring {
+  position: relative;
+  width: 74px;
+  height: 74px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #ff6a00 0%, #ff2d8f 58%, #8b2cff 100%);
+  box-shadow: 0 8px 17px rgba(255,45,143,0.18);
+}
+
+.spicey-premium-story img {
+  width: 67px;
+  height: 67px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 3px solid #fff;
+}
+
+.spicey-premium-story b {
+  position: absolute;
+  right: 0;
+  bottom: 8px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #2bd315;
+  border: 2px solid #fff;
+}
+
+.spicey-premium-story i {
+  position: absolute;
+  right: -2px;
+  bottom: 4px;
+  width: 24px;
+  height: 24px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  color: #fff;
+  font-size: 22px;
+  font-style: normal;
+  line-height: 1;
+  background: linear-gradient(135deg, #ff6a00, #ff2d8f);
+  border: 2px solid #fff;
+}
+
+.spicey-premium-story small {
+  display: block;
+  margin-top: 7px;
+  color: #17131f;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.12;
+}
+
+.spicey-premium-story.more .ring {
+  color: #15111e;
+  background: rgba(255,255,255,0.70);
+  border: 1px solid rgba(255,255,255,0.80);
+}
+
+.spicey-premium-story.more b {
+  top: 5px;
+  right: 5px;
+  bottom: auto;
+  width: 11px;
+  height: 11px;
+  background: #ff2d8f;
+  border-width: 0;
+}
+
+.spicey-premium-ai-card {
+  min-height: 116px;
+  display: grid;
+  grid-template-columns: 84px minmax(0, 1fr) 104px;
+  align-items: center;
+  gap: 14px;
+  margin: 0 0 16px;
+  padding: 18px;
+  border-radius: 28px;
+  background: rgba(255,255,255,0.74);
+  border: 1px solid rgba(255,255,255,0.84);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.96), 0 18px 38px rgba(80,35,68,0.12);
+  backdrop-filter: blur(22px) saturate(1.12);
+  -webkit-backdrop-filter: blur(22px) saturate(1.12);
+}
+
+.spicey-premium-ai-card .ai-orb {
+  width: 72px;
+  height: 72px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: linear-gradient(145deg, #ff6a00, #ff2d8f 56%, #8b2cff);
+  box-shadow: 0 14px 26px rgba(255,45,143,0.30);
+}
+
+.spicey-premium-ai-card .ai-orb img {
+  width: 50px;
+  height: 50px;
+  object-fit: contain;
+}
+
+.spicey-premium-ai-card h2 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 7px;
+  color: #100d19;
+  font-size: 22px;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.spicey-premium-ai-card h2 span {
+  padding: 4px 8px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #9d35ff, #7c20ff);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.spicey-premium-ai-card p {
+  margin: 0;
+  color: #3f3a55;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+.spicey-premium-ai-card > button {
+  height: 46px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  border: 0;
+  border-radius: 18px;
+  color: #fff;
+  font-size: 15px;
+  font-weight: 900;
+  background: linear-gradient(135deg, #ff5b18 0%, #ff2d8f 58%, #8b2cff 100%);
+  box-shadow: 0 16px 28px rgba(255,45,143,0.32);
+}
+
+.spicey-premium-map-card {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 132px;
+  gap: 14px;
+  min-height: 132px;
+  margin: 0 0 16px;
+  padding: 17px 17px 18px;
+  overflow: hidden;
+  border-radius: 28px;
+  background:
+    radial-gradient(circle at 90% 20%, rgba(139,44,255,0.26), transparent 34%),
+    linear-gradient(135deg, rgba(255,255,255,0.78), rgba(255,245,251,0.72));
+  border: 1px solid rgba(255,255,255,0.86);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.96), 0 18px 38px rgba(80,35,68,0.12);
+  backdrop-filter: blur(22px) saturate(1.12);
+  -webkit-backdrop-filter: blur(22px) saturate(1.12);
+}
+
+.spicey-premium-map-card .map-copy {
+  position: relative;
+  z-index: 2;
+}
+
+.spicey-premium-map-card .map-copy > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-bottom: 8px;
+  color: #ff5b18;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.spicey-premium-map-card h3 {
+  margin: 0 0 7px;
+  color: #111118;
+  font-size: 21px;
+  font-weight: 950;
+  line-height: 1.02;
+}
+
+.spicey-premium-map-card p {
+  margin: 0;
+  max-width: 166px;
+  color: #4f4860;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.34;
+}
+
+.spicey-premium-map-card .map-visual {
+  position: relative;
+  min-height: 90px;
+  border-radius: 22px;
+  background:
+    linear-gradient(90deg, rgba(255,91,24,0.12) 1px, transparent 1px),
+    linear-gradient(0deg, rgba(139,44,255,0.10) 1px, transparent 1px),
+    linear-gradient(135deg, rgba(255,91,24,0.18), rgba(255,45,143,0.18), rgba(139,44,255,0.18));
+  background-size: 24px 24px, 24px 24px, auto;
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.70);
+}
+
+.spicey-premium-map-card .pin {
+  position: absolute;
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  border-radius: 50% 50% 50% 10px;
+  background: linear-gradient(135deg, #ff6a00, #ff2d8f, #8b2cff);
+  box-shadow: 0 8px 16px rgba(255,45,143,0.28);
+  transform: rotate(-45deg);
+  z-index: 2;
+}
+
+.spicey-premium-map-card .pin img {
+  width: 25px;
+  height: 25px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid #fff;
+  transform: rotate(45deg);
+}
+
+.spicey-premium-map-card .pin-0 { left: 10px; top: 14px; }
+.spicey-premium-map-card .pin-1 { right: 18px; top: 10px; }
+.spicey-premium-map-card .pin-2 { left: 38px; bottom: 12px; }
+.spicey-premium-map-card .pin-3 { right: 8px; bottom: 18px; }
+
+.spicey-premium-map-card .route {
+  position: absolute;
+  left: 24px;
+  right: 24px;
+  top: 48px;
+  height: 2px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #ff6a00, #ff2d8f, #8b2cff);
+  transform: rotate(14deg);
+  opacity: 0.58;
+}
+
+.spicey-premium-map-card > button {
+  grid-column: 1;
+  position: relative;
+  z-index: 3;
+  width: max-content;
+  height: 36px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 13px;
+  border: 0;
+  border-radius: 999px;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 900;
+  background: linear-gradient(135deg, #ff6a00 0%, #ff2d8f 58%, #8b2cff 100%);
+  box-shadow: 0 12px 22px rgba(255,45,143,0.26);
+}
+
+.spicey-premium-tabs {
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  margin: 0 20px 10px;
+}
+
+.spicey-premium-tabs button {
+  position: relative;
+  padding: 0 0 10px;
+  border: 0;
+  background: transparent;
+  color: #59536b;
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.spicey-premium-tabs button.active {
+  color: #111118;
+}
+
+.spicey-premium-tabs button.active::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: 2px;
+  width: 54px;
+  height: 2px;
+  border-radius: 999px;
+  background: #ff5b18;
+  transform: translateX(-50%);
+}
+
+.spicey-premium-post-card {
+  margin: 0 0 12px;
+  padding: 16px 16px 18px;
+  border-radius: 28px;
+  background: rgba(255,255,255,0.76);
+  border: 1px solid rgba(255,255,255,0.86);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.95), 0 18px 42px rgba(80,35,68,0.13);
+  backdrop-filter: blur(22px) saturate(1.12);
+  -webkit-backdrop-filter: blur(22px) saturate(1.12);
+}
+
+.spicey-premium-post-card .post-head {
+  display: grid;
+  grid-template-columns: 50px 1fr 34px;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.spicey-premium-post-card .post-head > img {
+  width: 50px;
+  height: 50px;
+  padding: 2px;
+  border-radius: 50%;
+  object-fit: cover;
+  background: linear-gradient(135deg, #ff6a00, #ff2d8f, #8b2cff);
+}
+
+.spicey-premium-post-card .post-head strong {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  color: #111118;
+  font-size: 14px;
+  font-weight: 900;
+}
+
+.spicey-premium-post-card .post-head strong svg:not(.spicey-verified-badge) {
+  color: #ffffff;
+  fill: none;
+  padding: 2px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #ff6a00, #ff2d8f 52%, #8733ff);
+  box-shadow: 0 0 9px rgba(255, 45, 143, 0.58);
+}
+
+.spicey-premium-post-card .post-head strong svg.spicey-verified-badge {
+  display: block !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: none !important;
+  box-shadow: none !important;
+  transform: translateY(1px) !important;
+}
+
+.spicey-premium-post-card .post-head span {
+  display: block;
+  margin-top: 2px;
+  color: #686171;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.spicey-premium-post-card .post-head button,
+.spicey-premium-post-card .post-actions button,
+.spicey-premium-post-card .post-comments {
+  border: 0;
+  background: transparent;
+}
+
+.spicey-premium-post-card .post-media {
+  position: relative;
+  overflow: hidden;
+  border-radius: 18px;
+  aspect-ratio: 1.47 / 1;
+  background: #f2dce6;
+  cursor: grab;
+  touch-action: pan-y;
+  user-select: none;
+}
+
+.spicey-premium-post-card .post-media img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  pointer-events: none;
+  user-select: none;
+}
+
+.spicey-premium-post-card .premium-poster-copy {
+  position: absolute;
+  left: 22px;
+  top: auto;
+  bottom: 30px;
+  z-index: 6;
+  width: min(72%, 310px);
+  pointer-events: none;
+}
+
+.spicey-premium-post-card .premium-poster-title {
+  display: flex;
+  flex-direction: column;
+  font-family: "Inter", "Arial Black", sans-serif;
+  font-size: clamp(24px, 7.2vw, 40px);
+  line-height: 0.78;
+  font-weight: 760;
+  letter-spacing: 0;
+  text-transform: uppercase;
+  transform: scaleX(0.8);
+  transform-origin: left center;
+  background: linear-gradient(180deg, #ff25b8 0%, #ff356c 46%, #ff8b2a 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 3px 6px rgba(0,0,0,0.46));
+}
+
+.spicey-premium-post-card .premium-poster-title span {
+  display: block;
+}
+
+.spicey-premium-post-card .premium-poster-subtitle {
+  max-width: 76%;
+  margin-top: 9px;
+  color: rgba(255,255,255,0.82);
+  font-family: "Inter", "Helvetica Neue", Arial, sans-serif;
+  font-size: clamp(7px, 1.75vw, 9px);
+  line-height: 1.32;
+  font-weight: 250;
+  letter-spacing: 0.075em;
+  text-transform: uppercase;
+  text-shadow: 0 1px 7px rgba(0,0,0,0.58);
+}
+
+.spicey-premium-post-card .post-media > span {
+  display: none;
+}
+
+.spicey-premium-post-card .photo-nav {
+  position: absolute;
+  z-index: 4;
+  top: 50%;
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 50%;
+  color: #fff;
+  font-size: 26px;
+  line-height: 1;
+  background: rgba(20,16,24,0.44);
+  transform: translateY(-50%);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.spicey-premium-post-card .photo-nav.prev {
+  left: 10px;
+}
+
+.spicey-premium-post-card .photo-nav.next {
+  right: 10px;
+}
+
+.spicey-premium-post-card .photo-dots {
+  position: absolute;
+  left: 50%;
+  bottom: 11px;
+  display: flex;
+  gap: 5px;
+  transform: translateX(-50%);
+}
+
+.spicey-premium-post-card .photo-dots i {
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.58);
+}
+
+.spicey-premium-post-card .photo-dots i.active {
+  width: 18px;
+  background: #fff;
+}
+
+.spicey-premium-post-card .post-actions {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  margin: 13px 0 8px;
+  color: #121018;
+}
+
+.spicey-premium-post-card .post-actions button {
+  position: relative;
+  z-index: 3;
+  min-width: 31px;
+  min-height: 34px;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  color: #121018;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.spicey-premium-post-card .post-actions small {
+  color: #1f1928;
+  font-size: 10px;
+  font-weight: 900;
+}
+
+.spicey-premium-post-card .post-actions .like.active,
+.spicey-premium-post-card .post-actions .like.active small {
+  color: #ff2d55;
+}
+
+.spicey-premium-post-card .post-actions .like.active svg {
+  fill: #ff2d55;
+}
+
+.spicey-premium-post-card .post-actions .fire.active,
+.spicey-premium-post-card .post-actions .fire.active small {
+  color: #ff6a00;
+}
+
+.spicey-premium-post-card .post-actions .fire.active svg {
+  fill: #ff6a00;
+}
+
+.spicey-premium-post-card .post-actions .wow.active,
+.spicey-premium-post-card .post-actions .wow.active small {
+  color: #ffd166;
+}
+
+.spicey-premium-post-card .post-actions .wow.active svg {
+  stroke: #ffd166;
+}
+
+.spicey-premium-post-card .post-actions .save.active,
+.spicey-premium-post-card .post-actions .save.active small {
+  color: #ff9f0a;
+}
+
+.spicey-premium-post-card .post-actions .save.active svg {
+  stroke: #ff9f0a;
+  fill: rgba(255, 159, 10, 0.16);
+}
+
+.spicey-premium-post-card .post-actions .share.active,
+.spicey-premium-post-card .post-actions .share.active small {
+  color: #ff2d8f;
+}
+
+.spicey-premium-post-card .post-actions button:last-child {
+  margin-left: auto;
+}
+
+.spicey-premium-post-card .post-liked {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin: 4px 0 8px;
+  width: 100%;
+  border: 0;
+  background: transparent;
+  padding: 0;
+  text-align: left;
+  cursor: pointer;
+}
+
+.spicey-premium-post-card .post-liked span {
+  display: flex;
+}
+
+.spicey-premium-post-card .post-liked img {
+  width: 24px;
+  height: 24px;
+  margin-right: -7px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid #fff;
+}
+
+.spicey-premium-post-card .post-liked p,
+.spicey-premium-post-card .post-caption {
+  margin: 0;
+  color: #191521;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+.spicey-premium-post-card .post-caption b,
+.spicey-premium-post-card .post-liked b {
+  font-weight: 950;
+}
+
+.spicey-premium-post-card .post-caption em {
+  color: #7b1cff;
+  font-style: normal;
+  font-weight: 800;
+}
+
+.spicey-premium-post-card .post-comments {
+  margin-top: 8px;
+  padding: 0;
+  color: #777080;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.spicey-premium-post-card .post-activity {
+  display: grid;
+  gap: 7px;
+  margin: 8px 0 2px;
+}
+
+.spicey-premium-post-card .post-activity > button {
+  width: 100%;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #29232f;
+  font-size: 11px;
+  font-weight: 650;
+  text-align: left;
+  cursor: pointer;
+}
+
+.spicey-premium-post-card .post-activity b {
+  font-weight: 900;
+}
+
+.spicey-premium-post-card .activity-avatars {
+  display: flex;
+  flex: 0 0 auto;
+  min-width: 48px;
+}
+
+.spicey-premium-post-card .activity-avatars img {
+  width: 23px;
+  height: 23px;
+  margin-right: -7px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid #ffffff;
+}
+
+.spicey-premium-dark-feed .spicey-premium-post-card .post-activity > button {
+  color: rgba(255,255,255,0.88);
+}
+
+.spicey-premium-dark-feed .spicey-premium-post-card .activity-avatars img {
+  border-color: #09050e;
+}
+
+.spicey-premium-light-feed .spicey-premium-post-card .post-activity > button {
+  color: #29232f;
+}
+
+
+.spicey-comment-input::placeholder {
+  color: rgba(124, 91, 150, 0.62);
+  opacity: 1;
+}
+
+html:not(.light-mode) .spicey-comment-input::placeholder {
+  color: rgba(255,255,255,0.58);
+}
+
+.spicey-premium-trending {
+  margin: 10px 0 24px;
+  padding: 15px 14px 16px;
+  border-radius: 24px;
+  background: rgba(255,255,255,0.68);
+  border: 1px solid rgba(255,255,255,0.84);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.94), 0 16px 32px rgba(80,35,68,0.11);
+  backdrop-filter: blur(20px) saturate(1.1);
+  -webkit-backdrop-filter: blur(20px) saturate(1.1);
+}
+
+.spicey-premium-trending .trend-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.spicey-premium-trending h3 {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  color: #111118;
+  font-size: 15px;
+  font-weight: 900;
+}
+
+.spicey-premium-trending h3 svg {
+  color: #ff5b18;
+  fill: #ff5b18;
+}
+
+.spicey-premium-trending .trend-head button {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  border: 0;
+  background: transparent;
+  color: #8b22ff;
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.spicey-premium-trending .trend-row {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.spicey-premium-trending .trend-row::-webkit-scrollbar {
+  display: none;
+}
+
+.spicey-premium-trending .trend-row button {
+  position: relative;
+  flex: 0 0 124px;
+  height: 72px;
+  overflow: hidden;
+  border: 0;
+  border-radius: 18px;
+  padding: 11px 10px;
+  color: #fff;
+  text-align: left;
+  box-shadow: 0 12px 24px rgba(255,45,143,0.20);
+}
+
+.spicey-premium-trending .trend-row img,
+.spicey-premium-trending .trend-row i {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.spicey-premium-trending .trend-row img {
+  object-fit: cover;
+  filter: saturate(1.06) contrast(1.04) brightness(0.9);
+}
+
+.spicey-premium-trending .trend-row i {
+  background: linear-gradient(180deg, rgba(0,0,0,0.10), rgba(0,0,0,0.42));
+  opacity: 1;
+}
+
+.spicey-premium-trending .trend-row .wash-1 {
+  background: linear-gradient(180deg, rgba(0,0,0,0.08), rgba(0,0,0,0.42));
+}
+
+.spicey-premium-trending .trend-row .wash-2 {
+  background: linear-gradient(180deg, rgba(0,0,0,0.08), rgba(0,0,0,0.42));
+}
+
+.spicey-premium-trending .trend-row .spicey-trend-nav-card {
+  background: #090811;
+}
+
+.spicey-premium-trending .trend-row .spicey-trend-nav-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  opacity: 0.12;
+  background:
+    linear-gradient(90deg, rgba(255,255,255,0.15) 1px, transparent 1px),
+    linear-gradient(0deg, rgba(255,255,255,0.11) 1px, transparent 1px);
+  background-size: 18px 18px;
+  transform: rotate(-14deg) scale(1.16);
+}
+
+.spicey-premium-trending .trend-row .spicey-trend-map-card i {
+  background:
+    linear-gradient(180deg, rgba(0,0,0,0.06), rgba(0,0,0,0.50)),
+    radial-gradient(circle at 30% 78%, rgba(255,106,0,0.18), transparent 32%);
+}
+
+.spicey-premium-trending .trend-row .spicey-trend-explore-card i {
+  background:
+    linear-gradient(180deg, rgba(0,0,0,0.06), rgba(0,0,0,0.50)),
+    radial-gradient(circle at 74% 28%, rgba(255,45,143,0.16), transparent 34%);
+}
+
+.spicey-premium-trending .trend-row span,
+.spicey-premium-trending .trend-row small {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  color: #fff;
+  text-shadow: 0 2px 10px rgba(0,0,0,0.28);
+}
+
+.spicey-premium-trending .trend-row span {
+  gap: 2px;
+  font-size: 12px;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.spicey-premium-trending .trend-row small {
+  margin-top: 5px;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+@media (min-width: 1024px) {
+  .spicey-premium-feed-shell {
+    width: min(720px, calc(100vw - 34rem));
+    padding-left: 24px;
+    padding-right: 24px;
+  }
+
+  .spicey-premium-feed-page {
+    background:
+      radial-gradient(circle at 80% 2%, rgba(255,117,78,0.34), transparent 24%),
+      radial-gradient(circle at 86% 52%, rgba(255,45,143,0.20), transparent 31%),
+      radial-gradient(circle at 70% 100%, rgba(139,53,255,0.24), transparent 34%),
+      linear-gradient(180deg, #fffaf8 0%, #fff1f8 54%, #ffe0ef 100%);
+  }
+
+}
+
+@media (max-width: 430px) {
+  .spicey-premium-feed-shell {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+
+  .spicey-premium-header {
+    grid-template-columns: 48px minmax(0, 1fr) minmax(150px, auto);
+    gap: 7px;
+  }
+
+  .spicey-premium-actions {
+    gap: 6px;
+  }
+
+  .spicey-premium-actions button {
+    width: 44px;
+    height: 44px;
+  }
+
+  .spicey-premium-wordmark {
+    font-size: 31px;
+  }
+
+  .spicey-premium-wordmark .bolt {
+    font-size: 42px;
+    margin-right: 5px;
+  }
+
+  .spicey-premium-ai-card {
+    grid-template-columns: 74px minmax(0, 1fr);
+    padding: 16px;
+  }
+
+  .spicey-premium-ai-card > button {
+    grid-column: 2;
+    width: max-content;
+    min-width: 92px;
+    height: 40px;
+  }
+}
+
+/* Premium cinematic dark feed */
+.spicey-premium-dark-feed {
+  color: #ffffff;
+  background:
+    radial-gradient(circle at 12% 0%, rgba(255, 91, 24, 0.18), transparent 26%),
+    radial-gradient(circle at 88% 14%, rgba(255, 45, 143, 0.16), transparent 30%),
+    radial-gradient(circle at 56% 92%, rgba(139, 44, 255, 0.15), transparent 35%),
+    linear-gradient(180deg, #03050b 0%, #050006 48%, #020308 100%) !important;
+}
+
+.spicey-premium-dark-feed .spicey-premium-wordmark {
+  background: linear-gradient(92deg, #ff7a1a 0%, #ff2d55 48%, #d83cff 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  filter: drop-shadow(0 10px 18px rgba(255,45,143,0.24));
+}
+
+.spicey-premium-dark-feed .spicey-premium-actions button,
+.spicey-premium-dark-feed .spicey-premium-search,
+.spicey-premium-dark-feed .spicey-premium-ai-card,
+.spicey-premium-dark-feed .spicey-premium-map-card,
+.spicey-premium-dark-feed .spicey-premium-post-card,
+.spicey-premium-dark-feed .spicey-premium-trending {
+  background:
+    linear-gradient(180deg, rgba(18, 17, 25, 0.86), rgba(7, 8, 14, 0.78)) !important;
+  border: 1px solid rgba(255,255,255,0.10) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.08),
+    0 18px 42px rgba(0,0,0,0.42),
+    0 0 26px rgba(255,45,143,0.08) !important;
+}
+
+.spicey-premium-dark-feed .spicey-premium-search span,
+.spicey-premium-dark-feed .spicey-premium-ai-card p,
+.spicey-premium-dark-feed .spicey-premium-map-card p,
+.spicey-premium-dark-feed .spicey-premium-post-card .post-head span,
+.spicey-premium-dark-feed .spicey-premium-post-card .post-comments {
+  color: rgba(255,255,255,0.64) !important;
+}
+
+.spicey-premium-dark-feed .spicey-premium-search > svg,
+.spicey-premium-dark-feed .spicey-premium-map-card .map-copy > span,
+.spicey-premium-dark-feed .spicey-premium-trending h3 svg {
+  color: #ff6a00 !important;
+  fill: #ff6a00 !important;
+}
+
+.spicey-premium-dark-feed .spicey-premium-actions button,
+.spicey-premium-dark-feed .spicey-premium-story.more .ring {
+  color: #ffffff;
+  background: rgba(12, 13, 20, 0.78) !important;
+}
+
+.spicey-premium-dark-feed .spicey-premium-ai-card h2,
+.spicey-premium-dark-feed .spicey-premium-map-card h3,
+.spicey-premium-dark-feed .spicey-premium-post-card .post-head strong,
+.spicey-premium-dark-feed .spicey-premium-post-card .post-caption,
+.spicey-premium-dark-feed .spicey-premium-post-card .post-liked p,
+.spicey-premium-dark-feed .spicey-premium-trending h3,
+.spicey-premium-dark-feed .spicey-premium-story small,
+.spicey-premium-dark-feed .spicey-premium-tabs button.active {
+  color: #ffffff !important;
+}
+
+.spicey-premium-dark-feed .spicey-premium-tabs button {
+  color: rgba(255,255,255,0.54);
+}
+
+.spicey-premium-dark-feed .spicey-premium-post-card {
+  padding: 14px 14px 16px;
+}
+
+.spicey-premium-dark-feed .spicey-premium-post-card .post-media {
+  border-radius: 22px;
+  aspect-ratio: 0.88 / 1;
+  background: #090811;
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.08);
+}
+
+.spicey-premium-dark-feed .spicey-premium-post-card .post-media::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(180deg, transparent 45%, rgba(0,0,0,0.72) 100%);
+}
+
+.spicey-premium-dark-feed .spicey-premium-post-card .post-actions {
+  padding: 6px 2px 0;
+}
+
+.spicey-premium-dark-feed .spicey-premium-post-card .post-actions button,
+.spicey-premium-dark-feed .spicey-premium-post-card .post-actions small {
+  color: rgba(255,255,255,0.88);
+}
+
+.spicey-premium-dark-feed .spicey-premium-post-card .post-caption em {
+  color: #ff2d8f;
+}
+
+.spicey-premium-dark-feed .spicey-premium-map-card .map-visual {
+  background:
+    linear-gradient(90deg, rgba(255,255,255,0.07) 1px, transparent 1px),
+    linear-gradient(0deg, rgba(255,255,255,0.06) 1px, transparent 1px),
+    radial-gradient(circle at 60% 40%, rgba(255,45,143,0.18), transparent 45%),
+    linear-gradient(135deg, rgba(255,91,24,0.12), rgba(139,44,255,0.18));
+  background-size: 24px 24px, 24px 24px, auto, auto;
+}
+
+.spicey-premium-dark-feed .spicey-premium-trending .trend-row button {
+  box-shadow: 0 14px 28px rgba(0,0,0,0.40), 0 0 18px rgba(255,45,143,0.14);
+}
+
+.spicey-premium-dark-feed .spicey-premium-feed-shell {
+  width: min(100%, 430px);
+  padding: max(16px, env(safe-area-inset-top)) 14px 118px;
+}
+
+.spicey-premium-dark-feed .spicey-premium-header {
+  grid-template-columns: 30px 1fr auto;
+  min-height: 72px;
+  padding: 0 2px;
+}
+
+.spicey-premium-dark-feed .spicey-premium-wordmark {
+  min-height: 34px;
+  filter: drop-shadow(0 0 10px rgba(255,91,24,0.34)) drop-shadow(0 0 18px rgba(255,45,143,0.30));
+}
+
+.spicey-premium-dark-feed .spicey-premium-corner-logo {
+  background: transparent;
+  box-shadow: none;
+}
+
+.spicey-premium-dark-feed .spicey-premium-actions {
+  gap: 14px;
+}
+
+.spicey-premium-dark-feed .spicey-premium-actions button {
+  width: 38px;
+  height: 38px;
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+}
+
+.spicey-premium-dark-feed .spicey-premium-stories {
+  margin: 2px -2px 22px;
+  padding: 0 2px;
+  gap: 14px;
+}
+
+.spicey-premium-dark-feed .spicey-premium-story {
+  flex: 0 0 68px;
+  width: 68px;
+}
+
+.spicey-premium-dark-feed .spicey-premium-story .ring {
+  width: 64px;
+  height: 64px;
+  padding: 2px;
+  box-shadow: 0 0 0 1px rgba(255,106,0,0.22), 0 0 18px rgba(255,45,143,0.25);
+}
+
+.spicey-premium-dark-feed .spicey-premium-story img {
+  width: 58px;
+  height: 58px;
+  border-width: 2px;
+}
+
+.spicey-premium-dark-feed .spicey-premium-story small {
+  font-size: 11px;
+}
+
+.spicey-premium-dark-feed .spicey-premium-trending {
+  margin: 0 0 16px;
+  padding: 0;
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+}
+
+.spicey-premium-dark-feed .spicey-premium-trending .trend-head {
+  padding: 0 3px;
+}
+
+.spicey-premium-dark-feed .spicey-premium-trending h3 {
+  font-size: 13px;
+  text-transform: uppercase;
+}
+
+.spicey-premium-dark-feed .spicey-premium-trending .trend-head button {
+  color: rgba(255,255,255,0.72);
+}
+
+.spicey-premium-dark-feed .spicey-premium-trending .trend-row {
+  gap: 10px;
+  padding: 2px 0 4px;
+}
+
+.spicey-premium-dark-feed .spicey-premium-trending .trend-row button {
+  flex: 0 0 92px;
+  width: 92px;
+  height: 168px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  border-radius: 11px;
+  padding: 0 8px 10px;
+  border: 1px solid rgba(255,255,255,0.10);
+}
+
+.spicey-premium-dark-feed .spicey-premium-post-card {
+  position: relative;
+  overflow: hidden;
+  padding: 14px 14px 16px;
+  border-radius: 24px;
+}
+
+.spicey-premium-dark-feed .spicey-premium-post-card .post-media {
+  border-radius: 22px;
+  aspect-ratio: 0.83 / 1;
+}
+
+.spicey-premium-dark-feed .spicey-premium-post-card .post-actions {
+  position: absolute;
+  right: 24px;
+  top: 124px;
+  z-index: 8;
+  width: 52px;
+  padding: 10px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  border-radius: 28px;
+  background: rgba(5, 6, 12, 0.42);
+  backdrop-filter: blur(14px) saturate(1.1);
+  -webkit-backdrop-filter: blur(14px) saturate(1.1);
+}
+
+.spicey-premium-dark-feed .spicey-premium-post-card .post-actions button {
+  min-width: 52px;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2px;
+}
+
+.spicey-premium-dark-feed .spicey-premium-post-card .post-liked,
+.spicey-premium-dark-feed .spicey-premium-post-card .post-caption,
+.spicey-premium-dark-feed .spicey-premium-post-card .post-comments {
+  position: relative;
+  z-index: 3;
+}
+
+.spicey-premium-dark-feed .spicey-premium-post-card {
+  min-height: 524px;
+  margin-top: 4px;
+  padding: 12px 12px 0;
+  border-radius: 26px;
+  background:
+    linear-gradient(180deg, rgba(18, 8, 24, 0.74) 0%, rgba(5, 6, 12, 0.94) 100%) !important;
+  border-color: rgba(255, 45, 143, 0.48) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.08),
+    0 22px 50px rgba(0,0,0,0.60),
+    0 0 34px rgba(255,45,143,0.22) !important;
+}
+
+.spicey-premium-dark-feed .spicey-premium-post-card .post-head {
+  position: relative;
+  z-index: 9;
+  margin: 0 0 10px;
+  background: transparent !important;
+  text-shadow: 0 2px 12px rgba(0,0,0,0.74);
+}
+
+.spicey-premium-dark-feed .spicey-premium-post-card .post-head > img {
+  width: 44px;
+  height: 44px;
+  border: 2px solid rgba(255, 45, 143, 0.78);
+  box-shadow: 0 0 16px rgba(255,45,143,0.34);
+}
+
+.spicey-premium-dark-feed .spicey-premium-post-card .post-head strong {
+  font-size: 14px;
+}
+
+.spicey-premium-dark-feed .spicey-premium-post-card .post-head button {
+  color: #ffffff;
+}
+
+.spicey-premium-dark-feed .spicey-premium-post-card .post-media {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  border-radius: 24px;
+  aspect-ratio: auto;
+  box-shadow: none;
+}
+
+.spicey-premium-dark-feed .spicey-premium-post-card .post-media img {
+  filter: saturate(1.08) contrast(1.06) brightness(0.86);
+}
+
+.spicey-premium-dark-feed .spicey-premium-post-card .post-media::after {
+  background:
+    linear-gradient(180deg, rgba(0,0,0,0.06) 0%, rgba(0,0,0,0.02) 34%, rgba(0,0,0,0.86) 100%);
+}
+
+.spicey-premium-dark-feed.spicey-photo-color-on .spicey-premium-post-card .post-media img {
+  filter: saturate(1.1) contrast(1.07) brightness(0.86);
+}
+
+.spicey-premium-dark-feed.spicey-photo-color-on .spicey-premium-post-card {
+  border-color: rgba(255, 255, 255, 0.12) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.08),
+    0 22px 50px rgba(0,0,0,0.60) !important;
+}
+
+.spicey-premium-dark-feed.spicey-photo-color-on .spicey-premium-post-card .post-media::before {
+  content: none;
+}
+
+.spicey-premium-dark-feed.spicey-photo-color-on .spicey-premium-post-card .post-media::after {
+  background:
+    linear-gradient(180deg, rgba(0,0,0,0.08) 0%, rgba(0,0,0,0.02) 34%, rgba(0,0,0,0.86) 100%);
+  mix-blend-mode: normal;
+  opacity: 1;
+}
+
+.spicey-premium-dark-feed.spicey-photo-color-on .spicey-premium-trending .trend-row button img,
+.spicey-premium-dark-feed.spicey-photo-color-on .spicey-premium-story img {
+  filter: saturate(1.08) contrast(1.04) brightness(0.96);
+}
+
+.spicey-premium-dark-feed .spicey-premium-trending .trend-row button:not(.spicey-trend-nav-card) i {
+  background: linear-gradient(180deg, rgba(0,0,0,0.04), rgba(0,0,0,0.50));
+}
+
+.spicey-premium-dark-feed.spicey-photo-color-on .spicey-premium-trending .trend-row button {
+  border-color: rgba(255,255,255,0.10);
+  box-shadow: 0 14px 28px rgba(0,0,0,0.40);
+}
+
+.spicey-premium-dark-feed.spicey-photo-color-on .spicey-premium-story .ring {
+  box-shadow: 0 0 0 1px rgba(255,106,0,0.22), 0 0 18px rgba(255,45,143,0.25);
+}
+
+.spicey-premium-dark-feed.spicey-photo-color-off .spicey-premium-trending .trend-row button img,
+.spicey-premium-dark-feed.spicey-photo-color-off .spicey-premium-story img {
+  filter: saturate(1.02) contrast(1.02) brightness(0.95);
+}
+
+.spicey-premium-dark-feed .spicey-premium-post-card .post-media > span {
+  display: none;
+  top: 14px;
+  right: 14px;
+  z-index: 5;
+  background: rgba(10, 6, 16, 0.68);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.spicey-premium-dark-feed .spicey-premium-post-card .photo-nav {
+  background: rgba(0,0,0,0.28);
+}
+
+.spicey-premium-dark-feed .spicey-premium-post-card .photo-dots {
+  left: 50%;
+  right: auto;
+  bottom: 14px;
+  z-index: 7;
+  transform: translateX(-50%);
+}
+
+.spicey-premium-dark-feed .spicey-premium-post-card .post-actions {
+  right: 14px;
+  top: 158px;
+  width: 50px;
+  gap: 10px;
+  background: rgba(9, 8, 15, 0.56);
+  border: 1px solid rgba(255,255,255,0.09);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.08), 0 12px 28px rgba(0,0,0,0.35);
+}
+
+.spicey-premium-dark-feed .spicey-premium-post-card .post-actions button {
+  min-width: 48px;
+  min-height: 42px;
+}
+
+.spicey-premium-dark-feed .spicey-premium-post-card .post-actions svg {
+  width: 23px;
+  height: 23px;
+}
+
+.spicey-premium-dark-feed .spicey-premium-post-card .post-actions small {
+  font-size: 9px;
+}
+
+.spicey-premium-dark-feed .spicey-premium-post-card .post-liked {
+  display: flex;
+}
+
+.spicey-premium-dark-feed .spicey-premium-post-card .post-liked img {
+  width: 24px;
+  height: 24px;
+  border-color: rgba(255,255,255,0.84);
+}
+
+.spicey-premium-dark-feed .spicey-premium-post-card .post-liked p {
+  color: rgba(255,255,255,0.92) !important;
+  font-size: 14px;
+  font-weight: 750;
+  line-height: 1.15;
+  text-shadow: 0 2px 12px rgba(0,0,0,0.58);
+}
+
+.spicey-premium-dark-feed .spicey-premium-post-card .post-caption {
+  position: absolute;
+  left: 20px;
+  right: 82px;
+  bottom: 42px;
+  z-index: 7;
+  color: #ffffff !important;
+  font-size: 16px;
+  font-weight: 650;
+  line-height: 1.26;
+  text-shadow: 0 2px 14px rgba(0,0,0,0.68);
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.spicey-premium-dark-feed .spicey-premium-post-card .post-caption b {
+  margin-right: 9px;
+  font-size: 17px;
+  font-weight: 950;
+}
+
+.spicey-premium-dark-feed .spicey-premium-post-card .post-caption em {
+  display: none;
+}
+
+.spicey-premium-dark-feed .spicey-premium-post-card .post-comments {
+  display: block;
+}
+
+/* The real premium feed uses this activity row in both themes. */
+.spicey-premium-dark-feed .spicey-premium-post-card .post-liked,
+.spicey-premium-light-feed .spicey-premium-post-card .post-liked {
+  display: flex !important;
+  visibility: visible !important;
+}
+
+.spicey-premium-dark-feed .spicey-premium-post-card .post-comments,
+.spicey-premium-light-feed .spicey-premium-post-card .post-comments {
+  display: block !important;
+  visibility: visible !important;
+}
+
+@media (min-width: 1024px) {
+  .spicey-web-sidebar-logo-wrap {
+    width: 220px;
+    height: 148px;
+    margin: 12px auto 10px;
+    overflow: hidden;
+    border-radius: 26px;
+    background: #757575;
+    box-shadow: 0 16px 36px rgba(0,0,0,0.24), 0 0 24px rgba(255,45,143,0.14);
+  }
+
+  .spicey-web-sidebar-logo {
+    width: 100%;
+    height: 100%;
+    display: block;
+    object-fit: cover;
+    object-position: 50% 47%;
+  }
+}
+
+.spicey-premium-light-feed {
+  color: #15111e;
+  background:
+    radial-gradient(circle at 12% 0%, rgba(255, 91, 24, 0.10), transparent 26%),
+    radial-gradient(circle at 88% 14%, rgba(255, 45, 143, 0.09), transparent 30%),
+    radial-gradient(circle at 56% 92%, rgba(139, 44, 255, 0.08), transparent 35%),
+    linear-gradient(180deg, #ffffff 0%, #fff8fb 50%, #ffffff 100%) !important;
+}
+
+.spicey-premium-light-feed .spicey-premium-actions button,
+.spicey-premium-light-feed .spicey-premium-search,
+.spicey-premium-light-feed .spicey-premium-ai-card,
+.spicey-premium-light-feed .spicey-premium-map-card,
+.spicey-premium-light-feed .spicey-premium-trending {
+  background: rgba(255,255,255,0.86) !important;
+  border: 1px solid rgba(255,255,255,0.92) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.96),
+    0 16px 34px rgba(78, 36, 64, 0.11) !important;
+}
+
+.spicey-premium-light-feed .spicey-premium-post-card {
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.78), rgba(255,255,255,0.62)) !important;
+  border-color: rgba(255,255,255,0.86) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.92),
+    0 18px 42px rgba(78, 36, 64, 0.14) !important;
+}
+
+.spicey-premium-light-feed .spicey-premium-post-card .post-head {
+  text-shadow: none;
+}
+
+.spicey-premium-light-feed .spicey-premium-story.more .ring {
+  color: #15111e;
+  background: rgba(255,255,255,0.84) !important;
+}
+
+.spicey-premium-light-feed .spicey-premium-search,
+.spicey-premium-light-feed .spicey-premium-ai-card,
+.spicey-premium-light-feed .spicey-premium-map-card,
+.spicey-premium-light-feed .spicey-premium-post-card,
+.spicey-premium-light-feed .spicey-premium-trending,
+.spicey-premium-light-feed .spicey-premium-tabs button {
+  color: #15111e !important;
+}
+
+.spicey-premium-light-feed .spicey-premium-search span,
+.spicey-premium-light-feed .spicey-premium-map-card p,
+.spicey-premium-light-feed .spicey-premium-ai-card p {
+  color: rgba(35, 24, 44, 0.68) !important;
+}
+
+.spicey-premium-light-feed .spicey-premium-story small,
+.spicey-premium-light-feed .spicey-premium-trending h3,
+.spicey-premium-light-feed .spicey-premium-map-card h3,
+.spicey-premium-light-feed .spicey-premium-ai-card h2,
+.spicey-premium-light-feed .spicey-premium-tabs button.active {
+  color: #15111e !important;
+}
+
+.spicey-premium-light-feed .spicey-premium-post-card .post-head strong,
+.spicey-premium-light-feed .spicey-premium-post-card .post-head span,
+.spicey-premium-light-feed .spicey-premium-post-card .post-head button {
+  color: #ffffff !important;
+  text-shadow: 0 2px 12px rgba(0,0,0,0.72);
+}
+
+.spicey-premium-light-feed .spicey-premium-post-card .post-actions button,
+.spicey-premium-light-feed .spicey-premium-post-card .post-actions small,
+.spicey-premium-light-feed .spicey-premium-post-card .post-caption {
+  color: #ffffff !important;
+}
+
+.spicey-premium-light-feed .spicey-premium-post-card .post-actions {
+  background: rgba(255,255,255,0.24) !important;
+  border: 1px solid rgba(255,255,255,0.38) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.18), 0 12px 26px rgba(0,0,0,0.18) !important;
+  backdrop-filter: blur(14px) saturate(1.08);
+  -webkit-backdrop-filter: blur(14px) saturate(1.08);
+}
+
+.spicey-premium-light-feed .spicey-premium-post-card .post-actions svg {
+  color: #ffffff !important;
+  stroke: #ffffff !important;
+  filter: drop-shadow(0 2px 8px rgba(0,0,0,0.42));
+}
+
+.spicey-premium-light-feed .spicey-premium-post-card .premium-poster-subtitle {
+  color: #ffffff;
 }

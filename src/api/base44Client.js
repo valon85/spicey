@@ -1,5 +1,6 @@
 import supabaseApi from './supabaseApi';
 import { spiceyApi, spiceySession } from './spiceyApi';
+import { Preferences } from '@capacitor/preferences';
 
 const TOKEN_KEY = 'spicey_session';
 const PROFILE_OVERRIDES_KEY = 'spicey_profile_overrides';
@@ -99,59 +100,7 @@ const FALLBACK_PEOPLE = [
   { id: 'demo-dardan', user_id: 'demo-dardan', full_name: 'Dardan Berisha', username: 'dardan.b', email: 'dardan@spicey.local', avatar_url: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=256&q=80' },
 ];
 
-const LOCAL_IMPORTED_CHATS = [
-  { id: '6a347c82a8b50bd7ba72b03a', participant_ids: [BASE44_CURRENT_USER_ID, '69feae083aa61326b91c603e'], participant_usernames: ['valondervishi13', 'valondervishi'], last_message_time: '2026-06-18T23:17:30.966Z', last_message: 'hi', is_group: false },
-  { id: '6a2f5c62939a5bee67cc289b', participant_ids: [BASE44_CURRENT_USER_ID, '69fef3afd4b8a59a0460e8d9'], participant_usernames: ['valondervishi13', 'appspicey'], last_message_time: '2026-06-17T22:04:25.130Z', last_message: 'hilgjhcj,cg hl', is_group: false },
-  { id: '6a0faf305cbd429810597053', participant_ids: ['6a0fae6601bd8ce15e0f0f4e', BASE44_CURRENT_USER_ID], participant_usernames: ['applejohn', 'valondervishi13'], last_message_time: '2026-05-22T01:19:44.459Z', last_message: '', is_group: false },
-  { id: '6a0e8165169ea75e9bf07054', participant_ids: [BASE44_CURRENT_USER_ID, '6a0a10c4bb8c5deb31d7999d'], participant_usernames: ['valondervishi13', 'ardiandervishi'], last_message_time: '2026-05-21T04:00:40.015Z', last_message: 'Ke text oshte te postoj tekt ose don video pi youtube vet url e bon copy paste atej', is_group: false },
-  { id: '6a0e511f3afb39a9491c0c6c', participant_ids: [BASE44_CURRENT_USER_ID, '6a05114447b0efd796d85e1e'], participant_usernames: ['valondervishi13', 'lonnydee'], last_message_time: '2026-05-25T19:32:13.620Z', last_message: 'hi', is_group: false },
-  { id: '6a0ba4c18e4119860df25fdd', participant_ids: [BASE44_CURRENT_USER_ID, '6a0ba30a7ed1076276059082'], participant_usernames: ['valondervishi13', 'avnidear'], last_message_time: '2026-05-18T23:46:09.939Z', last_message: '', is_group: false },
-  { id: '6a06b6a8c832f56fe26e516b', participant_ids: ['6a069d8cd355f8ebc3455257', BASE44_CURRENT_USER_ID], participant_usernames: ['powernyc', 'valondervishi13'], last_message_time: '2026-05-25T18:32:47.522Z', last_message: 'Hi', is_group: false },
-  { id: '6a049db0164a4e114bdc2c9d', participant_ids: ['6a049b37e1a76da1bb6ce47b', BASE44_CURRENT_USER_ID], participant_usernames: ['beko', 'valondervishi13'], last_message_time: '2026-05-13T16:01:46.724Z', last_message: 'Ngec', is_group: false },
-  { id: '6a03eb321129df13eb313c9e', participant_ids: [BASE44_CURRENT_USER_ID, '6a027805928983c3fe51b2eb'], participant_usernames: ['valondervishi13', 'spiceysupport'], last_message_time: '2026-06-03T05:12:30.582Z', last_message: 'Image', is_group: false },
-  { id: '6a028f0cd7e4b596601ec656', participant_ids: [BASE44_CURRENT_USER_ID, '69feb0e9c1fe3f359ac8bcdb'], participant_usernames: ['valondervishi13', 'vlora.dervisi'], last_message_time: '2026-06-08T23:08:09.697Z', last_message: 'hi', is_group: false },
-  { id: '6a0250eaa2252b23d5ff40f8', participant_ids: [BASE44_CURRENT_USER_ID, '6a00c072d40a9ca53179fc05'], participant_usernames: ['valondervishi13', 'gazidervishi'], last_message_time: '2026-05-12T16:43:41.522Z', last_message: 'Line sedi cka', is_group: false },
-];
-
-const LOCAL_IMPORTED_MESSAGES = {
-  '6a347c82a8b50bd7ba72b03a': [
-    { id: '6a347c8bbd398c9b0cd6ad3f', sender_username: 'valondervishi13', sender_id: BASE44_CURRENT_USER_ID, chat_id: '6a347c82a8b50bd7ba72b03a', text: 'hi', created_date: '2026-06-18T23:17:31.412Z', read_by: [BASE44_CURRENT_USER_ID] },
-  ],
-  '6a2f5c62939a5bee67cc289b': [
-    { id: '6a2f5c67448742308d6da7bb', sender_username: 'valondervishi13', sender_id: BASE44_CURRENT_USER_ID, chat_id: '6a2f5c62939a5bee67cc289b', text: 'hi', created_date: '2026-06-15T01:59:03.333Z', read_by: [BASE44_CURRENT_USER_ID] },
-    { id: '6a3319e9a40f6ce74e7a7005', sender_username: 'valondervishi13', sender_id: BASE44_CURRENT_USER_ID, chat_id: '6a2f5c62939a5bee67cc289b', text: 'hilgjhcj,cg hl', created_date: '2026-06-17T22:04:25.404Z', read_by: [BASE44_CURRENT_USER_ID] },
-  ],
-  '6a0e8165169ea75e9bf07054': [
-    { id: 'local-old-ardian-1', sender_username: 'ardiandervishi', sender_id: '6a0a10c4bb8c5deb31d7999d', chat_id: '6a0e8165169ea75e9bf07054', text: 'Ke text oshte te postoj tekt ose don video pi youtube vet url e bon copy paste atej', created_date: '2026-05-21T04:00:40.015Z', read_by: [] },
-  ],
-  '6a0e511f3afb39a9491c0c6c': [
-    { id: '6a14a3be483b1c4a8a147aa1', sender_username: 'valondervishi13', sender_id: BASE44_CURRENT_USER_ID, chat_id: '6a0e511f3afb39a9491c0c6c', text: 'hi', created_date: '2026-05-25T19:32:14.092Z', read_by: [BASE44_CURRENT_USER_ID] },
-  ],
-  '6a06b6a8c832f56fe26e516b': [
-    { id: '6a1495cf3b4e1307b2c84f38', sender_username: 'valondervishi13', sender_id: BASE44_CURRENT_USER_ID, chat_id: '6a06b6a8c832f56fe26e516b', text: 'Hi', created_date: '2026-05-25T18:32:47.883Z', read_by: [BASE44_CURRENT_USER_ID] },
-  ],
-  '6a049db0164a4e114bdc2c9d': [
-    { id: 'local-old-beko-1', sender_username: 'beko', sender_id: '6a049b37e1a76da1bb6ce47b', chat_id: '6a049db0164a4e114bdc2c9d', text: 'Ngec', created_date: '2026-05-13T16:01:46.724Z', read_by: [] },
-  ],
-  '6a03eb321129df13eb313c9e': [
-    { id: '6a149b0173cb8f273624db7a', sender_username: 'valondervishi13', sender_id: BASE44_CURRENT_USER_ID, chat_id: '6a03eb321129df13eb313c9e', text: 'hi', created_date: '2026-05-25T18:54:57.859Z', read_by: [BASE44_CURRENT_USER_ID] },
-    { id: '6a14a1a9450d61e691df3cee', sender_username: 'valondervishi13', sender_id: BASE44_CURRENT_USER_ID, chat_id: '6a03eb321129df13eb313c9e', text: 'Hi', created_date: '2026-05-25T19:23:21.285Z', read_by: [BASE44_CURRENT_USER_ID] },
-    { id: '6a14a2457f8cf4d9cf45a92e', sender_username: 'valondervishi13', sender_id: BASE44_CURRENT_USER_ID, chat_id: '6a03eb321129df13eb313c9e', text: '1', created_date: '2026-05-25T19:25:57.626Z', read_by: [BASE44_CURRENT_USER_ID] },
-    { id: '6a14c2581d176f4b8224c8ed', sender_username: 'valondervishi13', sender_id: BASE44_CURRENT_USER_ID, chat_id: '6a03eb321129df13eb313c9e', text: 'si je', created_date: '2026-05-25T21:42:48.119Z', read_by: [BASE44_CURRENT_USER_ID] },
-    { id: '6a14c263c5ce3d2f2001e373', sender_username: 'Spicey Support', sender_id: '6a027805928983c3fe51b2eb', chat_id: '6a03eb321129df13eb313c9e', text: 'Mir', created_date: '2026-05-25T21:42:59.942Z', read_by: ['6a027805928983c3fe51b2eb'] },
-    { id: '6a1e20c7e9cc06ac3f067350', sender_username: 'valondervishi13', sender_id: BASE44_CURRENT_USER_ID, chat_id: '6a03eb321129df13eb313c9e', text: 'hi', created_date: '2026-06-02T00:16:07.811Z', read_by: [BASE44_CURRENT_USER_ID] },
-    { id: '6a1fb7bea9648f9dde9f8ccf', sender_username: 'Spicey Support', sender_id: '6a027805928983c3fe51b2eb', chat_id: '6a03eb321129df13eb313c9e', text: '', image_url: 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=600&q=80', created_date: '2026-06-03T05:12:30.877Z', read_by: ['6a027805928983c3fe51b2eb'] },
-  ],
-  '6a028f0cd7e4b596601ec656': [
-    { id: '6a1c56313fca0ca2735968b0', sender_username: 'vlora.dervisi', sender_id: '69feb0e9c1fe3f359ac8bcdb', chat_id: '6a028f0cd7e4b596601ec656', text: 'Hi', created_date: '2026-05-31T15:39:29.997Z', read_by: ['69feb0e9c1fe3f359ac8bcdb'] },
-    { id: '6a274b5a2a39befba4e9816d', sender_username: 'vlora.dervisi', sender_id: '69feb0e9c1fe3f359ac8bcdb', chat_id: '6a028f0cd7e4b596601ec656', text: 'hi', created_date: '2026-06-08T23:08:10.010Z', read_by: ['69feb0e9c1fe3f359ac8bcdb'] },
-  ],
-  '6a0250eaa2252b23d5ff40f8': [
-    { id: 'local-old-gazi-1', sender_username: 'gazidervishi', sender_id: '6a00c072d40a9ca53179fc05', chat_id: '6a0250eaa2252b23d5ff40f8', text: 'Line sedi cka', created_date: '2026-05-12T16:43:41.522Z', read_by: [] },
-  ],
-};
-
-const LOCAL_MESSAGES = new Map(Object.entries(LOCAL_IMPORTED_MESSAGES).map(([chatId, messages]) => [chatId, [...messages]]));
+const LOCAL_CALL_SESSIONS = new Map();
 
 const FALLBACK_REELS = [
   {
@@ -372,21 +321,47 @@ function mapBase44CurrentId(value, user) {
   return value === BASE44_CURRENT_USER_ID ? currentUserIdForFallback(user) : value;
 }
 
-function fallbackChatsForUser(user) {
-  const mappedCurrentId = currentUserIdForFallback(user);
-  return LOCAL_IMPORTED_CHATS.map((chat) => ({
-    ...chat,
-    participant_ids: chat.participant_ids.map((id) => id === BASE44_CURRENT_USER_ID ? mappedCurrentId : id),
-    local_imported: true,
-  }));
+function isMissingCallSessionsTable(error) {
+  return /call_sessions.*schema cache|schema cache.*call_sessions|could not find the table.*call_sessions|pgrst205/i
+    .test(error?.message || '');
 }
 
-function normalizeLocalMessage(message, user) {
+function warnMissingCallSessions(error) {
+  if (isMissingCallSessionsTable(error)) {
+    console.warn('[Spicey Calls] Supabase call_sessions table is missing. Run supabase/supabase/fix_call_sessions_schema_cache.sql.');
+    return;
+  }
+  console.warn('[Spicey Calls] Using local call fallback:', error?.message || error);
+}
+
+function makeLocalCallSession(payload = {}, user = null) {
+  const now = new Date().toISOString();
   return {
-    ...message,
-    sender_id: mapBase44CurrentId(message.sender_id, user),
-    read_by: Array.isArray(message.read_by) ? message.read_by.map((id) => mapBase44CurrentId(id, user)) : [],
+    id: payload.id || `local-call-${Date.now()}`,
+    caller_id: payload.caller_id || currentUserIdForFallback(user),
+    receiver_id: payload.receiver_id,
+    type: payload.type === 'video' ? 'video' : 'voice',
+    status: payload.status || 'ringing',
+    caller_name: payload.caller_name || user?.full_name || user?.username || 'User',
+    caller_avatar: payload.caller_avatar || user?.avatar_url || null,
+    receiver_name: payload.receiver_name || null,
+    receiver_avatar: payload.receiver_avatar || null,
+    caller_ice: payload.caller_ice || [],
+    receiver_ice: payload.receiver_ice || [],
+    created_at: payload.created_at || now,
+    created_date: payload.created_date || now,
+    updated_at: payload.updated_at || now,
+    local_only: true,
   };
+}
+
+function filterLocalCallSessions(filters = {}) {
+  return Array.from(LOCAL_CALL_SESSIONS.values()).filter((session) =>
+    Object.entries(filters || {}).every(([key, value]) => {
+      if (value === undefined || value === null || value === '') return true;
+      return String(session[key]) === String(value);
+    })
+  );
 }
 
 function funnyYoutubeReels() {
@@ -547,84 +522,29 @@ async function invokeFunction(name, payload = {}) {
     case 'searchMusic':
       return { data: await spiceyApi.music.search(payload) };
     case 'getOrCreateChat':
-      try {
-        return { data: await spiceyApi.chats.create(payload) };
-      } catch (error) {
-        const otherUserId = payload.other_user_id || payload.otherUserId || payload.receiver_id;
-        const chat = {
-          id: `local-chat-${otherUserId || Date.now()}`,
-          participant_ids: ['local-current-user', otherUserId].filter(Boolean),
-          last_message: '',
-          last_message_time: new Date().toISOString(),
-          local_only: true,
-        };
-        return { data: { chat, ...chat } };
-      }
+      return { data: await spiceyApi.chats.create(payload) };
+    case 'getUserChats':
+      return { data: await spiceyApi.chats.list() };
     case 'getChatMessages': {
       const chatId = payload.chat_id || payload.chatId;
-      if (LOCAL_MESSAGES.has(chatId)) {
-        const user = await currentUser().catch(() => null);
-        return { data: { messages: LOCAL_MESSAGES.get(chatId).map((message) => normalizeLocalMessage(message, user)) } };
-      }
-      let messages = [];
-      try {
-        messages = await supabaseApi.entities.Message.filter({ chat_id: chatId }, 'created_date', 200);
-      } catch (error) {
-        console.warn('[Spicey Messages] Supabase messages failed:', error.message);
-      }
-      if (!messages.length && LOCAL_MESSAGES.has(chatId)) {
-        const user = await currentUser().catch(() => null);
-        messages = LOCAL_MESSAGES.get(chatId).map((message) => normalizeLocalMessage(message, user));
-      }
-      return { data: { messages } };
+      if (!chatId) throw new Error('Missing chat id');
+      return { data: await spiceyApi.messages.list(chatId) };
     }
     case 'sendDirectMessage': {
       const chatId = payload.chat_id || payload.chatId;
-      try {
-        if (chatId && (LOCAL_MESSAGES.has(chatId) || String(chatId).startsWith('local-chat-'))) {
-          throw new Error('Local imported chat');
-        }
-        if (chatId) return { data: await spiceyApi.messages.create(chatId, payload) };
-        const receiverId = payload.receiver_id || payload.to_user_id || payload.receiverId;
-        const chat = await spiceyApi.chats.create({ other_user_id: receiverId });
-        return { data: await spiceyApi.messages.create(chat.chat?.id || chat.id, payload) };
-      } catch (error) {
-        const localChatId = chatId || `local-chat-${payload.receiver_id || payload.to_user_id || payload.receiverId || Date.now()}`;
-        const user = await currentUser().catch(() => null);
-        const localMessage = {
-          id: `local-msg-${Date.now()}`,
-          chat_id: localChatId,
-          sender_id: currentUserIdForFallback(user),
-          sender_username: user?.username || user?.email?.split('@')[0] || 'me',
-          sender_avatar: user?.avatar_url || '',
-          text: payload.text || '',
-          image_url: payload.imageUrl || payload.image_url || null,
-          video_url: payload.videoUrl || payload.video_url || null,
-          created_date: new Date().toISOString(),
-          read_by: [currentUserIdForFallback(user)],
-        };
-        const existing = LOCAL_MESSAGES.get(localChatId) || [];
-        LOCAL_MESSAGES.set(localChatId, [...existing, localMessage]);
-        return {
-          data: {
-            chat: { id: localChatId, local_only: true },
-            message: localMessage,
-          },
-        };
-      }
+      if (chatId) return { data: await spiceyApi.messages.create(chatId, payload) };
+      const receiverId = payload.receiver_id || payload.to_user_id || payload.receiverId;
+      const chat = await spiceyApi.chats.create({ other_user_id: receiverId });
+      return { data: await spiceyApi.messages.create(chat.chat?.id || chat.id, payload) };
     }
     case 'initiateCall':
       try {
         return { data: await spiceyApi.callSessions.create(payload) };
       } catch (error) {
-        const callSession = {
-          id: `local-call-${Date.now()}`,
-          caller_id: 'local-current-user',
-          receiver_id: payload.receiver_id,
-          type: payload.type === 'video' ? 'video' : 'voice',
-          status: 'ringing',
-          local_only: true,
-        };
+        warnMissingCallSessions(error);
+        const user = await currentUser().catch(() => null);
+        const callSession = makeLocalCallSession(payload, user);
+        LOCAL_CALL_SESSIONS.set(callSession.id, callSession);
         return { data: { call_session: callSession, session: callSession, voip: { sent: false, local_only: true } } };
       }
     case 'notifyNewMessage':
@@ -665,22 +585,52 @@ async function invokeFunction(name, payload = {}) {
 
 export const TokenStorage = {
   async get() {
-    return spiceySession.token();
+    const token = spiceySession.token();
+    if (token) return token;
+    try {
+      const { value } = await Preferences.get({ key: TOKEN_KEY });
+      if (!value) return null;
+      try {
+        return JSON.parse(value)?.access_token || value;
+      } catch (_) {
+        return value;
+      }
+    } catch (_) {
+      return null;
+    }
   },
   async set(value) {
     if (!value) return;
-    spiceySession.set({ access_token: value, token_type: 'bearer' });
+    const session = { access_token: value, token_type: 'bearer' };
+    spiceySession.set(session);
+    try { await Preferences.set({ key: TOKEN_KEY, value: JSON.stringify(session) }); } catch (_) {}
   },
   async remove() {
     spiceySession.clear();
     LEGACY_KEYS.forEach((key) => localStorage.removeItem(key));
+    try {
+      await Preferences.remove({ key: TOKEN_KEY });
+      await Preferences.remove({ key: 'spicey_user_data' });
+      await Preferences.remove({ key: 'spicey_cached_user' });
+    } catch (_) {}
   },
   async setUser(userObj) {
-    if (userObj) localStorage.setItem('spicey_user_data', JSON.stringify(userObj));
+    if (!userObj) return;
+    const value = JSON.stringify(userObj);
+    localStorage.setItem('spicey_user_data', value);
+    localStorage.setItem('spicey_cached_user', value);
+    try {
+      await Preferences.set({ key: 'spicey_user_data', value });
+      await Preferences.set({ key: 'spicey_cached_user', value });
+    } catch (_) {}
   },
   async getUser() {
     try {
-      return JSON.parse(localStorage.getItem('spicey_user_data') || 'null');
+      const localValue = localStorage.getItem('spicey_user_data') || localStorage.getItem('spicey_cached_user');
+      if (localValue) return JSON.parse(localValue);
+      const primary = await Preferences.get({ key: 'spicey_user_data' });
+      const fallback = primary?.value ? primary : await Preferences.get({ key: 'spicey_cached_user' });
+      return fallback?.value ? JSON.parse(fallback.value) : null;
     } catch (_) {
       return null;
     }
@@ -703,6 +653,7 @@ export async function persistLogin(sessionOrToken, maybeEmailOrUser, maybeUser) 
     await TokenStorage.set(sessionOrToken);
   } else if (sessionOrToken?.access_token) {
     spiceySession.set(sessionOrToken);
+    try { await Preferences.set({ key: TOKEN_KEY, value: JSON.stringify(sessionOrToken) }); } catch (_) {}
   }
   if (user) await TokenStorage.setUser(user);
 }
@@ -720,15 +671,56 @@ const wrappedEntities = {
   Chat: {
     ...supabaseApi.entities.Chat,
     async list(...args) {
-      let rows = [];
+      return supabaseApi.entities.Chat.list(...args);
+    },
+  },
+  CallSession: {
+    ...supabaseApi.entities.CallSession,
+    async list(...args) {
       try {
-        rows = await supabaseApi.entities.Chat.list(...args);
+        return await supabaseApi.entities.CallSession.list(...args);
       } catch (error) {
-        console.warn('[Spicey Chats] Supabase chats failed, using imported fallback:', error.message);
+        warnMissingCallSessions(error);
+        return Array.from(LOCAL_CALL_SESSIONS.values());
       }
-      if (Array.isArray(rows) && rows.length) return rows;
-      const user = await currentUser().catch(() => null);
-      return fallbackChatsForUser(user);
+    },
+    async filter(filters = {}, ...args) {
+      try {
+        return await supabaseApi.entities.CallSession.filter(filters, ...args);
+      } catch (error) {
+        warnMissingCallSessions(error);
+        return filterLocalCallSessions(filters);
+      }
+    },
+    async get(id) {
+      try {
+        return await supabaseApi.entities.CallSession.get(id);
+      } catch (error) {
+        warnMissingCallSessions(error);
+        return LOCAL_CALL_SESSIONS.get(id) || null;
+      }
+    },
+    async create(payload = {}) {
+      try {
+        return await supabaseApi.entities.CallSession.create(payload);
+      } catch (error) {
+        warnMissingCallSessions(error);
+        const user = await currentUser().catch(() => null);
+        const callSession = makeLocalCallSession(payload, user);
+        LOCAL_CALL_SESSIONS.set(callSession.id, callSession);
+        return callSession;
+      }
+    },
+    async update(id, payload = {}) {
+      try {
+        return await supabaseApi.entities.CallSession.update(id, payload);
+      } catch (error) {
+        warnMissingCallSessions(error);
+        const current = LOCAL_CALL_SESSIONS.get(id) || makeLocalCallSession({ id }, null);
+        const updated = { ...current, ...payload, updated_at: new Date().toISOString() };
+        LOCAL_CALL_SESSIONS.set(id, updated);
+        return updated;
+      }
     },
   },
 };

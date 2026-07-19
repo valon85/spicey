@@ -1,21 +1,41 @@
-import React, { useState, useEffect, useCallback, memo, useRef } from 'react';
+import React, { useState, useEffect, useCallback, memo } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useQuery } from '@tanstack/react-query';
-import Header from '../components/feed/Header';
+import Header from '../components/feed/Header.jsx';
 import StoryBar from '../components/feed/StoryBar';
-import PostCard from '../components/feed/PostCard';
+import PostCard from '../components/feed/PostCard.jsx';
 import TrendingNow from '../components/feed/TrendingNow';
 const MemoPostCard = memo(PostCard);
 import CommentsSheet from '../components/feed/CommentsSheet';
 import TagPostsModal from '../components/feed/TagPostsModal';
-import { TrendingUp, Sparkles, Flame, Plus, ChevronRight, Image, Video, Type } from 'lucide-react';
+import ShareSheet from '../components/panels/ShareSheet.jsx';
+import ReactionsSheet from '../components/panels/ReactionsSheet.jsx';
+import VerifiedBadge from '../components/shared/VerifiedBadge.jsx';
+import {
+  Bell,
+  ChevronRight,
+  Crown,
+  Flame,
+  Heart,
+  Hash,
+  MapPin,
+  MessageCircle,
+  MoreHorizontal,
+  Navigation,
+  Search,
+  Send,
+  SmilePlus,
+  SlidersHorizontal,
+  Sparkles,
+  TrendingUp,
+  UserRoundPlus,
+} from 'lucide-react';
 import AIAssistantSheet from '../components/panels/AIAssistantSheet.jsx';
 import AIOrb from '../components/ai/AIOrb';
 import AITalkMode from '../components/ai/AITalkMode';
 import { AIProvider, useAI } from '@/lib/AIContext';
-import TestCallButton from '../components/TestCallButton';
 import ActiveLiveBar from '../components/feed/ActiveLiveBar.jsx';
-import { AnimatePresence, motion } from 'framer-motion';
+import { AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 
 // Utility to ensure array safety
@@ -24,42 +44,32 @@ const asArray = (v) => Array.isArray(v) ? v : [];
 const TRENDING_TAGS = ['#SpiceyNight', '#UrbanVibes', '#GlowUp', '#NoFilter', '#AfterDark'];
 
 const FASHION_FEED_IMAGES = [
-  'https://images.pexels.com/photos/774909/pexels-photo-774909.jpeg?auto=compress&cs=tinysrgb&w=900&h=1250&fit=crop',
-  'https://images.pexels.com/photos/415829/pexels-photo-415829.jpeg?auto=compress&cs=tinysrgb&w=900&h=1250&fit=crop',
-  'https://images.pexels.com/photos/733872/pexels-photo-733872.jpeg?auto=compress&cs=tinysrgb&w=900&h=1250&fit=crop',
-  'https://images.pexels.com/photos/1239291/pexels-photo-1239291.jpeg?auto=compress&cs=tinysrgb&w=900&h=1250&fit=crop',
-  'https://images.pexels.com/photos/762020/pexels-photo-762020.jpeg?auto=compress&cs=tinysrgb&w=900&h=1250&fit=crop',
-  'https://images.pexels.com/photos/1036623/pexels-photo-1036623.jpeg?auto=compress&cs=tinysrgb&w=900&h=1250&fit=crop',
-  'https://images.pexels.com/photos/712513/pexels-photo-712513.jpeg?auto=compress&cs=tinysrgb&w=900&h=1250&fit=crop',
-  'https://images.pexels.com/photos/1181686/pexels-photo-1181686.jpeg?auto=compress&cs=tinysrgb&w=900&h=1250&fit=crop',
-  'https://images.pexels.com/photos/2065200/pexels-photo-2065200.jpeg?auto=compress&cs=tinysrgb&w=900&h=1250&fit=crop',
-  'https://images.pexels.com/photos/3760854/pexels-photo-3760854.jpeg?auto=compress&cs=tinysrgb&w=900&h=1250&fit=crop',
-  'https://images.pexels.com/photos/3763188/pexels-photo-3763188.jpeg?auto=compress&cs=tinysrgb&w=900&h=1250&fit=crop',
-  'https://images.pexels.com/photos/3769021/pexels-photo-3769021.jpeg?auto=compress&cs=tinysrgb&w=900&h=1250&fit=crop',
-  'https://images.pexels.com/photos/1382731/pexels-photo-1382731.jpeg?auto=compress&cs=tinysrgb&w=900&h=1250&fit=crop',
-  'https://images.pexels.com/photos/1536619/pexels-photo-1536619.jpeg?auto=compress&cs=tinysrgb&w=900&h=1250&fit=crop',
-  'https://images.pexels.com/photos/1587009/pexels-photo-1587009.jpeg?auto=compress&cs=tinysrgb&w=900&h=1250&fit=crop',
-  'https://images.pexels.com/photos/1858175/pexels-photo-1858175.jpeg?auto=compress&cs=tinysrgb&w=900&h=1250&fit=crop',
-  'https://images.pexels.com/photos/2010877/pexels-photo-2010877.jpeg?auto=compress&cs=tinysrgb&w=900&h=1250&fit=crop',
-  'https://images.pexels.com/photos/2122362/pexels-photo-2122362.jpeg?auto=compress&cs=tinysrgb&w=900&h=1250&fit=crop',
-  'https://images.pexels.com/photos/2531552/pexels-photo-2531552.jpeg?auto=compress&cs=tinysrgb&w=900&h=1250&fit=crop',
-  'https://images.pexels.com/photos/2787341/pexels-photo-2787341.jpeg?auto=compress&cs=tinysrgb&w=900&h=1250&fit=crop',
-  'https://images.pexels.com/photos/3059402/pexels-photo-3059402.jpeg?auto=compress&cs=tinysrgb&w=900&h=1250&fit=crop',
-  'https://images.pexels.com/photos/3065096/pexels-photo-3065096.jpeg?auto=compress&cs=tinysrgb&w=900&h=1250&fit=crop',
-  'https://images.pexels.com/photos/3373716/pexels-photo-3373716.jpeg?auto=compress&cs=tinysrgb&w=900&h=1250&fit=crop',
-  'https://images.pexels.com/photos/3756679/pexels-photo-3756679.jpeg?auto=compress&cs=tinysrgb&w=900&h=1250&fit=crop',
-  'https://images.pexels.com/photos/3771089/pexels-photo-3771089.jpeg?auto=compress&cs=tinysrgb&w=900&h=1250&fit=crop',
-  'https://images.pexels.com/photos/3771118/pexels-photo-3771118.jpeg?auto=compress&cs=tinysrgb&w=900&h=1250&fit=crop',
-  'https://images.pexels.com/photos/3812743/pexels-photo-3812743.jpeg?auto=compress&cs=tinysrgb&w=900&h=1250&fit=crop',
-  'https://images.pexels.com/photos/3992656/pexels-photo-3992656.jpeg?auto=compress&cs=tinysrgb&w=900&h=1250&fit=crop',
-  'https://images.pexels.com/photos/3992658/pexels-photo-3992658.jpeg?auto=compress&cs=tinysrgb&w=900&h=1250&fit=crop',
-  'https://images.pexels.com/photos/3992663/pexels-photo-3992663.jpeg?auto=compress&cs=tinysrgb&w=900&h=1250&fit=crop',
+  'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?w=900&h=1250&fit=crop&q=92',
+  'https://images.unsplash.com/photo-1485968579580-b6d095142e6e?w=900&h=1250&fit=crop&q=92',
+  'https://images.unsplash.com/photo-1509631179647-0177331693ae?w=900&h=1250&fit=crop&q=92',
+  'https://images.unsplash.com/photo-1485178575877-1a13bf489dfe?w=900&h=1250&fit=crop&q=92',
+  'https://images.unsplash.com/photo-1496747611176-843222e1e57c?w=900&h=1250&fit=crop&q=92',
+  'https://images.unsplash.com/photo-1501196354995-cbb51c65aaea?w=900&h=1250&fit=crop&q=92',
+  'https://images.unsplash.com/photo-1515378791036-0648a3ef77b2?w=900&h=1250&fit=crop&q=92',
+  'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=900&h=1250&fit=crop&q=92',
+  'https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=900&h=1250&fit=crop&q=92',
+  'https://images.unsplash.com/photo-1529139574466-a303027c1d8b?w=900&h=1250&fit=crop&q=92',
+  'https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?w=900&h=1250&fit=crop&q=92',
+  'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=900&h=1250&fit=crop&q=92',
+  'https://images.unsplash.com/photo-1503342217505-b0a15ec3261c?w=900&h=1250&fit=crop&q=92',
+  'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=900&h=1250&fit=crop&q=92',
+  'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=900&h=1250&fit=crop&q=92',
+  'https://images.unsplash.com/photo-1502823403499-6ccfcf4fb453?w=900&h=1250&fit=crop&q=92',
+  'https://images.unsplash.com/photo-1488426862026-3ee34a7d66df?w=900&h=1250&fit=crop&q=92',
+  'https://images.unsplash.com/photo-1533227268428-f9ed0900fb3b?w=900&h=1250&fit=crop&q=92',
+  'https://images.unsplash.com/photo-1512316609839-ce289d3eba0a?w=900&h=1250&fit=crop&q=92',
+  'https://images.unsplash.com/photo-1524250502761-1ac6f2e30d43?w=900&h=1250&fit=crop&q=92',
 ];
 
 function getFashionImageSet(postIndex = 0, count = 1) {
   const start = (Number(postIndex) * 7) % FASHION_FEED_IMAGES.length;
   return Array.from({ length: count }, (_, index) => (
-    `${FASHION_FEED_IMAGES[(start + index) % FASHION_FEED_IMAGES.length]}&spiceyFresh=20260711c_${postIndex}_${index}`
+    `${FASHION_FEED_IMAGES[(start + index) % FASHION_FEED_IMAGES.length]}&spiceyFresh=20260717stable_${postIndex}_${index}`
   ));
 }
 
@@ -157,21 +167,438 @@ function AIFloatingSection() {
   );
 }
 
+function FeedAIPromoCard({ onOpen }) {
+  return (
+    <section className="spicey-feed-ai-card">
+      <div className="spicey-feed-ai-orb">
+        <img
+          src="https://media.base44.com/images/public/69fe90d3bbe7ad47925e4a0a/a645abc1a_6ab1672f-73ff-4c98-a1ef-817016549a2f.png"
+          alt=""
+        />
+      </div>
+      <div className="spicey-feed-ai-copy">
+        <div className="spicey-feed-ai-title">
+          <strong>Spicey AI</strong>
+          <span>New</span>
+        </div>
+        <p>Your creative partner for captions, hashtags, ideas and more.</p>
+      </div>
+      <button type="button" onClick={onOpen} className="spicey-feed-ai-try">
+        Try AI <span>✦</span>
+      </button>
+    </section>
+  );
+}
+
+function FeedTabs() {
+  return (
+    <nav className="spicey-feed-tabs" aria-label="Feed tabs">
+      <button type="button" className="active">For You</button>
+      <button type="button">Following</button>
+      <button type="button">Trending</button>
+    </nav>
+  );
+}
+
+const PREMIUM_STORIES = [
+  {
+    name: 'Your Story',
+    image: 'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=180&h=180&fit=crop&crop=face&q=90',
+    self: true,
+  },
+  {
+    name: 'Valon',
+    image: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=180&h=180&fit=crop&crop=face&q=90',
+  },
+  {
+    name: 'Vlora',
+    image: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=180&h=180&fit=crop&crop=face&q=90',
+  },
+  {
+    name: 'Ardian',
+    image: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=180&h=180&fit=crop&crop=face&q=90',
+  },
+  {
+    name: 'John',
+    image: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=180&h=180&fit=crop&crop=face&q=90',
+  },
+];
+
+const PREMIUM_TRENDING = [
+  { tag: '#SpiceyLife', posts: '12.4K posts', image: 'https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?w=360&h=180&fit=crop&q=90' },
+  { tag: '#SummerVibes', posts: '8.7K posts', image: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=360&h=180&fit=crop&q=90' },
+  { tag: '#Reelt', posts: '5.3K posts', image: 'https://images.unsplash.com/photo-1519608487953-e999c86e7455?w=360&h=180&fit=crop&q=90' },
+];
+
+function PremiumPosterText({ caption }) {
+  const text = String(caption || '').replace(/\s+/g, ' ').trim();
+  if (!text) return null;
+  const words = text.split(' ').filter(Boolean);
+  const titleWords = words.slice(0, Math.min(2, words.length));
+  const titleLines = titleWords
+    .map(word => word.replace(/[^\p{L}\p{N}]+/gu, '').toUpperCase())
+    .filter(Boolean);
+  const rest = words.slice(titleWords.length).join(' ');
+
+  return (
+    <div className="premium-poster-copy">
+      <div className="premium-poster-title">
+        {titleLines.map(line => <span key={line}>{line}</span>)}
+      </div>
+      {rest && <div className="premium-poster-subtitle">{rest}</div>}
+    </div>
+  );
+}
+
+function PremiumPostCard({ post, index = 0, onCommentClick, currentUser }) {
+  const rawImages = asArray(post?.image_urls);
+  const images = rawImages.length ? rawImages : [post?.image_url || FASHION_FEED_IMAGES[index % FASHION_FEED_IMAGES.length]];
+  const postKey = post?.id || post?.image_url || `premium-${index}`;
+  const swipeStartRef = React.useRef(null);
+  const [photoIndex, setPhotoIndex] = React.useState(0);
+  const [reactions, setReactions] = React.useState(() => {
+    try {
+      const store = JSON.parse(localStorage.getItem('spicey_premium_reactions_v2') || '{}') || {};
+      return { like: false, fire: false, wow: false, share: false, ...(store[postKey] || {}) };
+    } catch {
+      return { like: false, fire: false, wow: false, share: false };
+    }
+  });
+  const [shareOpen, setShareOpen] = React.useState(false);
+  const [reactionsOpen, setReactionsOpen] = React.useState(false);
+  const heroImage = images[photoIndex] || images[0];
+  const authorAvatar = post?.author_avatar || PREMIUM_STORIES[(index % (PREMIUM_STORIES.length - 1)) + 1]?.image || PREMIUM_STORIES[0].image;
+  const authorName = post?.author_name || ['Vlora Dervishi', 'Valon Dervishi', 'Ardian Dervishi'][index % 3];
+  const caption = post?.caption || 'Sunset mode 🌅 ✨';
+  const count = Math.max(1, images.length);
+  const likeCount = (post?.likes_count || 1200) + (reactions.like ? 1 : 0);
+  const fireCount = (post?.fire_count || 87) + (reactions.fire ? 1 : 0);
+  const wowCount = (post?.wow_count || 34) + (reactions.wow ? 1 : 0);
+  const shareCount = (post?.shares_count || 12) + (reactions.share ? 1 : 0);
+  const toggleReaction = (key) => setReactions(prev => {
+    const next = { ...prev, [key]: !prev[key] };
+    try {
+      const store = JSON.parse(localStorage.getItem('spicey_premium_reactions_v2') || '{}') || {};
+      store[postKey] = next;
+      localStorage.setItem('spicey_premium_reactions_v2', JSON.stringify(store));
+    } catch {}
+    return next;
+  });
+  const handleShare = async () => {
+    toggleReaction('share');
+    setShareOpen(true);
+  };
+  const nextPhoto = () => setPhotoIndex(prev => (prev + 1) % count);
+  const prevPhoto = () => setPhotoIndex(prev => (prev - 1 + count) % count);
+  const handleSwipeStart = (event) => {
+    if (count <= 1) return;
+    const point = event.touches?.[0] || event;
+    swipeStartRef.current = { x: point.clientX, y: point.clientY };
+  };
+  const handleSwipeEnd = (event) => {
+    if (count <= 1 || !swipeStartRef.current) return;
+    const point = event.changedTouches?.[0] || event;
+    const dx = point.clientX - swipeStartRef.current.x;
+    const dy = point.clientY - swipeStartRef.current.y;
+    swipeStartRef.current = null;
+    if (Math.abs(dx) < 36 || Math.abs(dx) < Math.abs(dy)) return;
+    if (dx < 0) nextPhoto();
+    else prevPhoto();
+  };
+
+  return (
+    <>
+    <article className="spicey-premium-post-card">
+      <div className="post-head">
+        <img src={authorAvatar} alt={authorName} />
+        <div>
+          <strong>{authorName}<VerifiedBadge type="vip" size="sm" /></strong>
+          <span>{index === 0 ? '2h ago' : `${index + 2}h ago`}</span>
+        </div>
+        <button type="button" aria-label="More" onClick={() => setShareOpen(true)}><MoreHorizontal size={22} /></button>
+      </div>
+      <div
+        className="post-media"
+        onTouchStart={handleSwipeStart}
+        onTouchEnd={handleSwipeEnd}
+        onMouseDown={handleSwipeStart}
+        onMouseUp={handleSwipeEnd}
+      >
+        <img src={heroImage} alt="" />
+        <PremiumPosterText caption={caption} />
+        {count > 1 && (
+          <>
+            <div className="photo-dots">
+              {images.map((_, dotIndex) => (
+                <i key={dotIndex} className={dotIndex === photoIndex ? 'active' : ''} />
+              ))}
+            </div>
+          </>
+        )}
+      </div>
+      <div className="post-actions">
+        <button type="button" className={reactions.like ? 'active like' : 'like'} aria-label="Like" onClick={() => toggleReaction('like')}>
+          <Heart size={28} />
+          <small>{likeCount > 999 ? `${(likeCount / 1000).toFixed(1)}K` : likeCount}</small>
+        </button>
+        <button type="button" className={reactions.fire ? 'active fire' : 'fire'} aria-label="Fire" onClick={() => toggleReaction('fire')}>
+          <Flame size={27} />
+          <small>{fireCount}</small>
+        </button>
+        <button type="button" className={reactions.wow ? 'active wow' : 'wow'} aria-label="Wow" onClick={() => toggleReaction('wow')}>
+          <SmilePlus size={27} />
+          <small>{wowCount}</small>
+        </button>
+        <button type="button" aria-label="Comment" onClick={() => onCommentClick(post)}><MessageCircle size={29} /></button>
+        <button type="button" className={reactions.share ? 'active share' : 'share'} aria-label="Share" onClick={handleShare}>
+          <Send size={28} />
+          <small>{shareCount}</small>
+        </button>
+      </div>
+      <div className="post-activity" aria-label="Post activity">
+        <button type="button" onClick={() => setReactionsOpen(true)} aria-label="View likes">
+          <span className="activity-avatars">
+            <img src={PREMIUM_STORIES[1].image} alt="" />
+            <img src={PREMIUM_STORIES[2].image} alt="" />
+            <img src={PREMIUM_STORIES[3].image} alt="" />
+          </span>
+          <span><b>John, Vlora</b> +{index === 0 ? '1.2K' : `${Math.max(2, index + 4)}.${index + 1}K`} liked</span>
+        </button>
+        <button type="button" onClick={() => onCommentClick(post)} aria-label="View comments">
+          <span className="activity-avatars">
+            <img src={PREMIUM_STORIES[2].image} alt="" />
+            <img src={PREMIUM_STORIES[4].image} alt="" />
+          </span>
+          <span><b>Ardian, Mia</b> commented</span>
+        </button>
+        <button type="button" onClick={handleShare} aria-label="View shares">
+          <span className="activity-avatars">
+            <img src={PREMIUM_STORIES[3].image} alt="" />
+            <img src={PREMIUM_STORIES[1].image} alt="" />
+          </span>
+          <span><b>Valon, John</b> shared</span>
+        </button>
+      </div>
+    </article>
+    <ReactionsSheet
+      open={reactionsOpen}
+      onClose={() => setReactionsOpen(false)}
+      post={{ ...post, likes_count: likeCount, fire_count: fireCount }}
+      currentUser={currentUser}
+      liked={reactions.like}
+      fireReacted={reactions.fire}
+    />
+    <ShareSheet
+      open={shareOpen}
+      onClose={() => setShareOpen(false)}
+      post={{ ...post, image_url: heroImage, caption }}
+    />
+    </>
+  );
+}
+
+function PremiumMapPreview({ onOpen }) {
+  return (
+    <section className="spicey-premium-map-card">
+      <div className="map-copy">
+        <span><MapPin size={16} /> Spicey Map</span>
+        <h3>Find creators near you</h3>
+        <p>Live spots, stories and people around your city.</p>
+      </div>
+      <div className="map-visual">
+        {PREMIUM_STORIES.slice(1, 5).map((story, index) => (
+          <span key={story.name} className={`pin pin-${index}`}>
+            <img src={story.image} alt="" />
+          </span>
+        ))}
+        <i className="route" />
+      </div>
+      <button type="button" onClick={onOpen}>
+        Open <Navigation size={16} />
+      </button>
+    </section>
+  );
+}
+
+function PremiumLightFeed({ posts, isDark = false, currentUser, onVoiceOpen, onCommentClick, onTagClick, onMapOpen, onSearchOpen, onSettingsOpen, onVipOpen, onNotificationsOpen, onStoryOpen, onCreateOpen }) {
+  const feedPosts = asArray(posts).length ? asArray(posts) : [{ id: 'premium-demo' }];
+  const [activeTab, setActiveTab] = React.useState('For You');
+
+  return (
+    <div className="spicey-premium-feed-shell">
+      <header className="spicey-premium-header">
+        <div className="spicey-premium-corner-logo" aria-label="Spicey">
+          <img src="/spicey-assets/spicey-s-symbol.svg" alt="" />
+        </div>
+        <div className="spicey-premium-wordmark" aria-label="Spicey">
+          <span>Spicey</span>
+        </div>
+        <div className="spicey-premium-actions">
+          {isDark ? (
+            <>
+              <button type="button" aria-label="Search" onClick={onSearchOpen}>
+                <Search size={22} />
+              </button>
+              <button type="button" aria-label="Settings" onClick={onSettingsOpen}>
+                <SlidersHorizontal size={22} />
+              </button>
+            </>
+          ) : (
+            <button type="button" aria-label="Pro" onClick={onVipOpen}>
+              <Crown size={22} />
+            </button>
+          )}
+          <button type="button" aria-label="Notifications" onClick={onNotificationsOpen}>
+            <Bell size={22} />
+            <b>8</b>
+          </button>
+        </div>
+      </header>
+
+      {!isDark && (
+        <div className="spicey-premium-search" role="button" tabIndex={0} onClick={onSearchOpen} onKeyDown={(event) => { if (event.key === 'Enter') onSearchOpen(); }}>
+          <Search size={22} />
+          <span>Search people, posts, hashtags...</span>
+          <button type="button" aria-label="Filters" onClick={(event) => { event.stopPropagation(); onSettingsOpen(); }}>
+            <SlidersHorizontal size={22} />
+          </button>
+        </div>
+      )}
+
+      <section className="spicey-premium-stories" aria-label="Stories">
+        {PREMIUM_STORIES.map((story) => (
+          <button type="button" key={story.name} className="spicey-premium-story" onClick={story.self ? onCreateOpen : onStoryOpen}>
+            <span className="ring">
+              <img src={story.image} alt={story.name} />
+              {story.self ? <i>+</i> : <b />}
+            </span>
+            <small>{story.name}</small>
+          </button>
+        ))}
+        <button type="button" className="spicey-premium-story more" onClick={onSearchOpen}>
+          <span className="ring">
+            <UserRoundPlus size={27} />
+            <b />
+          </span>
+          <small>More</small>
+        </button>
+      </section>
+
+      {!isDark && (
+        <>
+          <section className="spicey-premium-ai-card">
+            <div className="ai-orb">
+              <img src="https://media.base44.com/images/public/69fe90d3bbe7ad47925e4a0a/a645abc1a_6ab1672f-73ff-4c98-a1ef-817016549a2f.png" alt="" />
+            </div>
+            <div>
+              <h2>Spicey AI Voice <span>Live</span></h2>
+              <p>Talk with Spicey AI for captions, ideas and anything social.</p>
+            </div>
+            <button type="button" onClick={onVoiceOpen}>Talk <Sparkles size={17} /></button>
+          </section>
+
+          <nav className="spicey-premium-tabs" aria-label="Feed tabs">
+            {['For You', 'Following', 'Trending'].map((tab) => (
+              <button type="button" key={tab} className={activeTab === tab ? 'active' : ''} onClick={() => setActiveTab(tab)}>{tab}</button>
+            ))}
+          </nav>
+        </>
+      )}
+
+      {feedPosts.map((post, index) => (
+        <React.Fragment key={post?.id || `premium-post-${index}`}>
+          {index === 0 && (
+            <section className="spicey-premium-trending">
+              <div className="trend-head">
+                <h3>Trending Now <Flame size={17} /></h3>
+                <button type="button" onClick={onSearchOpen}>See all <ChevronRight size={15} /></button>
+              </div>
+              <div className="trend-row">
+                <button type="button" className="spicey-trend-nav-card spicey-trend-map-card" onClick={onMapOpen}>
+                  <img src="https://images.unsplash.com/photo-1519501025264-65ba15a82390?w=360&h=520&fit=crop&q=90" alt="" />
+                  <span><MapPin size={23} /> Map</span>
+                  <small>Live places</small>
+                  <i />
+                </button>
+                <button type="button" className="spicey-trend-nav-card spicey-trend-explore-card" onClick={onSearchOpen}>
+                  <img src="https://images.unsplash.com/photo-1485178575877-1a13bf489dfe?w=360&h=520&fit=crop&q=90" alt="" />
+                  <span><Search size={23} /> Explore</span>
+                  <small>Search now</small>
+                  <i />
+                </button>
+                {PREMIUM_TRENDING.map((topic, trendIndex) => (
+                  <button type="button" key={topic.tag} onClick={() => onTagClick(topic.tag)}>
+                    <img src={topic.image} alt="" />
+                    <span><Hash size={24} /> {topic.tag}</span>
+                    <small>{topic.posts}</small>
+                    <i className={`wash-${trendIndex}`} />
+                  </button>
+                ))}
+              </div>
+            </section>
+          )}
+          <PremiumPostCard post={post} index={index} onCommentClick={onCommentClick} currentUser={currentUser} />
+        </React.Fragment>
+      ))}
+    </div>
+  );
+}
+
 export default function Feed() {
   const [commentPost, setCommentPost] = useState(null);
   const [aiOpen, setAiOpen] = useState(false);
+  const [talkOpen, setTalkOpen] = useState(false);
   const [isLight, setIsLight] = useState(false);
+  const [spiceyColorOn, setSpiceyColorOn] = useState(() => {
+    try {
+      return localStorage.getItem('spicey_photo_color_mode') !== 'off';
+    } catch {
+      return true;
+    }
+  });
   const [currentUser, setCurrentUser] = useState(null);
   const [activeTag, setActiveTag] = useState(null);
   const [tagModalOpen, setTagModalOpen] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
-    const check = () => setIsLight(document.documentElement.classList.contains('light-mode'));
+    const check = () => {
+      const root = document.documentElement;
+      const body = document.body;
+      const previewTheme = new URLSearchParams(window.location.search).get('previewTheme');
+      if (previewTheme === 'light') root.classList.add('light-mode');
+      if (previewTheme === 'dark') root.classList.remove('light-mode');
+      const storedTheme = localStorage.getItem('theme') || localStorage.getItem('spicey-theme') || localStorage.getItem('spicey_theme');
+      setIsLight(
+        previewTheme === 'light' ||
+        root.classList.contains('light-mode') ||
+        body.classList.contains('light-mode') ||
+        root.dataset.theme === 'light' ||
+        body.dataset.theme === 'light' ||
+        storedTheme === 'light'
+      );
+    };
     check();
     const obs = new MutationObserver(check);
     obs.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+    obs.observe(document.body, { attributes: true, attributeFilter: ['class', 'data-theme'] });
     return () => obs.disconnect();
+  }, []);
+
+  useEffect(() => {
+    const syncSpiceyColor = () => {
+      try {
+        setSpiceyColorOn(localStorage.getItem('spicey_photo_color_mode') !== 'off');
+      } catch {
+        setSpiceyColorOn(true);
+      }
+    };
+    window.addEventListener('storage', syncSpiceyColor);
+    window.addEventListener('spicey-photo-color-change', syncSpiceyColor);
+    return () => {
+      window.removeEventListener('storage', syncSpiceyColor);
+      window.removeEventListener('spicey-photo-color-change', syncSpiceyColor);
+    };
   }, []);
 
   // Cache user at Feed level to prevent N auth.me() calls from PostCard instances
@@ -515,6 +942,9 @@ export default function Feed() {
           ...post,
           author_name: realName || profile.username || post.author_username || 'User',
           author_avatar: realAvatar,
+          author_verification_badge: profile.verification_badge || null,
+          author_is_vip: Boolean(profile.is_vip || profile.verification_badge === 'vip'),
+          author_verified: Boolean(profile.verified || profile.verification_badge),
         };
       });
       
@@ -543,17 +973,105 @@ export default function Feed() {
     setTagModalOpen(true);
   }, []);
 
+  const themeQuery = isLight ? '?previewTheme=light' : '?previewTheme=dark';
   return (
     <>
-      <div style={{ paddingBottom: '80px' }}>
-        <Header isLight={isLight} />
-        <ActiveLiveBar />
-        <StoryBar />
-        <TrendingNow onTagClick={handleTrendingTagClick} activeTag={activeTag} />
+      <div className={`spicey-feed-page spicey-premium-feed-page spicey-premium-dark-feed ${isLight ? 'spicey-premium-light-feed spicey-photo-color-on' : `${spiceyColorOn ? 'spicey-photo-color-on' : 'spicey-photo-color-off'}`}`}>
+        <PremiumLightFeed
+          posts={posts}
+          isDark={!isLight}
+          currentUser={currentUser}
+          onVoiceOpen={() => setTalkOpen(true)}
+          onCommentClick={handleCommentClick}
+          onTagClick={handleTrendingTagClick}
+          onMapOpen={() => navigate(`/map${themeQuery}`)}
+          onSearchOpen={() => navigate(`/explore${themeQuery}`)}
+          onSettingsOpen={() => navigate(`/settings${themeQuery}`)}
+          onVipOpen={() => navigate(`/vip${themeQuery}`)}
+          onNotificationsOpen={() => navigate(`/notifications${themeQuery}`)}
+          onStoryOpen={() => navigate(`/profile${themeQuery}`)}
+          onCreateOpen={() => navigate(`/create${themeQuery}`)}
+        />
+        <AnimatePresence>
+          {!!commentPost && (
+            <CommentsSheet key={commentPost?.id} post={commentPost} open={!!commentPost} onClose={() => setCommentPost(null)} />
+          )}
+        </AnimatePresence>
+        <AIAssistantSheet open={aiOpen} onClose={() => setAiOpen(false)} />
+        {talkOpen && (
+          <AIProvider>
+            <AITalkMode onClose={() => setTalkOpen(false)} />
+          </AIProvider>
+        )}
+      </div>
+      <AnimatePresence>
+        {tagModalOpen && activeTag && (
+          <TagPostsModal
+            tag={activeTag}
+            currentUser={currentUser}
+            onClose={() => { setTagModalOpen(false); setActiveTag(null); }}
+          />
+        )}
+      </AnimatePresence>
+    </>
+  );
 
-        <div>
-          {(console.log('[MAP_CHECK] render posts', Array.isArray(posts), posts?.length), asArray(posts)).map((post) => (
-            <MemoPostCard key={post.id} post={post} onCommentClick={handleCommentClick} currentUser={currentUser} />
+  return (
+    <>
+      <div
+        className={`spicey-feed-page spicey-fluid-feed-page ${isLight ? 'spicey-light-reference-feed' : ''}`}
+        style={{
+          minHeight: '100vh',
+          paddingBottom: 'calc(164px + env(safe-area-inset-bottom, 0px))',
+          background: isLight
+            ? '#ffffff'
+            : '#030006',
+          color: isLight ? '#210d2f' : '#FFFFFF',
+          position: 'relative',
+          ...(isLight
+            ? {
+              height: '100dvh',
+              overflowX: 'hidden',
+              overflowY: 'auto',
+              WebkitOverflowScrolling: 'touch',
+              touchAction: 'pan-y',
+            }
+            : {
+              overflow: 'hidden',
+            }),
+        }}
+      >
+        <div
+          aria-hidden="true"
+          style={{
+            position: 'fixed',
+            inset: 0,
+            pointerEvents: 'none',
+            zIndex: 0,
+            background: isLight
+              ? '#ffffff'
+              : [
+                'radial-gradient(circle at 8% 5%, rgba(255,106,0,0.13), transparent 22%)',
+                'radial-gradient(circle at 94% 22%, rgba(193,0,255,0.16), transparent 28%)',
+                'radial-gradient(circle at 58% 94%, rgba(255,45,85,0.16), transparent 28%)',
+                'linear-gradient(180deg, #010102 0%, #050007 46%, #010102 100%)',
+              ].join(', '),
+          }}
+        />
+        <div className="spicey-feed-shell spicey-fluid-feed-shell" style={{ position: 'relative', zIndex: 1 }}>
+          <Header isLight={isLight} />
+          <ActiveLiveBar />
+          <StoryBar />
+          {isLight && <FeedAIPromoCard onOpen={handleAiOpen} />}
+          {isLight && <FeedTabs />}
+          {!isLight && <TrendingNow onTagClick={handleTrendingTagClick} activeTag={activeTag} />}
+
+        <div className="spicey-fluid-posts" style={{ paddingTop: 8, paddingBottom: 42 }}>
+          {(console.log('[MAP_CHECK] render posts', Array.isArray(posts), posts?.length), asArray(posts)).map((post, index) => (
+            <React.Fragment key={post.id}>
+              <MemoPostCard post={post} onCommentClick={handleCommentClick} currentUser={currentUser} />
+              {isLight && index === 0 && <TrendingNow onTagClick={handleTrendingTagClick} activeTag={activeTag} />}
+            </React.Fragment>
           ))}
         </div>
 
@@ -563,6 +1081,7 @@ export default function Feed() {
           )}
         </AnimatePresence>
         <AIAssistantSheet open={aiOpen} onClose={() => setAiOpen(false)} />
+        </div>
       </div>
 
       {/* Tag Posts Modal */}

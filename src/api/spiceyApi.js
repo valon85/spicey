@@ -234,8 +234,11 @@ async function profilesByUserIds(userIds = []) {
   }, {});
 }
 
-async function apiRequest(path, options = {}) {
+async function apiRequest(path, options = {}, retryAuth = true) {
   const token = spiceySession.token();
+  if (!token) {
+    throw new Error('No authenticated session token is available. Please log in again.');
+  }
   const response = await fetch(`${API_BASE_URL}${path}`, {
     ...options,
     headers: {
@@ -254,6 +257,11 @@ async function apiRequest(path, options = {}) {
       ? ' Native iOS needs VITE_SPICEY_API_URL for app APIs, or direct Supabase support for this action.'
       : '';
     throw new Error(`Expected JSON from Spicey API but received HTML/text from ${path}.${nativeHint}`);
+  }
+
+  if (!response.ok && retryAuth && (response.status === 401 || response.status === 403) && spiceySession.get()?.refresh_token) {
+    await refreshSupabaseSession();
+    return apiRequest(path, options, false);
   }
 
   if (!response.ok) {

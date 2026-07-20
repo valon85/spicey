@@ -1,5 +1,5 @@
 import { handleOptions, readJson, sendJson, setCors } from '../_lib/http.js';
-import { getSupabaseUser, supabaseTable } from '../_lib/supabaseRest.js';
+import { apiErrorStatus, getSupabaseUser, supabaseTable } from '../_lib/supabaseRest.js';
 import { sendVoipPush } from '../_lib/apns.js';
 
 async function currentProfile(token, user) {
@@ -37,7 +37,10 @@ export default async function handler(req, res) {
 
     if (req.method === 'POST') {
       const body = await readJson(req);
-      if (!body.receiver_id) return sendJson(res, 400, { error: 'Missing receiver_id' });
+      if (!body.receiver_id) return sendJson(res, 400, { error: 'Missing receiver_id', code: 'VALIDATION_ERROR' });
+      if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(body.receiver_id)) {
+        return sendJson(res, 422, { error: 'receiver_id must be a valid user UUID', code: 'INVALID_RECEIVER_ID' });
+      }
       const profile = await currentProfile(token, user);
       const rows = await supabaseTable('call_sessions', {
         method: 'POST',
@@ -92,6 +95,8 @@ export default async function handler(req, res) {
 
     return sendJson(res, 405, { error: 'Method not allowed' });
   } catch (error) {
-    return sendJson(res, 400, { error: error.message || 'Call session request failed' });
+    const status = apiErrorStatus(error);
+    console.error('[Calls API] request failed', { status, code: error.code || 'CALL_SESSION_ERROR', message: error.message });
+    return sendJson(res, status, { error: error.message || 'Call session request failed', code: error.code || 'CALL_SESSION_ERROR' });
   }
 }

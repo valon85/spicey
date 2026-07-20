@@ -13,12 +13,17 @@ function normalizePrivateKey(value = '') {
   return value.replace(/\\n/g, '\n').trim();
 }
 
-function apnsConfig() {
+export function normalizeApnsEnvironment(value = '') {
+  const normalized = String(value).trim().toLowerCase();
+  return normalized === 'development' || normalized === 'sandbox' ? 'development' : 'production';
+}
+
+function apnsConfig(environment) {
   const keyId = process.env.APN_KEY_ID;
   const teamId = process.env.APN_TEAM_ID;
   const bundleId = process.env.APN_BUNDLE_ID || 'com.base69fe90d3bbe7ad47925e4a0a.app';
   const privateKey = normalizePrivateKey(process.env.APN_AUTH_KEY || '');
-  const env = process.env.APN_ENV || 'production';
+  const env = normalizeApnsEnvironment(environment || process.env.APN_ENV);
 
   if (!keyId || !teamId || !bundleId || !privateKey) {
     return { ready: false, missing: ['APN_KEY_ID', 'APN_TEAM_ID', 'APN_BUNDLE_ID', 'APN_AUTH_KEY'].filter((key) => !process.env[key]) };
@@ -30,7 +35,8 @@ function apnsConfig() {
     teamId,
     bundleId,
     privateKey,
-    host: env === 'sandbox' ? 'https://api.sandbox.push.apple.com' : 'https://api.push.apple.com',
+    environment: env,
+    host: env === 'development' ? 'https://api.sandbox.push.apple.com' : 'https://api.push.apple.com',
   };
 }
 
@@ -64,8 +70,18 @@ export function getApnsStatus() {
   };
 }
 
-export async function sendApns({ token, pushType = 'alert', topic, payload, priority = 10 } = {}) {
-  const config = apnsConfig();
+export function summarizeApnsResult(result = {}) {
+  return {
+    sent: result.sent === true,
+    status: Number(result.status || 0),
+    environment: result.environment || 'unknown',
+    reason: result.data?.reason || result.reason || result.error || null,
+    apns_id: result.apns_id || null,
+  };
+}
+
+export async function sendApns({ token, pushType = 'alert', topic, payload, priority = 10, environment } = {}) {
+  const config = apnsConfig(environment);
   if (!config.ready) return { sent: false, skipped: true, reason: `Missing APNs config: ${config.missing.join(', ')}` };
   if (!token) return { sent: false, skipped: true, reason: 'Missing device token' };
 
@@ -85,38 +101,53 @@ export async function sendApns({ token, pushType = 'alert', topic, payload, prio
     const request = client.request(headers);
     let responseBody = '';
     let status = 0;
+    let apnsId = null;
+    let settled = false;
+
+    const finish = (result) => {
+      if (settled) return;
+      settled = true;
+      client.close();
+      resolve({ ...result, environment: config.environment, apns_id: apnsId });
+    };
 
     request.setEncoding('utf8');
     request.on('response', (headers) => {
       status = Number(headers[':status'] || 0);
+      apnsId = headers['apns-id'] || null;
     });
     request.on('data', (chunk) => {
       responseBody += chunk;
     });
     request.on('error', (error) => {
-      client.close();
-      resolve({ sent: false, status, error: error.message });
+      finish({ sent: false, status, error: error.message });
     });
     request.on('end', () => {
-      client.close();
       let data = {};
       try {
         data = responseBody ? JSON.parse(responseBody) : {};
-      } catch (_) {}
-      resolve({ sent: status >= 200 && status < 300, status, data });
+      } catch (error) {
+        data = {
+          reason: 'InvalidApnsResponse',
+          detail: error.message,
+        };
+      }
+      finish({ sent: status >= 200 && status < 300, status, data });
     });
+    client.on('error', (error) => finish({ sent: false, status, error: error.message }));
 
     request.end(body);
   });
 }
 
-export function sendRegularPush({ token, title, body, data = {} } = {}) {
-  const config = apnsConfig();
+export function sendRegularPush({ token, title, body, data = {}, environment } = {}) {
+  const config = apnsConfig(environment);
   return sendApns({
     token,
     pushType: 'alert',
     topic: config.bundleId,
     priority: 10,
+    environment,
     payload: {
       aps: {
         alert: { title, body },
@@ -128,16 +159,27 @@ export function sendRegularPush({ token, title, body, data = {} } = {}) {
   });
 }
 
-export function sendVoipPush({ token, callerName, callerId, callSessionId, callType = 'voice', callerAvatar = null } = {}) {
-  const config = apnsConfig();
+export function sendVoipPush({
+  token,
+  callerName,
+  callerId,
+  callSessionId,
+  callType = 'voice',
+  callerAvatar = null,
+  event = 'incoming',
+  environment,
+} = {}) {
+  const config = apnsConfig(environment);
   return sendApns({
     token,
     pushType: 'voip',
     topic: `${config.bundleId}.voip`,
     priority: 10,
+    environment,
     payload: {
       aps: {},
       type: 'call',
+      event,
       callerName,
       callerId,
       callerAvatar,

@@ -1,12 +1,9 @@
 import { handleOptions, readJson, sendJson, setCors } from '../_lib/http.js';
 import { apiErrorStatus, getSupabaseUser, supabaseTable } from '../_lib/supabaseRest.js';
+import { normalizeApnsEnvironment } from '../_lib/apns.js';
 
 const BUNDLE_ID = process.env.APN_BUNDLE_ID || 'com.base69fe90d3bbe7ad47925e4a0a.app';
 const TOKEN_TYPES = new Set(['apns', 'voip']);
-
-function safeTokenPreview(token = '') {
-  return token.length > 12 ? `${token.slice(0, 6)}...${token.slice(-6)}` : token;
-}
 
 export default async function handler(req, res) {
   setCors(req, res);
@@ -30,7 +27,7 @@ export default async function handler(req, res) {
       device_id: body.device_id || null,
       bundle_id: body.bundle_id || BUNDLE_ID,
       app_version: body.app_version || null,
-      environment: body.environment || process.env.APN_ENV || 'production',
+      environment: normalizeApnsEnvironment(body.environment || process.env.APN_ENV),
       enabled: true,
       updated_at: new Date().toISOString(),
       last_seen_at: new Date().toISOString(),
@@ -58,7 +55,11 @@ export default async function handler(req, res) {
       console.warn(`[Push] Legacy profile token update failed: ${error.message}`);
     });
 
-    console.log(`[Push] Registered ${tokenType} token for user=${user.id} token=${safeTokenPreview(token)}`);
+    console.log(`[Push] Registered ${tokenType} token`, {
+      userId: user.id,
+      environment: payload.environment,
+      bundleId: payload.bundle_id,
+    });
     return sendJson(res, 200, { device: rows[0] || null, token_type: tokenType });
   } catch (error) {
     const status = apiErrorStatus(error);

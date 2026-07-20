@@ -1,6 +1,6 @@
 import { handleOptions, readJson, sendJson, setCors } from '../../_lib/http.js';
 import { getSupabaseUser, supabaseTable } from '../../_lib/supabaseRest.js';
-import { sendRegularPush } from '../../_lib/apns.js';
+import { sendRegularPush, summarizeApnsResult } from '../../_lib/apns.js';
 
 function readChatId(req) {
   const url = new URL(req.url, 'http://spicey.local');
@@ -80,19 +80,24 @@ export default async function handler(req, res) {
         const ids = receiverIds.map((id) => `"${id}"`).join(',');
         const devices = await supabaseTable('push_devices', {
           serviceRole: true,
-          query: `?select=user_id,token&user_id=in.(${ids})&token_type=eq.apns&enabled=eq.true`,
+          query: `?select=user_id,token,environment&user_id=in.(${ids})&token_type=eq.apns&enabled=eq.true`,
         }).catch(() => []);
         const receivers = await supabaseTable('profiles', {
           serviceRole: true,
           query: `?select=user_id,push_token&user_id=in.(${ids})`,
         }).catch(() => []);
-        const tokens = Array.from(new Set([
-          ...devices.map((device) => device.token).filter(Boolean),
-          ...receivers.map((receiverProfile) => receiverProfile.push_token).filter(Boolean),
-        ]));
-        await Promise.all(tokens
-          .map((receiverProfile) => sendRegularPush({
-            token: receiverProfile,
+        const tokenTargets = [
+          ...devices
+            .filter((device) => device.token)
+            .map((device) => ({ token: device.token, environment: device.environment || process.env.APN_ENV })),
+          ...receivers
+            .filter((receiverProfile) => receiverProfile.push_token)
+            .map((receiverProfile) => ({ token: receiverProfile.push_token, environment: process.env.APN_ENV })),
+        ].filter((target, index, all) => all.findIndex((item) => item.token === target.token) === index);
+        const pushResults = await Promise.all(tokenTargets
+          .map((target) => sendRegularPush({
+            token: target.token,
+            environment: target.environment,
             title: profile.full_name || profile.username || user.email?.split('@')[0] || 'Spicey',
             body: body.text || 'sent you a message',
             data: {
@@ -101,7 +106,12 @@ export default async function handler(req, res) {
               senderId: user.id,
               messageId: created[0]?.id,
             },
-          }).catch(() => null)));
+          }).catch((error) => ({ sent: false, environment: target.environment, error: error.message }))));
+        if (pushResults.length) {
+          console.log('[APNs] Message delivery results', pushResults.map(summarizeApnsResult));
+        } else {
+          console.warn('[APNs] Message delivery skipped: receiver has no regular APNs token');
+        }
       }
 
       return sendJson(res, 200, { message: created[0] });

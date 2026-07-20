@@ -1,19 +1,69 @@
 import Capacitor
 
 @objc(CallKitPlugin)
-public class CallKitPlugin: CAPPlugin {
+public class CallKitPlugin: CAPPlugin, CAPBridgedPlugin {
+    public let identifier = "CallKitPlugin"
+    public let jsName = "CallKit"
+    public let pluginMethods: [CAPPluginMethod] = [
+        CAPPluginMethod(name: "reportIncomingCall", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "reportCallConnected", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "reportCallEnded", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "endCall", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "answerCall", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "startOutgoingCall", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "getActiveCalls", returnType: CAPPluginReturnPromise)
+    ]
+
+    public override func load() {
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleAnswerNotification(_:)),
+            name: NSNotification.Name("CallKitAnswerCall"),
+            object: nil
+        )
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleEndNotification(_:)),
+            name: NSNotification.Name("CallKitEndCall"),
+            object: nil
+        )
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleVoipTokenNotification(_:)),
+            name: NSNotification.Name("VoIPTokenUpdated"),
+            object: nil
+        )
+    }
+
+    deinit {
+        NotificationCenter.default.removeObserver(self)
+    }
+
+    @objc private func handleAnswerNotification(_ notification: Notification) {
+        notifyListeners("answerCall", data: notification.object as? [String: Any] ?? [:], retainUntilConsumed: true)
+    }
+
+    @objc private func handleEndNotification(_ notification: Notification) {
+        notifyListeners("endCall", data: notification.object as? [String: Any] ?? [:], retainUntilConsumed: true)
+    }
+
+    @objc private func handleVoipTokenNotification(_ notification: Notification) {
+        notifyListeners("voipTokenUpdated", data: notification.object as? [String: Any] ?? [:], retainUntilConsumed: true)
+    }
     
     @objc func reportIncomingCall(_ call: CAPPluginCall) {
         let callerName = call.getString("callerName") ?? "Unknown"
         let callerHandle = call.getString("callerHandle") ?? ""
         let hasVideo = call.getBool("hasVideo") ?? true
+        let callSessionId = call.getString("callSessionId")
         
         print("[CallKitPlugin] Report incoming call: \(callerName)")
         
         CallKitManager.shared.reportIncomingCall(
             callerName: callerName,
             callerHandle: callerHandle,
-            hasVideo: hasVideo
+            hasVideo: hasVideo,
+            callSessionId: callSessionId
         ) { uuid, error in
             if let error = error {
                 call.reject("Failed to report incoming call: \(error.localizedDescription)")

@@ -1,6 +1,9 @@
-import React, { useEffect, useRef } from 'react';
+import { useEffect, useRef } from 'react';
+import { registerPlugin } from '@capacitor/core';
 import { getVoIPToken, saveVoIPTokenToBackend } from '@/lib/pushNotifications';
 import { useAuth } from '@/lib/AuthContext';
+
+const CallKit = registerPlugin('CallKit');
 
 /**
  * Initialize VoIP Push Notifications for iOS calls
@@ -28,7 +31,7 @@ export default function VoIPProvider() {
         ]);
         
         if (voipToken) {
-          console.log('[VoIP] Token retrieved:', voipToken);
+          console.log('[VoIP] Token retrieved');
           await saveVoIPTokenToBackend(voipToken);
           console.log('[VoIP] Token saved to backend');
         } else {
@@ -39,20 +42,24 @@ export default function VoIPProvider() {
       }
     }, 1000); // Wait 1s after app renders
     
-    // Listen for VoIP token from native iOS (this is non-blocking)
-    const handleVoIPToken = (event) => {
-      const token = event.detail?.token || event.detail?.value;
-      if (token) {
-        console.log('[VoIP] Received token from native:', token);
-        saveVoIPTokenToBackend(token).catch(() => {});
+    let nativeListener;
+    CallKit.addListener('voipTokenUpdated', async ({ token }) => {
+      if (!token) return;
+      console.log('[VoIP] Received updated token from native');
+      try {
+        await saveVoIPTokenToBackend(token);
+      } catch (error) {
+        console.error('[VoIP] Updated token registration failed:', error.message);
       }
-    };
-    
-    window.addEventListener('VoIPTokenReceived', handleVoIPToken);
+    }).then((listener) => {
+      nativeListener = listener;
+    }).catch((error) => {
+      console.error('[VoIP] Failed to attach native token listener:', error.message);
+    });
     
     return () => {
       clearTimeout(timeoutId);
-      window.removeEventListener('VoIPTokenReceived', handleVoIPToken);
+      nativeListener?.remove();
     };
   }, [authChecked, user]);
 

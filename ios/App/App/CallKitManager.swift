@@ -10,6 +10,7 @@ public class CallKitManager: NSObject {
     private let callController = CXCallController()
     private var provider: CXProvider?
     private var activeCallUUID: UUID?
+    private var sessionIdsByUUID: [UUID: String] = [:]
     private var completionHandlers: [UUID: ((Bool) -> Void)] = [:]
     
     override init() {
@@ -35,10 +36,14 @@ public class CallKitManager: NSObject {
         callerName: String,
         callerHandle: String,
         hasVideo: Bool = true,
+        callSessionId: String? = nil,
         completion: ((UUID?, Error?) -> Void)?
     ) {
         let uuid = UUID()
         activeCallUUID = uuid
+        if let callSessionId, !callSessionId.isEmpty {
+            sessionIdsByUUID[uuid] = callSessionId
+        }
         
         let update = CXCallUpdate()
         update.remoteHandle = CXHandle(type: .generic, value: callerHandle)
@@ -56,6 +61,7 @@ public class CallKitManager: NSObject {
             update: update,
             completion: { error in
                 if let error = error {
+                    self.sessionIdsByUUID.removeValue(forKey: uuid)
                     print("[CallKit] Error reporting incoming call: \(error)")
                     completion?(nil, error)
                 } else {
@@ -79,6 +85,7 @@ public class CallKitManager: NSObject {
         print("[CallKit] Reporting call ended: \(uuid)")
         provider?.reportCall(with:uuid, endedAt:Date(), reason:.remoteEnded)
         activeCallUUID = nil
+        sessionIdsByUUID.removeValue(forKey: uuid)
     }
     
     // Start outgoing call
@@ -158,6 +165,8 @@ extension CallKitManager: CXProviderDelegate {
 
     public func providerDidReset(_ provider: CXProvider) {
         print("[CallKit] Provider reset")
+        activeCallUUID = nil
+        sessionIdsByUUID.removeAll()
     }
 
     public func provider(_ provider: CXProvider, didActivate audioSession: AVAudioSession) {
@@ -173,7 +182,10 @@ extension CallKitManager: CXProviderDelegate {
 
         NotificationCenter.default.post(
             name: NSNotification.Name("CallKitAnswerCall"),
-            object: ["uuid": action.callUUID.uuidString]
+            object: [
+                "uuid": action.callUUID.uuidString,
+                "callSessionId": sessionIdsByUUID[action.callUUID] ?? ""
+            ]
         )
 
         action.fulfill()
@@ -184,7 +196,10 @@ extension CallKitManager: CXProviderDelegate {
 
         NotificationCenter.default.post(
             name: NSNotification.Name("CallKitEndCall"),
-            object: ["uuid": action.callUUID.uuidString]
+            object: [
+                "uuid": action.callUUID.uuidString,
+                "callSessionId": sessionIdsByUUID[action.callUUID] ?? ""
+            ]
         )
 
         reportCallEnded(uuid: action.callUUID)

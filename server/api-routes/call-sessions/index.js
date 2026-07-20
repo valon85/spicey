@@ -1,6 +1,6 @@
 import { handleOptions, readJson, sendJson, setCors } from '../_lib/http.js';
 import { apiErrorStatus, getSupabaseUser, supabaseTable } from '../_lib/supabaseRest.js';
-import { sendVoipPush } from '../_lib/apns.js';
+import { sendVoipPush, summarizeApnsResult } from '../_lib/apns.js';
 
 async function currentProfile(token, user) {
   const rows = await supabaseTable('profiles', {
@@ -59,26 +59,37 @@ export default async function handler(req, res) {
       const callSession = rows[0];
       const receiverDevices = await supabaseTable('push_devices', {
         serviceRole: true,
-        query: `?select=token&user_id=eq.${encodeURIComponent(body.receiver_id)}&token_type=eq.voip&enabled=eq.true`,
+        query: `?select=token,environment&user_id=eq.${encodeURIComponent(body.receiver_id)}&token_type=eq.voip&enabled=eq.true`,
       }).catch(() => []);
       const receiverProfiles = await supabaseTable('profiles', {
         serviceRole: true,
         query: `?select=user_id,voip_push_token&user_id=eq.${encodeURIComponent(body.receiver_id)}&limit=1`,
       }).catch(() => []);
-      const tokens = Array.from(new Set([
-        ...receiverDevices.map((device) => device.token).filter(Boolean),
-        receiverProfiles[0]?.voip_push_token,
-      ].filter(Boolean)));
-      const voipResults = tokens.length
-        ? await Promise.all(tokens.map((deviceToken) => sendVoipPush({
-          token: deviceToken,
+      const tokenTargets = [
+        ...receiverDevices
+          .filter((device) => device.token)
+          .map((device) => ({ token: device.token, environment: device.environment || process.env.APN_ENV })),
+        ...(receiverProfiles[0]?.voip_push_token
+          ? [{ token: receiverProfiles[0].voip_push_token, environment: process.env.APN_ENV }]
+          : []),
+      ].filter((target, index, all) => all.findIndex((item) => item.token === target.token) === index);
+      const voipResults = tokenTargets.length
+        ? await Promise.all(tokenTargets.map((target) => sendVoipPush({
+          token: target.token,
+          environment: target.environment,
           callerName: callSession.caller_name,
           callerId: user.id,
           callerAvatar: callSession.caller_avatar,
           callSessionId: callSession.id,
           callType: callSession.type,
-        }).catch((error) => ({ sent: false, error: error.message }))))
+        }).catch((error) => ({ sent: false, environment: target.environment, error: error.message }))))
         : { sent: false, skipped: true, reason: 'Receiver has no VoIP token' };
+
+      if (Array.isArray(voipResults)) {
+        console.log('[APNs] VoIP delivery results', voipResults.map(summarizeApnsResult));
+      } else {
+        console.warn('[APNs] VoIP delivery skipped', summarizeApnsResult(voipResults));
+      }
 
       return sendJson(res, 201, {
         call_session: callSession,
@@ -87,7 +98,7 @@ export default async function handler(req, res) {
           ? {
             sent: voipResults.some((result) => result.sent),
             devices: voipResults.length,
-            results: voipResults.map((result) => ({ sent: result.sent, status: result.status, skipped: result.skipped, reason: result.reason || result.data?.reason || result.error })),
+            results: voipResults.map(summarizeApnsResult),
           }
           : voipResults,
       });

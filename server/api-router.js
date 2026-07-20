@@ -110,6 +110,7 @@ const ROUTES = [
   { group: 'map', pattern: '/api/map/location', handler: handler36 },
   { group: 'map', pattern: '/api/map/profiles', handler: handler37 },
   { group: 'media', pattern: '/api/media/upload', handler: handler38 },
+  { group: 'chats-messages', pattern: '/api/messages', handler: handler25 },
   { group: 'chats-messages', pattern: '/api/messages/:messageId', handler: handler39 },
   { group: 'calls-live', pattern: '/api/missed-calls/:missedCallId', handler: handler40 },
   { group: 'calls-live', pattern: '/api/missed-calls', handler: handler41 },

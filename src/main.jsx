@@ -76,12 +76,10 @@ function showNativeBootError(error) {
 
 window.addEventListener('error', event => {
   console.error('[MAIN] window error:', event.error || event.message);
-  showNativeBootError(event.error || event.message);
 });
 
 window.addEventListener('unhandledrejection', event => {
   console.error('[MAIN] unhandled rejection:', event.reason);
-  showNativeBootError(event.reason);
 });
 
 

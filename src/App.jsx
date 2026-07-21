@@ -178,13 +178,13 @@ function AppContent() {
     return <SpiceyAuthModal />;
   }
 
-  if (isNativeIOS && !hasToken && (isLoadingAuth || !authChecked)) {
-    console.log('RETURN_AUTH - iOS immediate login while auth initializes');
-    return <SpiceyAuthModal />;
+  if (isNativeIOS && (isLoadingAuth || !authChecked)) {
+    console.log('RETURN_LOADING - iOS validating stored session');
+    return <AuthLoader />;
   }
 
-  if (isNativeIOS && hasToken) {
-    console.log('RETURN_FEED - iOS quick render with routing');
+  if (isNativeIOS && user?.id) {
+    console.log('RETURN_FEED - iOS verified session with routing');
     
     return (
       <div style={{ display: 'flex', flexDirection: 'column', height: '100dvh', width: '100vw', overscrollBehavior: 'none', position: 'relative', zIndex: 0 }}>

@@ -44,7 +44,8 @@ export const AuthProvider = ({ children }) => {
   useBackgroundCallWatch(user?.id);
 
   // Use protocol only — window.Capacitor is not reliably set at React render time
-  const getIsNative = () => typeof window !== 'undefined' && window.location.protocol === 'capacitor:';
+  const getIsNative = () => typeof window !== 'undefined'
+    && ['capacitor:', 'spicey:'].includes(window.location.protocol);
   const isNative = getIsNative();
 
 

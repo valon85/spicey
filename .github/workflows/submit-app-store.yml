@@ -23,29 +23,47 @@ jobs:
       - name: Restore App Store Connect API key
         env:
           APPSTORE_CONNECT_API_KEY_BASE64: ${{ secrets.APPSTORE_CONNECT_API_KEY_BASE64 }}
-          APPSTORE_CONNECT_KEY_ID: ${{ secrets.APPSTORE_CONNECT_KEY_ID }}
-          APPSTORE_CONNECT_ISSUER_ID: ${{ secrets.APPSTORE_CONNECT_ISSUER_ID }}
         run: |
           set -euo pipefail
           test -n "${APPSTORE_CONNECT_API_KEY_BASE64}"
-          test -n "${APPSTORE_CONNECT_KEY_ID}"
-          test -n "${APPSTORE_CONNECT_ISSUER_ID}"
           mkdir -p build/app-store
-          python3 - <<'PY'
-          import base64, json, os
-          key = base64.b64decode(os.environ["APPSTORE_CONNECT_API_KEY_BASE64"]).decode()
-          payload = {
-              "key_id": os.environ["APPSTORE_CONNECT_KEY_ID"],
-              "issuer_id": os.environ["APPSTORE_CONNECT_ISSUER_ID"],
-              "key": key,
-              "in_house": False,
-          }
-          with open("build/app-store/api-key.json", "w") as f:
-              json.dump(payload, f)
-          PY
-          chmod 600 build/app-store/api-key.json
+          python3 -c 'import base64, os, sys; sys.stdout.buffer.write(base64.b64decode(os.environ["APPSTORE_CONNECT_API_KEY_BASE64"]))' > build/app-store/AuthKey.p8
+          chmod 600 build/app-store/AuthKey.p8
+
+      - name: Create Fastlane submission configuration
+        run: |
+          mkdir -p fastlane
+          cat > fastlane/Fastfile <<'RUBY'
+          default_platform(:ios)
+
+          platform :ios do
+            lane :submit do
+              api_key = app_store_connect_api_key(
+                key_id: ENV["APPSTORE_CONNECT_KEY_ID"],
+                issuer_id: ENV["APPSTORE_CONNECT_ISSUER_ID"],
+                key_filepath: "build/app-store/AuthKey.p8",
+                in_house: false
+              )
+
+              deliver(
+                api_key: api_key,
+                app_identifier: "com.base69fe90d3bbe7ad47925e4a0a.app",
+                app_version: "1.0",
+                build_number: "1",
+                skip_binary_upload: true,
+                skip_metadata: true,
+                skip_screenshots: true,
+                submit_for_review: true,
+                automatic_release: true,
+                force: true,
+                precheck_include_in_app_purchases: false
+              )
+            end
+          end
+          RUBY
 
       - name: Submit build 1.0 (1) for App Store review
-        run: |
-          set -euo pipefail
-          fastlane deliver             --api_key_path build/app-store/api-key.json             --app_identifier com.base69fe90d3bbe7ad47925e4a0a.app             --app_version 1.0             --build_number 1             --skip_binary_upload true             --skip_metadata true             --skip_screenshots true             --submit_for_review true             --automatic_release true             --force true             --precheck_include_in_app_purchases false
+        env:
+          APPSTORE_CONNECT_KEY_ID: ${{ secrets.APPSTORE_CONNECT_KEY_ID }}
+          APPSTORE_CONNECT_ISSUER_ID: ${{ secrets.APPSTORE_CONNECT_ISSUER_ID }}
+        run: fastlane ios submit

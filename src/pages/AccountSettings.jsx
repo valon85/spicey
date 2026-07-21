@@ -520,6 +520,7 @@ export default function AccountSettings() {
             <button onClick={() => window.open('mailto:info@spicey.live', '_blank')} className="px-4 py-2 rounded-full text-xs font-semibold" style={{ background: 'rgba(255,107,53,0.12)', color: '#FF6B35', border: '1px solid rgba(255,107,53,0.25)' }}>Contact Us</button>
             <button onClick={() => navigate('/privacy-policy')} className="px-4 py-2 rounded-full text-xs font-semibold" style={{ background: isLight ? '#F2F2F7' : 'rgba(255,255,255,0.07)', color: isLight ? '#8E8E93' : 'rgba(255,255,255,0.5)' }}>Privacy Policy</button>
             <button onClick={() => navigate('/terms-of-service')} className="px-4 py-2 rounded-full text-xs font-semibold" style={{ background: isLight ? '#F2F2F7' : 'rgba(255,255,255,0.07)', color: isLight ? '#8E8E93' : 'rgba(255,255,255,0.5)' }}>Terms of Service</button>
+            <button onClick={() => navigate('/community-guidelines')} className="px-4 py-2 rounded-full text-xs font-semibold" style={{ background: isLight ? '#F2F2F7' : 'rgba(255,255,255,0.07)', color: isLight ? '#8E8E93' : 'rgba(255,255,255,0.5)' }}>Community Guidelines</button>
           </div>
         </div>
       </InfoPanel>

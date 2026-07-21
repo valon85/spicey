@@ -49,12 +49,15 @@ export default function CommunityGuidelines() {
     { emoji: '🚫', text: 'Post content that promotes, glorifies, or facilitates illegal activities' },
     { emoji: '🚫', text: 'Upload copyrighted material without permission from the copyright holder' },
     { emoji: '🚫', text: 'Self-harm content or content encouraging dangerous, life-threatening behavior' },
+    { emoji: '🚫', text: 'Share non-consensual intimate imagery, sexual extortion, grooming, trafficking, or threats to publish private sexual content' },
+    { emoji: '🚫', text: 'Hack accounts, steal credentials, distribute malware, phish users, bypass security, or use compromised accounts' },
+    { emoji: '🚫', text: 'Make credible threats of violence or use SPICEY to coordinate real-world harm' },
   ];
 
   const enforcement = [
-    { level: '⚠️ Warning', desc: 'First-time minor violations may receive a warning and content removal.' },
+    { level: '⚠️ Warning', desc: 'A first minor violation may receive a warning and content removal; a warning is not guaranteed.' },
     { level: '🔇 Temporary Suspension', desc: 'Repeated or moderate violations result in temporary account suspension (1–30 days).' },
-    { level: '🔒 Permanent Ban', desc: 'Severe or repeated violations result in permanent account termination and device-level block.' },
+    { level: '🔒 Permanent Ban', desc: 'Severe violations — including exploitation, credible threats, hacking, or non-consensual intimate content — may cause an immediate permanent ban. Repeated nudity or other violations may also result in termination.' },
     { level: '⚖️ Legal Action', desc: 'Illegal content (CSAM, fraud, threats) will be reported to law enforcement. SPICEY cooperates fully with authorities.' },
   ];
 
@@ -62,7 +65,7 @@ export default function CommunityGuidelines() {
     <div className="min-h-screen" style={{ background: bg }}>
       <div className="sticky top-0 z-40 flex items-center gap-3 px-4 py-4"
         style={{ background: headerBg, backdropFilter: 'blur(20px)', borderBottom: headerBorder, paddingTop: 'max(1rem, env(safe-area-inset-top))' }}>
-        <button onClick={() => navigate('/settings')} className="w-8 h-8 flex items-center justify-center" style={{ color: backColor }}>
+        <button onClick={() => navigate(backTo)} className="w-8 h-8 flex items-center justify-center" style={{ color: backColor }}>
           <ChevronLeft className="w-6 h-6" />
         </button>
         <h1 className="text-lg font-bold" style={{ color: titleColor }}>Community Guidelines</h1>
@@ -74,7 +77,7 @@ export default function CommunityGuidelines() {
             <Shield className="w-5 h-5 text-orange-400" />
             <h2 className="text-lg font-bold" style={{ color: titleColor }}>Community Guidelines</h2>
           </div>
-          <p className="text-sm" style={{ color: mutedColor }}>Effective: May 29, 2026</p>
+          <p className="text-sm" style={{ color: mutedColor }}>Effective: July 21, 2026 · Version 3.0</p>
           <p className="text-sm mt-3 leading-relaxed" style={{ color: bodyColor }}>
             SPICEY is built on creativity, authenticity, and mutual respect. These guidelines exist to protect our community and ensure that SPICEY remains a safe, positive, and welcoming space for everyone. By using SPICEY, you agree to follow these guidelines. Violations may result in content removal, account suspension, or permanent bans.
           </p>
@@ -181,7 +184,7 @@ export default function CommunityGuidelines() {
         </section>
 
         <div className="text-xs pt-4" style={{ color: footerColor, borderTop: footerBorder }}>
-          <p>SPICEY · info@spicey.live · © 2026 Spicey. All rights reserved. · Last updated: May 29, 2026</p>
+          <p>SPICEY · info@spicey.live · © 2026 Spicey. All rights reserved. · Last updated: July 21, 2026</p>
         </div>
       </div>
     </div>

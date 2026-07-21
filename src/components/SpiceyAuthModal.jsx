@@ -8,6 +8,7 @@ console.log('[BUILD_TEST_20260625_NO_PENDING_USER_FIX]');
 
 const SPICEY_LOGO = "https://media.base44.com/images/public/69fe90d3bbe7ad47925e4a0a/a7812bd9b_841b8be5-b1e6-4719-9a32-36fafbb51084.png";
 const SPICEY_BOLT = "https://media.base44.com/images/public/69fe90d3bbe7ad47925e4a0a/a645abc1a_6ab1672f-73ff-4c98-a1ef-817016549a2f.png";
+const LEGAL_VERSION = '3.0';
 
 function isPasswordResetPath() {
   if (typeof window === 'undefined') return false;
@@ -59,6 +60,8 @@ async function apiPost(path, body) {
       password: body.password,
       fullName: body.full_name,
       username: body.email?.split('@')[0],
+      legalAccepted: body.legal_accepted,
+      legalVersion: body.legal_version,
     });
     return {
       access_token: result.session?.access_token,
@@ -87,6 +90,7 @@ export default function SpiceyAuthModal() {
   const [recoverySession, setRecoverySession] = useState(null);
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [legalAccepted, setLegalAccepted] = useState(false);
 
   const emailRef = useRef('');
   const inFlight = useRef(false);
@@ -271,6 +275,7 @@ export default function SpiceyAuthModal() {
   const handleSignup = async () => {
     if (!fullName.trim()) { setError('Please enter your full name.'); return; }
     if (password.length < 6) { setError('Password must be at least 6 characters.'); return; }
+    if (!legalAccepted) { setError('Please read and accept the Terms, Privacy Policy, and Community Guidelines.'); return; }
     if (inFlight.current) return;
     inFlight.current = true;
     setError('');
@@ -280,6 +285,8 @@ export default function SpiceyAuthModal() {
         email: email.trim().toLowerCase(),
         password,
         full_name: fullName.trim(),
+        legal_accepted: true,
+        legal_version: LEGAL_VERSION,
       });
       const token = data?.access_token || data?.token;
       if (token && data?.user?.id) {
@@ -546,6 +553,21 @@ export default function SpiceyAuthModal() {
               autoComplete={mode === 'signup' ? 'new-password' : 'current-password'} />
           </AuthField>
         )}
+        {mode === 'signup' && (
+          <label className="spicey-auth-consent">
+            <input
+              type="checkbox"
+              checked={legalAccepted}
+              onChange={event => setLegalAccepted(event.target.checked)}
+            />
+            <span>
+              I confirm I am at least 13 and have read and accept the{' '}
+              <a href="/terms">Terms of Service</a>,{' '}
+              <a href="/privacy">Privacy Policy</a>, and{' '}
+              <a href="/guidelines">Community Guidelines</a>.
+            </span>
+          </label>
+        )}
         {mode === 'signin' && (
           <div className="spicey-auth-forgot-row">
             <button type="button"
@@ -556,7 +578,7 @@ export default function SpiceyAuthModal() {
           </div>
         )}
         {error ? <ErrorBox msg={error} /> : <div style={{ height: 12 }} />}
-        <button type="submit" disabled={loading} className="spicey-auth-submit">
+        <button type="submit" disabled={loading || (mode === 'signup' && !legalAccepted)} className="spicey-auth-submit">
           {loading
             ? <><Spinner /> {mode === 'signin' ? 'Signing In…' : mode === 'forgot' ? 'Sending…' : mode === 'reset' ? 'Updating…' : 'Creating Account…'}</>
             : <>{mode === 'signin' ? 'Sign In' : mode === 'forgot' ? 'Send Reset Link' : mode === 'reset' ? 'Save New Password' : 'Create Account'} <ArrowRight /></>}
@@ -604,8 +626,8 @@ export default function SpiceyAuthModal() {
       </form>
       <div className="spicey-auth-legal">
         <ShieldCheck />
-        <p>By continuing you agree to our</p>
-        <strong>Terms &amp; Privacy Policy</strong>
+        <p>Your privacy and safety matter.</p>
+        <strong><a href="/terms">Terms</a> · <a href="/privacy">Privacy</a> · <a href="/guidelines">Guidelines</a></strong>
       </div>
       </div>
       <Styles />
@@ -954,6 +976,12 @@ function Styles() {
           0 0 22px rgba(255,45,150,0.42),
           0 12px 30px rgba(255,106,0,0.22);
       }
+      .spicey-auth-consent {
+        display: flex; gap: 10px; align-items: flex-start; margin: 12px 2px 2px;
+        color: rgba(255,255,255,0.68); font-size: 12px; line-height: 1.45;
+      }
+      .spicey-auth-consent input { width: 18px; height: 18px; margin-top: 1px; accent-color: #ff5500; flex: 0 0 auto; }
+      .spicey-auth-consent a, .spicey-auth-legal a { color: #ff9b54; font-weight: 700; text-decoration: underline; }
       .spicey-auth-submit:disabled {
         opacity: 0.58;
         cursor: not-allowed;

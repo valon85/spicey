@@ -34,7 +34,7 @@ export default function PrivacyPolicy() {
     <div className="min-h-screen" style={{ background: bg }}>
       <div className="sticky top-0 z-40 flex items-center gap-3 px-4 py-4"
         style={{ background: headerBg, backdropFilter: 'blur(20px)', borderBottom: headerBorder, paddingTop: 'max(1rem, env(safe-area-inset-top))' }}>
-        <button onClick={() => navigate('/settings')} className="w-8 h-8 flex items-center justify-center" style={{ color: backColor }}>
+        <button onClick={() => navigate(backTo)} className="w-8 h-8 flex items-center justify-center" style={{ color: backColor }}>
           <ChevronLeft className="w-6 h-6" />
         </button>
         <h1 className="text-lg font-bold" style={{ color: titleColor }}>Privacy Policy</h1>
@@ -46,7 +46,7 @@ export default function PrivacyPolicy() {
             <Lock className="w-5 h-5 text-orange-400" />
             <h2 className="text-lg font-bold" style={{ color: titleColor }}>Privacy Policy</h2>
           </div>
-          <p className="text-sm" style={{ color: mutedColor }}>Effective Date: May 29, 2026 · Last Updated: May 29, 2026</p>
+          <p className="text-sm" style={{ color: mutedColor }}>Effective Date: July 21, 2026 · Version 3.0</p>
           <p className="text-sm mt-3 leading-relaxed" style={{ color: bodyColor }}>
             SPICEY ("we", "us", or "our") is committed to protecting your personal information and your right to privacy. This Privacy Policy describes how we collect, use, disclose, and safeguard your information when you use the SPICEY mobile application and platform.
           </p>
@@ -80,11 +80,12 @@ export default function PrivacyPolicy() {
         {[
           { num: '1', title: 'Information We Collect', content: (
             <div className="space-y-2 text-sm leading-relaxed" style={{ color: bodyColor }}>
-              <p><span className="font-semibold" style={{ color: titleColor }}>Account information:</span> Email address, chosen username, display name, and password (stored encrypted).</p>
+              <p><span className="font-semibold" style={{ color: titleColor }}>Account information:</span> Email address, username, display name, age-eligibility and legal-consent records. Passwords are handled by our authentication provider; SPICEY does not store or display your plaintext password.</p>
               <p><span className="font-semibold" style={{ color: titleColor }}>Profile information:</span> Profile photo, bio, website, location, and any other information you choose to add.</p>
               <p><span className="font-semibold" style={{ color: titleColor }}>User content:</span> Posts, photos, videos, stories, reels, comments, messages, and any other content you create.</p>
               <p><span className="font-semibold" style={{ color: titleColor }}>Usage data:</span> Interactions such as likes, follows, views, and shares — used solely to personalize your experience.</p>
               <p><span className="font-semibold" style={{ color: titleColor }}>Device information:</span> Device type, operating system, and app version for performance and security purposes.</p>
+              <p><span className="font-semibold" style={{ color: titleColor }}>Location and calling data:</span> Location you choose to share, call-session metadata, notification preferences, and APNs/VoIP device tokens needed for maps, calls, and notifications.</p>
               <p><span className="font-semibold" style={{ color: titleColor }}>Communications:</span> Direct messages and chat content. Messages are stored to enable the messaging feature.</p>
             </div>
           )},
@@ -107,9 +108,9 @@ export default function PrivacyPolicy() {
               <p><span className="font-semibold text-orange-400">Important:</span> Any illegal content detected — particularly content involving the exploitation of minors — will be immediately removed and reported to the National Center for Missing & Exploited Children (NCMEC) and relevant law enforcement agencies as required by law.</p>
             </div>
           )},
-          { num: '4', title: 'Data Sharing', content: <p className="text-sm leading-relaxed" style={{ color: bodyColor }}>We do not sell your personal data to third parties. We may share data with trusted service providers who assist us in operating the Platform, under strict confidentiality obligations. We may disclose data to law enforcement or government authorities when required by applicable law, court order, or to protect the safety of our users or the public.</p> },
+          { num: '4', title: 'Data Sharing and Sale', content: <p className="text-sm leading-relaxed" style={{ color: bodyColor }}>We do not sell personal information. We disclose only what is reasonably necessary to service providers that host, secure, deliver, analyze, or support the Platform, and when required or permitted by law to protect users, SPICEY, or the public. Where applicable, you may ask about or object to sale or sharing by contacting info@spicey.live.</p> },
           { num: '5', title: 'Data Security', content: <p className="text-sm leading-relaxed" style={{ color: bodyColor }}>We implement industry-standard security measures including encryption in transit (HTTPS/TLS) and at rest, role-based access controls, and regular security reviews. Despite these measures, no digital platform can guarantee absolute security. You are responsible for maintaining the security of your account credentials.</p> },
-          { num: '6', title: 'Data Retention', content: <p className="text-sm leading-relaxed" style={{ color: bodyColor }}>We retain your personal data for as long as your account is active or as needed to provide services. When you delete your account, your profile, posts, and personal data are permanently deleted within 30 days. Certain data may be retained longer where required by law, for fraud prevention, or for moderation/safety records.</p> },
+          { num: '6', title: 'Data Retention', content: <p className="text-sm leading-relaxed" style={{ color: bodyColor }}>We retain personal data while your account is active and as needed to provide and secure the service. Account deletion removes data from active systems according to our deletion process; limited backups, transaction records, fraud-prevention records, moderation evidence, and information required by law may be retained longer and then deleted or de-identified.</p> },
           { num: '7', title: "Children's Privacy (COPPA)", content: <p className="text-sm leading-relaxed" style={{ color: bodyColor }}>SPICEY is not directed to children under 13 years of age. We do not knowingly collect personal information from children under 13. If we become aware that a child under 13 has provided us with personal information, we will take immediate steps to delete such information and terminate the associated account. Parents who believe their child has created an account should contact us immediately at info@spicey.live.</p> },
           { num: '8', title: 'Your Rights', content: (
             <div className="space-y-2 text-sm leading-relaxed" style={{ color: bodyColor }}>
@@ -129,9 +130,9 @@ export default function PrivacyPolicy() {
               <p>OpenAI's use of data submitted via the API is governed by <a href="https://openai.com/policies/privacy-policy" target="_blank" rel="noopener noreferrer" className="text-orange-400">OpenAI's Privacy Policy</a>. SPICEY does not expose your OpenAI API credentials to users — all AI requests are processed securely on our backend servers.</p>
             </div>
           )},
-          { num: '10', title: 'Third-Party Services', content: <p className="text-sm leading-relaxed" style={{ color: bodyColor }}>SPICEY integrates with third-party services including OpenAI (AI features), Stripe (payment processing), and Firebase (push notifications). These services have their own privacy policies and we recommend reviewing them. We do not control the privacy practices of third-party services and are not responsible for their policies.</p> },
+          { num: '10', title: 'Third-Party Services', content: <p className="text-sm leading-relaxed" style={{ color: bodyColor }}>SPICEY uses service providers such as Supabase (database and authentication), Vercel and Cloudflare (hosting and delivery), Apple APNs (notifications and VoIP), OpenAI (AI features), YouTube/Google (embedded media), Mapbox (maps), Resend (email), and Stripe when payment features are used. Each provider processes only the data needed for its function under its own terms and privacy commitments.</p> },
           { num: '11', title: 'International Data Transfers', content: <p className="text-sm leading-relaxed" style={{ color: bodyColor }}>Your information may be transferred to and processed in countries other than the country in which you reside. These countries may have data protection laws that differ from your country. Where required, we ensure appropriate safeguards are in place for such transfers.</p> },
-          { num: '12', title: 'Changes to This Policy', content: <p className="text-sm leading-relaxed" style={{ color: bodyColor }}>We may update this Privacy Policy from time to time. We will notify you of significant changes via in-app notification or email at least 30 days before they take effect. Your continued use of the Platform after changes are posted constitutes acceptance of the revised policy.</p> },
+          { num: '12', title: 'Changes to This Policy', content: <p className="text-sm leading-relaxed" style={{ color: bodyColor }}>We may update this Policy as the Platform and law change. We will identify the effective date and, where required, provide advance notice or request renewed consent. Material changes do not reduce rights granted by applicable law.</p> },
         ].map(({ num, title, content }) => (
           <section key={num}>
             <h3 className="text-base font-bold mb-2" style={{ color: titleColor }}>{num}. {title}</h3>
@@ -166,7 +167,7 @@ export default function PrivacyPolicy() {
         </section>
 
         <div className="text-xs pt-4" style={{ color: footerColor, borderTop: footerBorder }}>
-          <p>SPICEY · info@spicey.live · © 2026 Spicey. All rights reserved. · Last updated: May 29, 2026</p>
+          <p>SPICEY · info@spicey.live · © 2026 Spicey. All rights reserved. · Last updated: July 21, 2026</p>
         </div>
       </div>
     </div>

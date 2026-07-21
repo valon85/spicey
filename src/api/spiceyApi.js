@@ -309,7 +309,8 @@ export const spiceyApi = {
       if (data.session) spiceySession.set(data.session);
       return data;
     },
-    async signup({ email, password, fullName, username }) {
+    async signup({ email, password, fullName, username, legalAccepted, legalVersion }) {
+      if (legalAccepted !== true) throw new Error('You must accept the legal policies to create an account.');
       if (useDirectSupabaseAuth()) {
         try {
           const cleanEmail = email.trim().toLowerCase();
@@ -321,6 +322,8 @@ export const spiceyApi = {
               data: {
                 full_name: fullName || '',
                 username: username || cleanEmail.split('@')[0],
+                legal_accepted_at: new Date().toISOString(),
+                legal_version: legalVersion || '3.0',
               },
             },
           });
@@ -334,7 +337,7 @@ export const spiceyApi = {
       }
       const data = await apiRequest('/api/auth/signup', {
         method: 'POST',
-        body: JSON.stringify({ email, password, fullName, username }),
+        body: JSON.stringify({ email, password, fullName, username, legalAccepted, legalVersion }),
       });
       if (data.session) spiceySession.set(data.session);
       return data;

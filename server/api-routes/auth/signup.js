@@ -7,9 +7,12 @@ export default async function handler(req, res) {
   if (req.method !== 'POST') return sendJson(res, 405, { error: 'Method not allowed' });
 
   try {
-    const { email, password, fullName, username } = await readJson(req);
+    const { email, password, fullName, username, legalAccepted, legalVersion } = await readJson(req);
     if (!email || !password) return sendJson(res, 400, { error: 'Email and password are required' });
     if (password.length < 6) return sendJson(res, 400, { error: 'Password must be at least 6 characters' });
+    if (legalAccepted !== true || legalVersion !== '3.0') {
+      return sendJson(res, 422, { error: 'You must accept the current Terms, Privacy Policy, and Community Guidelines' });
+    }
 
     const cleanEmail = email.trim().toLowerCase();
     const data = await supabaseAuth('/signup', {
@@ -20,6 +23,10 @@ export default async function handler(req, res) {
         data: {
           full_name: fullName || '',
           username: username || cleanEmail.split('@')[0],
+          legal_accepted_at: new Date().toISOString(),
+          terms_version: legalVersion,
+          privacy_version: legalVersion,
+          guidelines_version: legalVersion,
         },
       },
     });

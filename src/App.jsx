@@ -61,6 +61,7 @@ import HomeFeedV3Experimental from './pages/HomeFeedV3Experimental';
 import GiftVIPAccess from './pages/GiftVIPAccess';
 import PrivacyPolicy from './pages/PrivacyPolicy';
 import TermsOfService from './pages/TermsOfService';
+import CommunityGuidelines from './pages/CommunityGuidelines';
 import { hasAdminAccess } from '@/lib/adminAccess';
 
 function RequireAdmin({ user, children }) {
@@ -178,6 +179,18 @@ function AppContent() {
     return <SpiceyAuthModal />;
   }
 
+  // Legal documents must remain available before login so a person can read
+  // them before accepting them during account creation.
+  const publicLegalPages = {
+    '/privacy': <PrivacyPolicy />,
+    '/privacy-policy': <PrivacyPolicy />,
+    '/terms': <TermsOfService />,
+    '/terms-of-service': <TermsOfService />,
+    '/guidelines': <CommunityGuidelines />,
+    '/community-guidelines': <CommunityGuidelines />,
+  };
+  if (publicLegalPages[location.pathname]) return publicLegalPages[location.pathname];
+
   if (isNativeIOS && (isLoadingAuth || !authChecked)) {
     console.log('RETURN_LOADING - iOS validating stored session');
     return <AuthLoader />;
@@ -235,7 +248,11 @@ function AppContent() {
             <Route path="/admin/home-feed-v2" element={adminPage(<HomeFeedV2Test />)} />
             <Route path="/admin/home-feed-v3" element={adminPage(<HomeFeedV3Experimental />)} />
             <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+            <Route path="/privacy" element={<PrivacyPolicy />} />
             <Route path="/terms-of-service" element={<TermsOfService />} />
+            <Route path="/terms" element={<TermsOfService />} />
+            <Route path="/guidelines" element={<CommunityGuidelines />} />
+            <Route path="/community-guidelines" element={<CommunityGuidelines />} />
             <Route path="*" element={<PageNotFound />} />
           </Routes>
         </div>
@@ -324,7 +341,11 @@ function AppContent() {
             <Route path="/admin/home-feed-v2" element={adminPage(<HomeFeedV2Test />)} />
             <Route path="/admin/home-feed-v3" element={adminPage(<HomeFeedV3Experimental />)} />
             <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+            <Route path="/privacy" element={<PrivacyPolicy />} />
             <Route path="/terms-of-service" element={<TermsOfService />} />
+            <Route path="/terms" element={<TermsOfService />} />
+            <Route path="/guidelines" element={<CommunityGuidelines />} />
+            <Route path="/community-guidelines" element={<CommunityGuidelines />} />
             <Route path="*" element={<PageNotFound />} />
           </Routes>
         </div>

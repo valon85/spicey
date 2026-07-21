@@ -41,6 +41,8 @@ export default function TermsOfService() {
     'Content that promotes or facilitates illegal activities',
     'Sharing private information of others without their consent (doxxing)',
     'Coordinated inauthentic behavior designed to manipulate platform metrics',
+    'Unauthorized access, hacking, credential theft, malware, security bypasses, or use of stolen or compromised accounts',
+    'Non-consensual intimate imagery, sexual extortion, grooming, trafficking, or threats to publish private sexual content',
   ];
 
   const sections = [
@@ -54,7 +56,7 @@ export default function TermsOfService() {
     },
     {
       title: '3. User Accounts & Identity',
-      body: 'You are responsible for maintaining the confidentiality of your account credentials and for all activities that occur under your account. You agree to provide accurate, current, and complete information during registration. Creating multiple accounts to evade bans, impersonate others, or engage in coordinated inauthentic behavior is strictly prohibited and will result in permanent termination of all associated accounts.',
+      body: 'You are responsible for protecting your credentials and promptly reporting suspected compromise. You may not access another person’s account, test or bypass security without written authorization, distribute malware, steal credentials, or use a hacked or stolen account. We may lock or recover accounts, preserve security evidence, and terminate related accounts to protect users and SPICEY.',
     },
     {
       title: '5. User-Generated Content',
@@ -62,7 +64,7 @@ export default function TermsOfService() {
     },
     {
       title: '6. Content Moderation',
-      body: 'SPICEY employs automated moderation systems and human review to enforce these Terms. We reserve the right to remove any content that violates our policies, suspend or terminate accounts, and report illegal content to appropriate authorities — including law enforcement — without prior notice. Content removal decisions are final at SPICEY\'s discretion. Users may appeal moderation decisions by contacting info@spicey.live.',
+      body: 'SPICEY may use automated systems and human review to enforce these Terms. We may remove or restrict content, limit features, preserve relevant records, suspend or terminate accounts, and notify appropriate authorities when required or permitted by law or reasonably necessary to address an emergency or credible threat. Users may appeal by contacting info@spicey.live.',
     },
     {
       title: '7. Enforcement & Consequences',
@@ -85,12 +87,16 @@ export default function TermsOfService() {
       body: 'SPICEY is provided "as is" and "as available" without any warranties of any kind, express or implied. We do not warrant that the Platform will be uninterrupted, error-free, or free from viruses or other harmful components. Your use of the Platform is at your sole risk.',
     },
     {
-      title: '11. Limitation of Liability',
+      title: '12. Limitation of Liability',
       body: 'To the fullest extent permitted by applicable law, SPICEY shall not be liable for any indirect, incidental, special, consequential, or punitive damages arising from your use of the Platform, including but not limited to loss of data, loss of profits, or reputational harm.',
     },
     {
-      title: '12. Changes to Terms',
+      title: '13. Changes to Terms',
       body: 'SPICEY reserves the right to modify these Terms at any time. We will notify users of material changes via in-app notification or email. Continued use of the Platform after changes are posted constitutes acceptance of the revised Terms.',
+    },
+    {
+      title: '14. Indemnification & Platform Protection',
+      body: 'To the extent permitted by law, you agree to defend, indemnify, and hold SPICEY and its operators harmless from claims, losses, liabilities, and reasonable costs arising from your unlawful content, misuse of the Platform, violation of these Terms, or infringement of another person’s rights. SPICEY may investigate suspected abuse, preserve relevant evidence, restrict access, and cooperate with lawful investigations while protecting rights required by applicable law.',
     },
   ];
 
@@ -98,7 +104,7 @@ export default function TermsOfService() {
     <div className="min-h-screen" style={{ background: bg }}>
       <div className="sticky top-0 z-40 flex items-center gap-3 px-4 py-4"
         style={{ background: headerBg, backdropFilter: 'blur(20px)', borderBottom: headerBorder, paddingTop: 'max(1rem, env(safe-area-inset-top))' }}>
-        <button onClick={() => navigate('/settings')} className="w-8 h-8 flex items-center justify-center" style={{ color: backColor }}>
+        <button onClick={() => navigate(backTo)} className="w-8 h-8 flex items-center justify-center" style={{ color: backColor }}>
           <ChevronLeft className="w-6 h-6" />
         </button>
         <h1 className="text-lg font-bold" style={{ color: titleColor }}>Terms of Service</h1>
@@ -110,7 +116,7 @@ export default function TermsOfService() {
             <Shield className="w-5 h-5 text-orange-400" />
             <h2 className="text-lg font-bold" style={{ color: titleColor }}>Terms of Service</h2>
           </div>
-          <p className="text-sm" style={{ color: mutedColor }}>Effective Date: May 29, 2026 · Last Updated: May 29, 2026</p>
+          <p className="text-sm" style={{ color: mutedColor }}>Effective Date: July 21, 2026 · Version 3.0</p>
           <p className="text-sm mt-3 leading-relaxed" style={{ color: bodyColor }}>
             Welcome to SPICEY. These Terms of Service govern your access to and use of the SPICEY platform, including our mobile application and all related services. Please read these terms carefully before using the Platform.
           </p>
@@ -141,7 +147,7 @@ export default function TermsOfService() {
         ))}
 
         <section>
-          <h3 className="text-base font-bold mb-2" style={{ color: titleColor }}>13. Contact</h3>
+          <h3 className="text-base font-bold mb-2" style={{ color: titleColor }}>15. Contact</h3>
           <p className="text-sm leading-relaxed" style={{ color: bodyColor }}>
             For questions about these Terms, to report violations, or to submit a DMCA takedown request, contact us at:{' '}
             <a href="mailto:info@spicey.live" className="text-orange-400">info@spicey.live</a>
@@ -149,7 +155,7 @@ export default function TermsOfService() {
         </section>
 
         <div className="text-xs pt-4" style={{ color: footerColor, borderTop: footerBorder }}>
-          <p>SPICEY · info@spicey.live · © 2026 Spicey. All rights reserved. · Last updated: May 29, 2026</p>
+          <p>SPICEY · info@spicey.live · © 2026 Spicey. All rights reserved. · Last updated: July 21, 2026</p>
         </div>
       </div>
     </div>

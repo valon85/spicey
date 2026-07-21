@@ -34,7 +34,7 @@ env:
 jobs:
   build-ios:
     name: IPA and TestFlight
-    runs-on: macos-15
+    runs-on: macos-26
     timeout-minutes: 70
 
     steps:

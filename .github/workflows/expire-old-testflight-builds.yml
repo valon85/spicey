@@ -1,0 +1,113 @@
+name: Expire old TestFlight builds
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  expire-old-builds:
+    runs-on: macos-26
+    timeout-minutes: 30
+    steps:
+      - name: Setup Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.3"
+
+      - name: Install JWT dependency
+        run: gem install jwt --no-document
+
+      - name: Expire every build except the newest valid build
+        env:
+          APPSTORE_CONNECT_API_KEY_BASE64: ${{ secrets.APPSTORE_CONNECT_API_KEY_BASE64 }}
+          APPSTORE_CONNECT_KEY_ID: ${{ secrets.APPSTORE_CONNECT_KEY_ID }}
+          APPSTORE_CONNECT_ISSUER_ID: ${{ secrets.APPSTORE_CONNECT_ISSUER_ID }}
+          IOS_BUNDLE_ID: com.base69fe90d3bbe7ad47925e4a0a.app
+        run: |
+          ruby <<'RUBY'
+          require 'base64'
+          require 'json'
+          require 'jwt'
+          require 'net/http'
+          require 'openssl'
+          require 'uri'
+
+          key_id = ENV.fetch('APPSTORE_CONNECT_KEY_ID')
+          issuer_id = ENV.fetch('APPSTORE_CONNECT_ISSUER_ID')
+          private_key = OpenSSL::PKey::EC.new(Base64.strict_decode64(ENV.fetch('APPSTORE_CONNECT_API_KEY_BASE64')))
+          bundle_id = ENV.fetch('IOS_BUNDLE_ID')
+
+          def token(private_key, key_id, issuer_id)
+            now = Time.now.to_i
+            JWT.encode(
+              { iss: issuer_id, iat: now, exp: now + 15 * 60, aud: 'appstoreconnect-v1' },
+              private_key,
+              'ES256',
+              { kid: key_id, typ: 'JWT' }
+            )
+          end
+
+          def request(method, path, jwt, body = nil)
+            uri = URI("https://api.appstoreconnect.apple.com#{path}")
+            klass = { get: Net::HTTP::Get, patch: Net::HTTP::Patch }.fetch(method)
+            req = klass.new(uri)
+            req['Authorization'] = "Bearer #{jwt}"
+            req['Content-Type'] = 'application/json'
+            req.body = JSON.generate(body) if body
+            response = Net::HTTP.start(uri.hostname, uri.port, use_ssl: true) { |http| http.request(req) }
+            unless response.code.to_i.between?(200, 299)
+              raise "App Store Connect #{method.to_s.upcase} #{path} failed (HTTP #{response.code}): #{response.body}"
+            end
+            response.body.to_s.empty? ? {} : JSON.parse(response.body)
+          end
+
+          jwt = token(private_key, key_id, issuer_id)
+          apps_query = URI.encode_www_form('filter[bundleId]' => bundle_id, 'limit' => 1)
+          app = request(:get, "/v1/apps?#{apps_query}", jwt).fetch('data').first
+          raise "No App Store Connect app found for #{bundle_id}" unless app
+
+          builds_query = URI.encode_www_form('filter[app]' => app.fetch('id'), 'sort' => '-uploadedDate', 'limit' => 200)
+          builds_path = "/v1/builds?#{builds_query}"
+
+          newest = nil
+          40.times do
+            jwt = token(private_key, key_id, issuer_id)
+            builds = request(:get, builds_path, jwt).fetch('data')
+            newest = builds.first
+            state = newest&.dig('attributes', 'processingState')
+            break if newest && state == 'VALID'
+            raise "Newest TestFlight build failed processing (#{state})" if %w[FAILED INVALID].include?(state)
+            puts "Waiting for newest TestFlight build to become VALID (current: #{state || 'not visible'})"
+            sleep 30
+          end
+
+          raise 'Newest TestFlight build did not become VALID; no builds were expired' unless newest&.dig('attributes', 'processingState') == 'VALID'
+
+          jwt = token(private_key, key_id, issuer_id)
+          builds = request(:get, builds_path, jwt).fetch('data')
+          keep_id = newest.fetch('id')
+          keep_version = newest.dig('attributes', 'version')
+          puts "Keeping newest build #{keep_version} (#{keep_id}) active"
+
+          expired_count = 0
+          builds.each do |build|
+            next if build.fetch('id') == keep_id
+            next if build.dig('attributes', 'expired')
+
+            jwt = token(private_key, key_id, issuer_id)
+            payload = {
+              data: {
+                type: 'builds',
+                id: build.fetch('id'),
+                attributes: { expired: true }
+              }
+            }
+            request(:patch, "/v1/builds/#{build.fetch('id')}", jwt, payload)
+            puts "Expired build #{build.dig('attributes', 'version')} (#{build.fetch('id')})"
+            expired_count += 1
+          end
+
+          puts "Completed: kept 1 newest build and expired #{expired_count} older builds."
+          RUBY

@@ -135,11 +135,14 @@ jobs:
               )
 
           if "signingConfig signingConfigs.release" not in text:
-              text = text.replace(
+              build_types_marker = "    buildTypes {\n"
+              before_build_types, build_types = text.split(build_types_marker, 1)
+              build_types = build_types.replace(
                   "        release {\n",
                   "        release {\n            signingConfig signingConfigs.release\n",
                   1,
               )
+              text = before_build_types + build_types_marker + build_types
 
           path.write_text(text)
           PY

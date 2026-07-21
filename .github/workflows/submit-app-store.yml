@@ -1,4 +1,4 @@
-name: Submit iOS to App Store Review
+name: Verify App Store Review Status
 
 on:
   push:
@@ -12,61 +12,70 @@ permissions:
   contents: read
 
 jobs:
-  submit:
-    name: Submit latest TestFlight build
+  verify:
+    name: Verify active App Store submission
     runs-on: macos-26
-    timeout-minutes: 45
+    timeout-minutes: 15
     steps:
-      - name: Install Fastlane
-        run: gem install fastlane --no-document
+      - name: Install API tools
+        run: python3 -m pip install --quiet pyjwt cryptography requests
 
-      - name: Restore App Store Connect API key
+      - name: Check App Store Connect review status
         env:
           APPSTORE_CONNECT_API_KEY_BASE64: ${{ secrets.APPSTORE_CONNECT_API_KEY_BASE64 }}
-        run: |
-          set -euo pipefail
-          test -n "${APPSTORE_CONNECT_API_KEY_BASE64}"
-          mkdir -p build/app-store
-          python3 -c 'import base64, os, sys; sys.stdout.buffer.write(base64.b64decode(os.environ["APPSTORE_CONNECT_API_KEY_BASE64"]))' > build/app-store/AuthKey.p8
-          chmod 600 build/app-store/AuthKey.p8
-
-      - name: Create Fastlane submission configuration
-        run: |
-          mkdir -p fastlane
-          cat > fastlane/Fastfile <<'RUBY'
-          default_platform(:ios)
-
-          platform :ios do
-            lane :submit do
-              api_key = app_store_connect_api_key(
-                key_id: ENV["APPSTORE_CONNECT_KEY_ID"],
-                issuer_id: ENV["APPSTORE_CONNECT_ISSUER_ID"],
-                key_filepath: "build/app-store/AuthKey.p8",
-                in_house: false
-              )
-
-              deliver(
-                api_key: api_key,
-                app_identifier: "com.base69fe90d3bbe7ad47925e4a0a.app",
-                app_version: "1.0",
-                build_number: "1",
-                skip_binary_upload: true,
-                skip_metadata: true,
-                skip_screenshots: true,
-                submit_for_review: true,
-                automatic_release: true,
-                force: true,
-                precheck_include_in_app_purchases: false,
-                submission_information: {
-                  export_compliance_uses_encryption: false
-                }
-              )
-            end
-          end
-          RUBY
-
-      - name: Submit build 1.0 (1) for App Store review
-        env:
           APPSTORE_CONNECT_KEY_ID: ${{ secrets.APPSTORE_CONNECT_KEY_ID }}
           APPSTORE_CONNECT_ISSUER_ID: ${{ secrets.APPSTORE_CONNECT_ISSUER_ID }}
-        run: fastlane ios submit
+        run: |
+          python3 - <<'PY'
+          import base64
+          import json
+          import os
+          import time
+          import jwt
+          import requests
+
+          private_key = base64.b64decode(os.environ["APPSTORE_CONNECT_API_KEY_BASE64"]).decode()
+          now = int(time.time())
+          token = jwt.encode(
+              {"iss": os.environ["APPSTORE_CONNECT_ISSUER_ID"], "iat": now, "exp": now + 900, "aud": "appstoreconnect-v1"},
+              private_key,
+              algorithm="ES256",
+              headers={"kid": os.environ["APPSTORE_CONNECT_KEY_ID"], "typ": "JWT"},
+          )
+          headers = {"Authorization": f"Bearer {token}"}
+          base = "https://api.appstoreconnect.apple.com/v1"
+
+          def get(path, params=None):
+              response = requests.get(base + path, headers=headers, params=params, timeout=30)
+              response.raise_for_status()
+              return response.json()
+
+          apps = get("/apps", {"filter[bundleId]": "com.base69fe90d3bbe7ad47925e4a0a.app", "limit": 1})["data"]
+          if not apps:
+              raise SystemExit("APP_NOT_FOUND")
+          app_id = apps[0]["id"]
+
+          versions = get("/appStoreVersions", {
+              "filter[app]": app_id,
+              "filter[platform]": "IOS",
+              "filter[versionString]": "1.0",
+              "limit": 1,
+          })["data"]
+          if not versions:
+              raise SystemExit("VERSION_NOT_FOUND")
+          attrs = versions[0]["attributes"]
+
+          submissions = get("/reviewSubmissions", {
+              "filter[app]": app_id,
+              "limit": 20,
+          })["data"]
+          active_states = {"READY_FOR_REVIEW", "WAITING_FOR_REVIEW", "IN_REVIEW", "UNRESOLVED_ISSUES", "CANCELING", "COMPLETING"}
+          active = [item["attributes"]["state"] for item in submissions if item["attributes"]["state"] in active_states]
+
+          print("APP_STORE_VERSION=1.0")
+          print("APP_STORE_STATE=" + str(attrs.get("appStoreState")))
+          print("RELEASE_TYPE=" + str(attrs.get("releaseType")))
+          print("REVIEW_SUBMISSION_STATES=" + json.dumps(active))
+          if not active:
+              raise SystemExit("NO_ACTIVE_REVIEW_SUBMISSION")
+          PY

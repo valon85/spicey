@@ -11,19 +11,37 @@
  *   https://developers.google.com/youtube/terms/api-services-tos
  */
 import React, { useState, useCallback, useEffect, useId, useRef } from 'react';
-import { ExternalLink, Youtube, ArrowLeft } from 'lucide-react';
+import { ExternalLink, Youtube, ArrowLeft, Volume2, VolumeX } from 'lucide-react';
 
 export default function YouTubeReelItem({ video, onBack, onVideoEnd, onVideoUnavailable }) {
   const [embedError, setEmbedError] = useState(false);
   const [playerReady, setPlayerReady] = useState(false);
+  const [soundEnabled, setSoundEnabled] = useState(() => localStorage.getItem('spicey-youtube-sound') === 'on');
   const playerContainerRef = useRef(null);
   const playerRef = useRef(null);
   const unavailableTimerRef = useRef(null);
+  const soundEnabledRef = useRef(soundEnabled);
   const playerId = `youtube-player-${useId().replace(/:/g, '')}`;
 
   const watchOnYouTube = useCallback(() => {
     window.open(video.watchUrl, '_blank', 'noopener,noreferrer');
   }, [video.watchUrl]);
+
+  const toggleSound = useCallback(() => {
+    const nextEnabled = !soundEnabledRef.current;
+    soundEnabledRef.current = nextEnabled;
+    setSoundEnabled(nextEnabled);
+    localStorage.setItem('spicey-youtube-sound', nextEnabled ? 'on' : 'off');
+    const player = playerRef.current;
+    if (!player) return;
+    if (nextEnabled) {
+      player.unMute?.();
+      player.setVolume?.(100);
+      player.playVideo?.();
+    } else {
+      player.mute?.();
+    }
+  }, []);
 
   // Load YouTube IFrame Player API and initialize player
   useEffect(() => {
@@ -63,6 +81,7 @@ export default function YouTubeReelItem({ video, onBack, onVideoEnd, onVideoUnav
             // Try to play - muted for autoplay policy
             event.target.playVideo();
             event.target.setVolume(100);
+            if (soundEnabledRef.current) event.target.unMute();
           },
           onStateChange: (event) => {
             // PlayerState.ENDED = 0
@@ -73,13 +92,10 @@ export default function YouTubeReelItem({ video, onBack, onVideoEnd, onVideoUnav
             // PlayerState.PLAYING = 1
             if (event.data === window.YT.PlayerState.PLAYING) {
               console.log('[YouTubeReel] Video is playing');
-              // Unmute after 1 second if user hasn't interacted
-              setTimeout(() => {
-                if (player.unMute) {
-                  player.unMute();
-                  player.setVolume(100);
-                }
-              }, 1000);
+              if (soundEnabledRef.current) {
+                player.unMute?.();
+                player.setVolume?.(100);
+              }
             }
           },
           onError: (event) => {
@@ -172,6 +188,25 @@ export default function YouTubeReelItem({ video, onBack, onVideoEnd, onVideoUnav
           </div>
         )}
       </div>
+
+      {/* iOS requires a real user gesture before autoplay audio can be enabled. */}
+      {!embedError && (
+        <button
+          type="button"
+          onClick={toggleSound}
+          className="absolute z-50 right-4 flex items-center gap-2 rounded-full px-3 py-2 text-white font-semibold active:scale-95 transition-transform"
+          style={{
+            top: 'max(66px, calc(env(safe-area-inset-top) + 54px))',
+            background: soundEnabled ? 'rgba(236,72,153,0.9)' : 'rgba(0,0,0,0.72)',
+            border: '1px solid rgba(255,255,255,0.25)',
+            backdropFilter: 'blur(10px)',
+          }}
+          aria-label={soundEnabled ? 'Mute YouTube video' : 'Turn on YouTube sound'}
+        >
+          {soundEnabled ? <Volume2 className="w-5 h-5" /> : <VolumeX className="w-5 h-5" />}
+          <span className="text-xs">{soundEnabled ? 'Sound on' : 'Tap for sound'}</span>
+        </button>
+      )}
 
 
 

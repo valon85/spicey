@@ -676,7 +676,7 @@ export const spiceyApi = {
   },
   youtube: {
     reels({ query = 'funny short videos', limit = 12 } = {}) {
-      const params = new URLSearchParams({ query, limit: String(limit) });
+      const params = new URLSearchParams({ query, limit: String(limit), fresh: String(Date.now()) });
       return apiRequest(`/api/youtube/reels?${params}`);
     },
   },

@@ -21,6 +21,15 @@ function mapVideo(item) {
   };
 }
 
+function shuffle(items) {
+  const shuffled = [...items];
+  for (let index = shuffled.length - 1; index > 0; index -= 1) {
+    const swapIndex = Math.floor(Math.random() * (index + 1));
+    [shuffled[index], shuffled[swapIndex]] = [shuffled[swapIndex], shuffled[index]];
+  }
+  return shuffled;
+}
+
 export default async function handler(req, res) {
   setCors(req, res);
   if (handleOptions(req, res)) return;
@@ -34,13 +43,14 @@ export default async function handler(req, res) {
     const url = new URL(req.url, 'http://spicey.local');
     const query = url.searchParams.get('query') || 'funny short videos';
     const maxResults = Math.min(Number(url.searchParams.get('limit') || 12), 25);
+    const searchPoolSize = Math.min(Math.max(maxResults * 3, 25), 50);
     const searchUrl = new URL('https://www.googleapis.com/youtube/v3/search');
     searchUrl.searchParams.set('key', apiKey);
     searchUrl.searchParams.set('part', 'snippet');
     searchUrl.searchParams.set('type', 'video');
     searchUrl.searchParams.set('videoDuration', 'short');
     searchUrl.searchParams.set('safeSearch', 'moderate');
-    searchUrl.searchParams.set('maxResults', String(maxResults));
+    searchUrl.searchParams.set('maxResults', String(searchPoolSize));
     searchUrl.searchParams.set('q', query);
 
     const response = await fetch(searchUrl);
@@ -69,7 +79,9 @@ export default async function handler(req, res) {
     const embeddableItems = (details.items || []).filter((item) => (
       item.status?.embeddable === true && item.status?.privacyStatus === 'public'
     ));
-    return sendJson(res, 200, { videos: embeddableItems.map(mapVideo).filter((v) => v.youtube_id) });
+    res.setHeader('Cache-Control', 'private, no-store, max-age=0');
+    const videos = shuffle(embeddableItems.map(mapVideo).filter((v) => v.youtube_id)).slice(0, maxResults);
+    return sendJson(res, 200, { videos });
   } catch (error) {
     return sendJson(res, 400, { error: error.message || 'YouTube reels request failed' });
   }

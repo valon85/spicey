@@ -11,12 +11,13 @@ export default async function handler(req, res) {
     const url = new URL(req.url, 'http://spicey.local');
     const query = (url.searchParams.get('query') || url.searchParams.get('q') || '').trim();
     const limit = url.searchParams.get('limit') || '8';
-    if (!query) return sendJson(res, 200, { users: [] });
-
     const safeQuery = query.replace(/[*,()]/g, '');
+    const profileQuery = safeQuery
+      ? `?or=(username.ilike.*${encodeURIComponent(safeQuery)}*,full_name.ilike.*${encodeURIComponent(safeQuery)}*)&order=updated_at.desc&limit=${encodeURIComponent(limit)}`
+      : `?order=updated_at.desc&limit=${encodeURIComponent(limit)}`;
     const users = await supabaseTable('profiles', {
       token,
-      query: `?or=(username.ilike.*${encodeURIComponent(safeQuery)}*,full_name.ilike.*${encodeURIComponent(safeQuery)}*)&limit=${encodeURIComponent(limit)}`,
+      query: profileQuery,
     });
 
     return sendJson(res, 200, {

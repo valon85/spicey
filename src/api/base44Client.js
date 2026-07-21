@@ -516,7 +516,9 @@ async function invokeFunction(name, payload = {}) {
           console.warn('[Spicey Users] Supabase profile fallback failed:', error.message);
         }
       }
-      if (!users.length) users = fallbackPeople(query, limit);
+      // Demo/Base44 IDs are not valid Supabase UUIDs. Never expose those
+      // placeholders in production because follow/chat actions cannot target them.
+      if (!users.length && import.meta.env.DEV) users = fallbackPeople(query, limit);
       return { data: { users: users.map(normalizeUser), profiles: users.map(normalizeUser) } };
     }
     case 'searchMusic':

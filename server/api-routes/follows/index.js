@@ -1,6 +1,24 @@
 import { handleOptions, readJson, sendJson, setCors } from '../_lib/http.js';
 import { getSupabaseUser, supabaseTable } from '../_lib/supabaseRest.js';
 
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+async function resolveProfileUserId(token, suppliedId) {
+  const value = String(suppliedId || '').trim();
+  if (!value) return null;
+
+  const encoded = encodeURIComponent(value);
+  const query = UUID_PATTERN.test(value)
+    ? `?or=(user_id.eq.${encoded},id.eq.${encoded})&select=user_id&limit=1`
+    : `?or=(legacy_base44_user_id.eq.${encoded},legacy_base44_profile_id.eq.${encoded})&select=user_id&limit=1`;
+  const rows = await supabaseTable('profiles', {
+    token,
+    serviceRole: true,
+    query,
+  });
+  return rows[0]?.user_id || null;
+}
+
 async function profileFor(token, userId, { serviceRole = false } = {}) {
   const rows = await supabaseTable('profiles', {
     token,
@@ -66,8 +84,10 @@ export default async function handler(req, res) {
     const url = new URL(req.url, 'http://spicey.local');
 
     if (req.method === 'GET') {
-      const targetUserId = url.searchParams.get('targetUserId') || url.searchParams.get('target_user_id');
-      if (targetUserId) {
+      const suppliedTargetUserId = url.searchParams.get('targetUserId') || url.searchParams.get('target_user_id');
+      if (suppliedTargetUserId) {
+        const targetUserId = await resolveProfileUserId(token, suppliedTargetUserId);
+        if (!targetUserId) return sendJson(res, 404, { error: 'Profile not found', code: 'PROFILE_NOT_FOUND' });
         return sendJson(res, 200, await getStatus(token, user.id, targetUserId));
       }
 
@@ -83,8 +103,15 @@ export default async function handler(req, res) {
 
     if (req.method === 'POST') {
       const body = await readJson(req);
-      const targetUserId = body.target_user_id || body.targetUserId;
-      if (!targetUserId) return sendJson(res, 400, { error: 'target_user_id is required' });
+      const suppliedTargetUserId = body.target_user_id || body.targetUserId;
+      if (!suppliedTargetUserId) return sendJson(res, 400, { error: 'target_user_id is required' });
+      const targetUserId = await resolveProfileUserId(token, suppliedTargetUserId);
+      if (!targetUserId) {
+        return sendJson(res, 422, {
+          error: 'This profile is not connected to a Spicey account yet',
+          code: 'PROFILE_NOT_CONNECTED',
+        });
+      }
       if (targetUserId === user.id) return sendJson(res, 400, { error: 'You cannot follow yourself' });
 
       const existing = await supabaseTable('follows', {

@@ -35,7 +35,22 @@ export default async function handler(req, res) {
         serviceRole: true,
         query: `?chat_id=eq.${encodeURIComponent(chatId)}&order=created_at.asc&limit=200`,
       });
-      return sendJson(res, 200, { messages });
+      const unread = messages.filter((message) => (
+        message.sender_id !== user.id && !(message.read_by || []).includes(user.id)
+      ));
+      if (unread.length) {
+        await Promise.all(unread.map((message) => supabaseTable('messages', {
+          method: 'PATCH',
+          serviceRole: true,
+          query: `?id=eq.${encodeURIComponent(message.id)}`,
+          body: { read_by: [...new Set([...(message.read_by || []), user.id])] },
+        }))).catch((error) => console.warn('[Messages] Failed to mark read:', error.message));
+      }
+      return sendJson(res, 200, {
+        messages: messages.map((message) => unread.some((item) => item.id === message.id)
+          ? { ...message, read_by: [...new Set([...(message.read_by || []), user.id])] }
+          : message),
+      });
     }
 
     if (req.method === 'POST') {

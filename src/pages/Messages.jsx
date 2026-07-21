@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 
 function timeAgo(dateStr) {
@@ -57,7 +57,6 @@ import ChatView from '../components/messages/ChatView.jsx';
 import NewMessageSheet from '../components/panels/NewMessageSheet.jsx';
 import VerifiedBadge from '../components/shared/VerifiedBadge.jsx';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useNavigate } from 'react-router-dom';
 
 const STORIES = [
   { name: 'Your Story', img: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&q=80', isYou: true },
@@ -87,7 +86,6 @@ function UserAvatarMedia({ src, alt, style }) {
 
 export default function Messages() {
   const location = useLocation();
-  const navigate = useNavigate();
   const [activeChat, setActiveChat] = useState(null);
   const [search, setSearch] = useState('');
   const [searchFocused, setSearchFocused] = useState(false);
@@ -146,8 +144,9 @@ export default function Messages() {
       return rows.filter(c => Array.isArray(c.participant_ids) && c.participant_ids.includes(currentUser.id));
     },
     enabled: !!currentUser?.id,
-    staleTime: 120000,
-    refetchOnWindowFocus: false,
+    staleTime: 4000,
+    refetchInterval: activeChat ? false : 5000,
+    refetchOnWindowFocus: true,
   });
   const chats = chatsData || EMPTY_LIST;
 
@@ -214,7 +213,7 @@ export default function Messages() {
           online: false,
           preview: 'Start a conversation',
           time: 'Now',
-          unread: 0,
+          unread: Number(chat.unread_count || 0),
           chatId: null,
           userId: u.user_id || u.id,
           isDirectMessage: true,
@@ -272,7 +271,7 @@ export default function Messages() {
           online: false,
           chatId: chat.id,
           userId: otherUserId,
-          lastMessageTime: chat.updated_date || chat.last_message_time || new Date().toISOString()
+          lastMessageTime: chat.last_message_time || chat.updated_at || chat.updated_date || new Date(0).toISOString()
         });
       }
       return conversationsList;
@@ -281,10 +280,9 @@ export default function Messages() {
     let cancelled = false;
     buildConversations().then((conversationsList) => {
       if (cancelled) return;
-      // Sort: unread first, then by most recent message time (newest first)
+      // Always keep the freshest conversation first. Unread is visual state,
+      // not a reason to pin an older conversation above a newer message.
       conversationsList.sort((a, b) => {
-        if (a.unread > 0 && b.unread === 0) return -1;
-        if (b.unread > 0 && a.unread === 0) return 1;
         const timeDiff = new Date(b.lastMessageTime).getTime() - new Date(a.lastMessageTime).getTime();
         if (timeDiff !== 0) return timeDiff;
         // Fallback: if times are equal, sort by name alphabetically
@@ -310,8 +308,6 @@ export default function Messages() {
         }));
 
       const combined = [...missedCallItems, ...conversationsList].sort((a, b) => {
-        if (a.unread > 0 && b.unread === 0) return -1;
-        if (b.unread > 0 && a.unread === 0) return 1;
         const timeDiff = new Date(b.lastMessageTime).getTime() - new Date(a.lastMessageTime).getTime();
         if (timeDiff !== 0) return timeDiff;
         return a.name.localeCompare(b.name);
@@ -522,6 +518,7 @@ export default function Messages() {
                     onClick={async () => {
                       if (deletingChatId === c.chatId) return;
                       if (c.isMissedCall && c.missedCallId) base44.entities.MissedCall.update(c.missedCallId, { seen: true }).catch(() => {});
+                      setConversations((items) => items.map((item) => item.id === c.id ? { ...item, unread: 0 } : item));
                       setActiveChat({...c, chatId: c.chatId, userId: c.userId});
                     }}
                     onMouseDown={handlePressStart} onMouseUp={handlePressEnd} onMouseLeave={handlePressEnd}

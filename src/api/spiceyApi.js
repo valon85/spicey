@@ -1115,9 +1115,20 @@ export const spiceyApi = {
         });
         const otherIds = chats.map((chat) => (chat.participant_ids || []).find((id) => id !== user.id)).filter(Boolean);
         const profileMap = await profilesByUserIds(otherIds);
+        const chatIds = chats.map((chat) => chat.id).filter(Boolean);
+        const chatMessages = chatIds.length ? await supabaseRest('messages', {
+          query: `?select=chat_id,sender_id,read_by&chat_id=in.(${chatIds.map((id) => `"${id}"`).join(',')})&limit=5000`,
+        }).catch(() => []) : [];
+        const unreadByChat = chatMessages.reduce((counts, message) => {
+          if (message.sender_id !== user.id && !(message.read_by || []).includes(user.id)) {
+            counts[message.chat_id] = (counts[message.chat_id] || 0) + 1;
+          }
+          return counts;
+        }, {});
         return {
           chats: chats.map((chat) => ({
             ...chat,
+            unread_count: unreadByChat[chat.id] || 0,
             other_profile: profileMap[(chat.participant_ids || []).find((id) => id !== user.id)] || null,
           })),
         };

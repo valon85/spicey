@@ -8,6 +8,8 @@ PODS:
   - CapacitorCordova (6.2.1)
   - CapacitorFilesystem (6.0.4):
     - Capacitor
+  - CapacitorKeyboard (6.0.4):
+    - Capacitor
   - CapacitorPreferences (6.0.4):
     - Capacitor
   - CapacitorPushNotifications (6.0.5):
@@ -16,32 +18,35 @@ PODS:
     - Capacitor
 
 DEPENDENCIES:
-  - "Capacitor (from `../../../spicey-6-working/node_modules/@capacitor/ios`)"
-  - "CapacitorApp (from `../../../spicey-6-working/node_modules/@capacitor/app`)"
-  - "CapacitorCamera (from `../../../spicey-6-working/node_modules/@capacitor/camera`)"
-  - "CapacitorCordova (from `../../../spicey-6-working/node_modules/@capacitor/ios`)"
-  - "CapacitorFilesystem (from `../../../spicey-6-working/node_modules/@capacitor/filesystem`)"
-  - "CapacitorPreferences (from `../../../spicey-6-working/node_modules/@capacitor/preferences`)"
-  - "CapacitorPushNotifications (from `../../../spicey-6-working/node_modules/@capacitor/push-notifications`)"
-  - "CapacitorShare (from `../../../spicey-6-working/node_modules/@capacitor/share`)"
+  - "Capacitor (from `../../node_modules/@capacitor/ios`)"
+  - "CapacitorApp (from `../../node_modules/@capacitor/app`)"
+  - "CapacitorCamera (from `../../node_modules/@capacitor/camera`)"
+  - "CapacitorCordova (from `../../node_modules/@capacitor/ios`)"
+  - "CapacitorFilesystem (from `../../node_modules/@capacitor/filesystem`)"
+  - "CapacitorKeyboard (from `../../node_modules/@capacitor/keyboard`)"
+  - "CapacitorPreferences (from `../../node_modules/@capacitor/preferences`)"
+  - "CapacitorPushNotifications (from `../../node_modules/@capacitor/push-notifications`)"
+  - "CapacitorShare (from `../../node_modules/@capacitor/share`)"
 
 EXTERNAL SOURCES:
   Capacitor:
-    :path: "../../../spicey-6-working/node_modules/@capacitor/ios"
+    :path: "../../node_modules/@capacitor/ios"
   CapacitorApp:
-    :path: "../../../spicey-6-working/node_modules/@capacitor/app"
+    :path: "../../node_modules/@capacitor/app"
   CapacitorCamera:
-    :path: "../../../spicey-6-working/node_modules/@capacitor/camera"
+    :path: "../../node_modules/@capacitor/camera"
   CapacitorCordova:
-    :path: "../../../spicey-6-working/node_modules/@capacitor/ios"
+    :path: "../../node_modules/@capacitor/ios"
   CapacitorFilesystem:
-    :path: "../../../spicey-6-working/node_modules/@capacitor/filesystem"
+    :path: "../../node_modules/@capacitor/filesystem"
+  CapacitorKeyboard:
+    :path: "../../node_modules/@capacitor/keyboard"
   CapacitorPreferences:
-    :path: "../../../spicey-6-working/node_modules/@capacitor/preferences"
+    :path: "../../node_modules/@capacitor/preferences"
   CapacitorPushNotifications:
-    :path: "../../../spicey-6-working/node_modules/@capacitor/push-notifications"
+    :path: "../../node_modules/@capacitor/push-notifications"
   CapacitorShare:
-    :path: "../../../spicey-6-working/node_modules/@capacitor/share"
+    :path: "../../node_modules/@capacitor/share"
 
 SPEC CHECKSUMS:
   Capacitor: c95400d761e376be9da6be5a05f226c0e865cebf
@@ -49,10 +54,11 @@ SPEC CHECKSUMS:
   CapacitorCamera: 5ba135b0cb55a788758139fa2404d726bf60f0f3
   CapacitorCordova: 8d93e14982f440181be7304aa9559ca631d77fff
   CapacitorFilesystem: 5b9aec35c0212bd0064e26d278c93e925864f212
+  CapacitorKeyboard: e8cd50fd5cbdd023a5947a5c0f5cca6e5aa5a253
   CapacitorPreferences: 5848e0691b36b4bb4acc98e481ab56d451578d30
   CapacitorPushNotifications: 35abece14371c57172e8321c9ccc8b6fa35fabfe
   CapacitorShare: 77ff779e3b7c6ae9fb5461e52cf7ef805d429491
 
-PODFILE CHECKSUM: 2fffc124dcfb1157571893ad516e8e6db33da063
+PODFILE CHECKSUM: e241b517d22e889a93b73fd082c86862e5269182
 
 COCOAPODS: 1.16.2

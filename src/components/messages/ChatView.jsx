@@ -1,9 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { ChevronLeft, Send, Phone, Video, Mic, Image as ImageIcon, Smile, Check, CheckCheck, Heart, MoreVertical, Camera, Film, MapPin, Gift, Play } from 'lucide-react';
+import { ChevronLeft, Send, Phone, Video, Mic, Image as ImageIcon, Smile, Check, CheckCheck, MoreVertical, Camera, Film, MapPin, Gift, Play } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { base44 } from '@/api/base44Client';
 import { useAuth } from '@/lib/AuthContext';
-import CallSheet from '../panels/CallSheet.jsx';
+import { Capacitor } from '@capacitor/core';
+import { Keyboard, KeyboardResize } from '@capacitor/keyboard';
 
 function useIsLightMode() {
   const [isLight, setIsLight] = React.useState(() => document.documentElement.classList.contains('light-mode'));
@@ -257,6 +258,7 @@ export default function ChatView({ convo, onBack }) {
   const [sending, setSending] = useState(false);
   const [chatId, setChatId] = useState(convo.chatId || null);
   const [keyboardOpen, setKeyboardOpen] = useState(false);
+  const [viewport, setViewport] = useState(() => ({ height: window.innerHeight, offsetTop: 0 }));
   const [showEmojiPanel, setShowEmojiPanel] = useState(false);
   const [emojiCategory, setEmojiCategory] = useState(0);
   const chatIdRef = useRef(convo.chatId || null);
@@ -266,6 +268,7 @@ export default function ChatView({ convo, onBack }) {
   const videoInputRef = useRef(null);
   const deletedIdsRef = useRef(new Set());
   const inputRef = useRef(null);
+  const didInitialScrollRef = useRef(false);
 
   const mapMessages = (msgs, userId, prevMsgs = []) => {
     const prevReactions = Object.fromEntries(prevMsgs.map(m => [m.id, m.reaction]));
@@ -312,6 +315,31 @@ export default function ChatView({ convo, onBack }) {
         input.removeEventListener('blur', handleBlur);
       };
     }
+  }, []);
+
+  // Keep the composer attached to the real iOS visual viewport and remove the
+  // previous/next/done accessory strip that creates the large keyboard gap.
+  useEffect(() => {
+    if (Capacitor.isNativePlatform()) {
+      Keyboard.setResizeMode({ mode: KeyboardResize.Native }).catch(() => {});
+      Keyboard.setAccessoryBarVisible({ isVisible: false }).catch(() => {});
+    }
+    const visualViewport = window.visualViewport;
+    const updateViewport = () => {
+      const height = Math.round(visualViewport?.height || window.innerHeight);
+      const offsetTop = Math.round(visualViewport?.offsetTop || 0);
+      setViewport({ height, offsetTop });
+      setKeyboardOpen(window.innerHeight - height > 100 || document.activeElement === inputRef.current);
+    };
+    updateViewport();
+    visualViewport?.addEventListener('resize', updateViewport);
+    visualViewport?.addEventListener('scroll', updateViewport);
+    window.addEventListener('resize', updateViewport);
+    return () => {
+      visualViewport?.removeEventListener('resize', updateViewport);
+      visualViewport?.removeEventListener('scroll', updateViewport);
+      window.removeEventListener('resize', updateViewport);
+    };
   }, []);
 
   // Load current user and chat history
@@ -364,12 +392,25 @@ export default function ChatView({ convo, onBack }) {
   useEffect(() => {
     const el = scrollContainerRef.current;
     if (!el) return;
+    if (!didInitialScrollRef.current && messages.length > 0) {
+      didInitialScrollRef.current = true;
+      requestAnimationFrame(() => {
+        el.scrollTop = el.scrollHeight;
+        bottomRef.current?.scrollIntoView({ behavior: 'auto', block: 'end' });
+      });
+      return;
+    }
     // Only auto-scroll if user is near bottom (within 120px)
     const distFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
     if (distFromBottom < 120) {
       bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
     }
   }, [messages]);
+
+  useEffect(() => {
+    if (!keyboardOpen) return;
+    requestAnimationFrame(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' }));
+  }, [keyboardOpen]);
 
   const send = async () => {
     const content = input?.trim();
@@ -489,7 +530,7 @@ export default function ChatView({ convo, onBack }) {
   };
 
   return (
-    <div className="fixed inset-0 flex flex-col overflow-hidden spicey-chat-screen" style={{ background: isLight ? 'linear-gradient(160deg, #FFFFFF 0%, #F8F8FC 52%, #FFF7F2 100%)' : '#050407', height: '100dvh' }}>
+    <div className="fixed left-0 right-0 flex flex-col overflow-hidden spicey-chat-screen" style={{ background: isLight ? 'linear-gradient(160deg, #FFFFFF 0%, #F8F8FC 52%, #FFF7F2 100%)' : '#050407', height: `${viewport.height}px`, top: `${viewport.offsetTop}px` }}>
       <style>{`
         .spicey-chat-screen {
           --spicey-orange: #ff6a18;
@@ -769,6 +810,9 @@ export default function ChatView({ convo, onBack }) {
           padding: 12px 28px max(20px, env(safe-area-inset-bottom));
           background: linear-gradient(to top, rgba(4,3,6,1) 76%, rgba(4,3,6,0));
         }
+        .spicey-composer-wrap.keyboard-open {
+          padding-bottom: 6px;
+        }
         .spicey-composer-row {
           display: grid;
           grid-template-columns: minmax(0, 1fr) 62px;
@@ -972,7 +1016,7 @@ export default function ChatView({ convo, onBack }) {
       </AnimatePresence>
 
       {/* ── Input bar ── */}
-      <div className="spicey-composer-wrap">
+      <div className={`spicey-composer-wrap ${keyboardOpen ? 'keyboard-open' : ''}`}>
         <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
         <input ref={videoInputRef} type="file" accept="video/*" className="hidden" onChange={handleFileChange} />
 
@@ -991,6 +1035,9 @@ export default function ChatView({ convo, onBack }) {
               autoCorrect="off"
               spellCheck="false"
               autoCapitalize="off"
+              autoComplete="off"
+              inputMode="text"
+              enterKeyHint="send"
             />
             <motion.button
               whileTap={{ scale: 0.88 }}

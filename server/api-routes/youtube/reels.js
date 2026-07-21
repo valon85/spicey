@@ -49,7 +49,27 @@ export default async function handler(req, res) {
       return sendJson(res, response.status, { error: data.error?.message || 'YouTube request failed' });
     }
 
-    return sendJson(res, 200, { videos: (data.items || []).map(mapVideo).filter((v) => v.youtube_id) });
+    const searchItems = data.items || [];
+    const videoIds = searchItems.map((item) => item.id?.videoId).filter(Boolean);
+    if (!videoIds.length) return sendJson(res, 200, { videos: [] });
+
+    // Search results do not include embed permissions. Validate each result with
+    // videos.list so the mobile feed never gets stuck on a blocked iframe.
+    const detailsUrl = new URL('https://www.googleapis.com/youtube/v3/videos');
+    detailsUrl.searchParams.set('key', apiKey);
+    detailsUrl.searchParams.set('part', 'snippet,status,contentDetails');
+    detailsUrl.searchParams.set('id', videoIds.join(','));
+
+    const detailsResponse = await fetch(detailsUrl);
+    const details = await detailsResponse.json();
+    if (!detailsResponse.ok) {
+      return sendJson(res, detailsResponse.status, { error: details.error?.message || 'YouTube video validation failed' });
+    }
+
+    const embeddableItems = (details.items || []).filter((item) => (
+      item.status?.embeddable === true && item.status?.privacyStatus === 'public'
+    ));
+    return sendJson(res, 200, { videos: embeddableItems.map(mapVideo).filter((v) => v.youtube_id) });
   } catch (error) {
     return sendJson(res, 400, { error: error.message || 'YouTube reels request failed' });
   }

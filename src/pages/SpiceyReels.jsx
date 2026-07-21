@@ -602,6 +602,16 @@ export default function SpiceyReels() {
   const spiceyCount = spiceyReels.length;
   const ytCount = youtubeVideos.length;
 
+  // Keep the selected reel valid if an unavailable YouTube result is removed.
+  useEffect(() => {
+    setCurrentIndex((index) => Math.max(0, Math.min(index, allReelsRef.current.length - 1)));
+  }, [allReels.length]);
+
+  const handleYouTubeUnavailable = useCallback((videoId, errorCode) => {
+    console.warn('[SpiceyReels] Removing unavailable YouTube video:', videoId, errorCode);
+    setYoutubeVideos((videos) => videos.filter((video) => video.youtubeVideoId !== videoId));
+  }, []);
+
   const goNext = useCallback(() => {
     setSlideDir(1);
     setCurrentIndex(i => {
@@ -807,6 +817,7 @@ export default function SpiceyReels() {
                 setSlideDir(1);
                 setCurrentIndex(i => Math.min(allReelsRef.current.length - 1, i + 1));
               }}
+              onVideoUnavailable={handleYouTubeUnavailable}
             />
           ) : (
             <ReelItem

@@ -10,24 +10,24 @@
  * - Compliant with YouTube API Services Terms of Service:
  *   https://developers.google.com/youtube/terms/api-services-tos
  */
-import React, { useState, useCallback, useEffect, useRef } from 'react';
+import React, { useState, useCallback, useEffect, useId, useRef } from 'react';
 import { ExternalLink, Youtube, ArrowLeft } from 'lucide-react';
 
-export default function YouTubeReelItem({ video, onBack, onVideoEnd }) {
+export default function YouTubeReelItem({ video, onBack, onVideoEnd, onVideoUnavailable }) {
   const [embedError, setEmbedError] = useState(false);
   const [playerReady, setPlayerReady] = useState(false);
-  const iframeRef = React.useRef(null);
-  const playerRef = React.useRef(null);
+  const playerContainerRef = useRef(null);
+  const playerRef = useRef(null);
+  const unavailableTimerRef = useRef(null);
+  const playerId = `youtube-player-${useId().replace(/:/g, '')}`;
 
   const watchOnYouTube = useCallback(() => {
     window.open(video.watchUrl, '_blank', 'noopener,noreferrer');
   }, [video.watchUrl]);
 
-  // YouTube embed URL — autoplay, no controls (we use custom UI), mute for autoplay policy
-  const embedSrc = `https://www.youtube.com/embed/${video.youtubeVideoId}?autoplay=1&mute=1&controls=0&rel=0&playsinline=1&enablejsapi=1&modestbranding=1`;
-
   // Load YouTube IFrame Player API and initialize player
   useEffect(() => {
+    let cancelled = false;
     console.log('[YouTubeReel] Setting up player for video:', video.youtubeVideoId);
     
     // Load YouTube IFrame API if not already loaded
@@ -40,11 +40,22 @@ export default function YouTubeReelItem({ video, onBack, onVideoEnd }) {
 
     // Initialize player when API is ready
     const initPlayer = () => {
-      if (!iframeRef.current) return;
+      if (cancelled || !playerContainerRef.current || !window.YT?.Player) return;
       
       console.log('[YouTubeReel] Initializing YouTube player');
       
-      const player = new window.YT.Player('youtube-player', {
+      const player = new window.YT.Player(playerId, {
+        host: 'https://www.youtube-nocookie.com',
+        videoId: video.youtubeVideoId,
+        playerVars: {
+          autoplay: 1,
+          mute: 1,
+          controls: 1,
+          playsinline: 1,
+          rel: 0,
+          modestbranding: 1,
+          origin: 'https://spicey.live',
+        },
         events: {
           onReady: (event) => {
             console.log('[YouTubeReel] Player ready, attempting autoplay');
@@ -74,6 +85,9 @@ export default function YouTubeReelItem({ video, onBack, onVideoEnd }) {
           onError: (event) => {
             console.error('[YouTubeReel] Player error:', event.data);
             setEmbedError(true);
+            unavailableTimerRef.current = setTimeout(() => {
+              onVideoUnavailable?.(video.youtubeVideoId, event.data);
+            }, 1200);
           }
         }
       });
@@ -93,13 +107,15 @@ export default function YouTubeReelItem({ video, onBack, onVideoEnd }) {
 
     // Cleanup on unmount
     return () => {
+      cancelled = true;
+      clearTimeout(unavailableTimerRef.current);
       console.log('[YouTubeReel] Cleaning up player');
       if (playerRef.current) {
         playerRef.current.destroy();
         playerRef.current = null;
       }
     };
-  }, [video.youtubeVideoId, onVideoEnd]);
+  }, [video.youtubeVideoId, onVideoEnd, onVideoUnavailable, playerId]);
 
   // Auto-advance fallback timer based on video duration
   React.useEffect(() => {
@@ -136,18 +152,7 @@ export default function YouTubeReelItem({ video, onBack, onVideoEnd }) {
       {/* ── Official YouTube Iframe Player ── */}
       <div className="absolute inset-0">
         {!embedError ? (
-          <iframe
-            ref={iframeRef}
-            src={embedSrc}
-            title={video.title}
-            className="w-full h-full"
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-            allowFullScreen
-            referrerPolicy="strict-origin-when-cross-origin"
-            onError={() => setEmbedError(true)}
-            style={{ border: 'none', background: '#000' }}
-            id="youtube-player"
-          />
+          <div ref={playerContainerRef} id={playerId} className="w-full h-full" />
         ) : (
           /* Embed blocked / unavailable fallback */
           <div className="w-full h-full flex flex-col items-center justify-center gap-4 px-8 text-center"

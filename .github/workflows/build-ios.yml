@@ -203,6 +203,12 @@ jobs:
           path.write_text(text)
           PY
 
+      - name: Set unique iOS version
+        run: |
+          set -euo pipefail
+          echo "IOS_BUILD_NUMBER=$((1000 + GITHUB_RUN_NUMBER))" >> "$GITHUB_ENV"
+          echo "IOS_MARKETING_VERSION=2.121944.${GITHUB_RUN_NUMBER}" >> "$GITHUB_ENV"
+
       - name: Archive iOS app
         run: |
           set -euo pipefail
@@ -213,6 +219,7 @@ jobs:
             -destination "generic/platform=iOS" \
             -archivePath "${IOS_ARCHIVE_PATH}" \
             CURRENT_PROJECT_VERSION="${IOS_BUILD_NUMBER}" \
+            MARKETING_VERSION="${IOS_MARKETING_VERSION}" \
             clean archive
 
       - name: Export IPA

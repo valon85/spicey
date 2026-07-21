@@ -162,23 +162,45 @@ jobs:
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         run: |
           set -euo pipefail
-          ruby <<'RUBY'
-          require 'xcodeproj'
+          python3 <<'PY'
+          import os
+          import re
+          from pathlib import Path
 
-          project = Xcodeproj::Project.open(ENV.fetch('IOS_PROJECT'))
-          target = project.targets.find { |candidate| candidate.name == ENV.fetch('IOS_SCHEME') }
-          raise 'iOS App target was not found' unless target
+          path = Path(os.environ['IOS_PROJECT']) / 'project.pbxproj'
+          text = path.read_text()
+          pattern = re.compile(
+              r'(\w+ /\* Release \*/ = \{\n'
+              r'\s+isa = XCBuildConfiguration;\n'
+              r'\s+baseConfigurationReference = [^\n]+ /\* Pods-App\.release\.xcconfig \*/;\n'
+              r'\s+buildSettings = \{)(.*?)(\n\s+\};\n\s+name = Release;)',
+              re.DOTALL,
+          )
+          match = pattern.search(text)
+          if not match:
+              raise SystemExit('Release build settings for the App target were not found')
 
-          release = target.build_configurations.find { |configuration| configuration.name == 'Release' }
-          raise 'Release configuration was not found' unless release
+          settings = match.group(2)
+          keys = (
+              'CODE_SIGN_STYLE',
+              'CODE_SIGN_IDENTITY',
+              'DEVELOPMENT_TEAM',
+              'PRODUCT_BUNDLE_IDENTIFIER',
+              'PROVISIONING_PROFILE_SPECIFIER',
+          )
+          for key in keys:
+              settings = re.sub(rf'\n\s+{key} = [^;]+;', '', settings)
 
-          release.build_settings['CODE_SIGN_STYLE'] = 'Manual'
-          release.build_settings['CODE_SIGN_IDENTITY'] = 'Apple Distribution'
-          release.build_settings['DEVELOPMENT_TEAM'] = ENV.fetch('APPLE_TEAM_ID')
-          release.build_settings['PRODUCT_BUNDLE_IDENTIFIER'] = ENV.fetch('IOS_BUNDLE_ID')
-          release.build_settings['PROVISIONING_PROFILE_SPECIFIER'] = ENV.fetch('IOS_PROFILE_NAME')
-          project.save
-          RUBY
+          settings += ''.join((
+              '\n\t\t\t\tCODE_SIGN_STYLE = Manual;',
+              '\n\t\t\t\tCODE_SIGN_IDENTITY = "Apple Distribution";',
+              f'\n\t\t\t\tDEVELOPMENT_TEAM = {os.environ["APPLE_TEAM_ID"]};',
+              f'\n\t\t\t\tPRODUCT_BUNDLE_IDENTIFIER = {os.environ["IOS_BUNDLE_ID"]};',
+              f'\n\t\t\t\tPROVISIONING_PROFILE_SPECIFIER = "{os.environ["IOS_PROFILE_NAME"]}";',
+          ))
+          text = text[:match.start()] + match.group(1) + settings + match.group(3) + text[match.end():]
+          path.write_text(text)
+          PY
 
       - name: Archive iOS app
         run: |

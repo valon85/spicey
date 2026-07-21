@@ -18,7 +18,7 @@ jobs:
     timeout-minutes: 15
     steps:
       - name: Install API tools
-        run: python3 -m pip install --quiet pyjwt cryptography requests
+        run: python3 -m pip install --quiet --break-system-packages pyjwt cryptography requests
 
       - name: Check App Store Connect review status
         env:

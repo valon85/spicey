@@ -83,7 +83,7 @@ function extractText(data) {
   return chunks.join('\n').trim();
 }
 
-async function createSpeechDataUrl(text, voice) {
+async function createSpeechDataUrl(text, voice, languageName) {
   const response = await fetch('https://api.openai.com/v1/audio/speech', {
     method: 'POST',
     headers: {
@@ -94,7 +94,7 @@ async function createSpeechDataUrl(text, voice) {
       model: process.env.OPENAI_SPEECH_MODEL || 'gpt-4o-mini-tts',
       voice,
       input: text.slice(0, 600),
-      instructions: 'Speak like a calm natural ChatGPT-style voice assistant. Warm, relaxed, human, not robotic, not dramatic, with smooth pacing.',
+      instructions: `Speak naturally in ${languageName}. Use native pronunciation and a warm, calm, conversational tone. Do not sound like a translator or announcer.`,
       response_format: 'mp3',
       speed: 1.0,
     }),
@@ -168,6 +168,11 @@ export default async function handler(req, res) {
     const inputText = isGreeting
       ? `Greet me warmly in ${languageName}. Say you are Spicey AI and ask how you can help.`
       : userText;
+    const history = Array.isArray(body.conversation_history)
+      ? body.conversation_history
+        .filter((item) => item && ['user', 'assistant'].includes(item.role) && typeof item.content === 'string')
+        .slice(-12)
+      : [];
 
     const response = await fetch('https://api.openai.com/v1/responses', {
       method: 'POST',
@@ -182,6 +187,7 @@ export default async function handler(req, res) {
             role: 'system',
             content: `You are Spicey AI, a warm natural voice assistant. Reply only in ${languageName}. Keep answers short, calm, natural, and spoken. No markdown. Avoid exclamation-heavy delivery.`,
           },
+          ...history,
           { role: 'user', content: inputText },
         ],
         max_output_tokens: isGreeting ? 60 : 120,
@@ -196,7 +202,7 @@ export default async function handler(req, res) {
     let speechUrl = '';
 
     try {
-      speechUrl = await createSpeechDataUrl(aiText, VOICE_MAP[body.voice] || 'nova');
+      speechUrl = await createSpeechDataUrl(aiText, VOICE_MAP[body.voice] || 'nova', languageName);
     } catch (error) {
       console.warn('[voice-chat] speech fallback:', error.message);
     }

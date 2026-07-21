@@ -199,6 +199,9 @@ export default function AITalkMode({ onClose }) {
   const realtimeStreamRef = useRef(null);
   const realtimeReadyRef = useRef(false);
   const realtimeClosingRef = useRef(false);
+  const realtimeGenerationRef = useRef(0);
+  const realtimeReconnectAttemptsRef = useRef(0);
+  const realtimeReconnectTimerRef = useRef(null);
   const listenTimeoutRef = useRef(null);
   const restartListenRef = useRef(null);
 
@@ -253,7 +256,10 @@ export default function AITalkMode({ onClose }) {
       setMicBlocked(false);
       setMicPermission('granted');
       setAiText('Mic is on. Speak naturally.');
-      setTimeout(() => startListeningRef.current?.(), 120);
+      setTimeout(() => {
+        if (typeof RTCPeerConnection !== 'undefined') startRealtimeSession({ greet: false });
+        else startListeningRef.current?.();
+      }, 120);
       return true;
     } catch (error) {
       micPrimedRef.current = false;
@@ -269,23 +275,9 @@ export default function AITalkMode({ onClose }) {
   };
 
   const safeVoiceChat = async (payload = {}) => {
-    try {
-      const data = await spiceyApi.ai.voiceChat(payload);
-      if (data?.error) throw new Error(data.error);
-      return data;
-    } catch (error) {
-      const lang = payload.language || selectedLangRef.current || 'en';
-      const fallbackText = payload.is_greeting
-        ? getGreeting(lang)
-        : `I heard you. ${payload.text_override ? `You said: "${payload.text_override}".` : 'Ask me anything and I will help.'}`;
-      return {
-        transcription: payload.text_override || '',
-        ai_text: fallbackText,
-        text: fallbackText,
-        speech_url: '',
-        no_speech: false,
-      };
-    }
+    const data = await spiceyApi.ai.voiceChat(payload);
+    if (data?.error) throw new Error(data.error);
+    return data;
   };
 
   useEffect(() => { selectedLangRef.current = selectedLang; }, [selectedLang]);
@@ -304,7 +296,12 @@ export default function AITalkMode({ onClose }) {
 
   const stopRealtime = () => {
     realtimeClosingRef.current = true;
+    realtimeGenerationRef.current += 1;
     realtimeReadyRef.current = false;
+    if (realtimeReconnectTimerRef.current) {
+      clearTimeout(realtimeReconnectTimerRef.current);
+      realtimeReconnectTimerRef.current = null;
+    }
     try { realtimeChannelRef.current?.close?.(); } catch (e) {}
     realtimeChannelRef.current = null;
     try { realtimePcRef.current?.close?.(); } catch (e) {}
@@ -318,7 +315,6 @@ export default function AITalkMode({ onClose }) {
       realtimeAudioRef.current.srcObject = null;
       realtimeAudioRef.current = null;
     }
-    setTimeout(() => { realtimeClosingRef.current = false; }, 0);
   };
 
   const interruptRealtime = () => {
@@ -328,11 +324,13 @@ export default function AITalkMode({ onClose }) {
     setVoiceLevel(0.25);
   };
 
-  const startRealtimeSession = async () => {
+  const startRealtimeSession = async ({ greet = false } = {}) => {
     try {
       voiceModeRef.current = 'realtime';
       stopMic();
       stopRealtime();
+      realtimeClosingRef.current = false;
+      const generation = realtimeGenerationRef.current;
       isBusyRef.current = true;
       setErrorMsg('');
       setStatusBoth('thinking');
@@ -363,12 +361,16 @@ export default function AITalkMode({ onClose }) {
       const remoteAudio = new Audio();
       remoteAudio.autoplay = true;
       remoteAudio.playsInline = true;
+      remoteAudio.setAttribute('playsinline', '');
+      remoteAudio.volume = 1;
       realtimeAudioRef.current = remoteAudio;
 
       pc.ontrack = (event) => {
         remoteAudio.srcObject = event.streams[0];
-        remoteAudio.play().catch(() => {
+        remoteAudio.play().then(() => {
           setErrorMsg('');
+        }).catch(() => {
+          setErrorMsg('Tap the center button once to enable voice audio.');
         });
       };
 
@@ -378,7 +380,9 @@ export default function AITalkMode({ onClose }) {
       realtimeChannelRef.current = dc;
 
       dc.onopen = () => {
+        if (generation !== realtimeGenerationRef.current) return;
         realtimeReadyRef.current = true;
+        realtimeReconnectAttemptsRef.current = 0;
         isBusyRef.current = false;
         setStatusBoth('listening');
         setPhase('listening');
@@ -387,7 +391,7 @@ export default function AITalkMode({ onClose }) {
           type: 'session.update',
           session: {
             type: 'realtime',
-            instructions: `You are Spicey AI, a warm natural voice assistant. The selected language is ${activeLanguageName}. Start in that language and reply in that language unless the user clearly switches language. Speak naturally like ChatGPT Voice, not like a translator. Keep responses short for voice. If the user interrupts, stop and listen.`,
+            instructions: `You are Spicey AI, a warm natural voice assistant. The selected language is ${activeLanguageName}. Begin and continue in that language unless the user clearly switches language. Speak naturally like ChatGPT Voice, not like a translator. Keep responses short for voice. Introduce yourself only when the user asks who you are. If the user interrupts, stop and listen.`,
             audio: {
               input: {
                 transcription: { model: 'whisper-1' },
@@ -403,44 +407,57 @@ export default function AITalkMode({ onClose }) {
             },
           },
         });
-        sendRealtimeEvent({
-          type: 'response.create',
-          response: {
-            instructions: `Say this greeting naturally in ${activeLanguageName}: "${activeGreeting}"`,
-          },
-        });
+        if (greet) {
+          sendRealtimeEvent({
+            type: 'response.create',
+            response: {
+              instructions: `Say this greeting naturally in ${activeLanguageName}: "${activeGreeting}"`,
+            },
+          });
+        }
       };
 
       dc.onmessage = (event) => {
         let msg;
         try { msg = JSON.parse(event.data); } catch (_) { return; }
-        if (msg.type === 'response.audio.delta') {
+        if (msg.type === 'response.audio.delta' || msg.type === 'response.output_audio.delta') {
           setStatusBoth('speaking');
           setPhase('speaking');
           setVoiceLevel(0.65);
-        } else if (msg.type === 'response.audio.done' || msg.type === 'response.done') {
+        } else if (msg.type === 'response.audio.done' || msg.type === 'response.output_audio.done' || msg.type === 'response.done') {
           setStatusBoth('listening');
           setPhase('listening');
           setVoiceLevel(0);
-        } else if (msg.type === 'response.audio_transcript.delta' || msg.type === 'response.text.delta') {
+        } else if (msg.type === 'response.audio_transcript.delta' || msg.type === 'response.output_audio_transcript.delta' || msg.type === 'response.text.delta') {
           if (msg.delta) setAiText((prev) => `${prev || ''}${msg.delta}`);
-        } else if (msg.type === 'response.audio_transcript.done' || msg.type === 'response.text.done') {
+        } else if (msg.type === 'response.audio_transcript.done' || msg.type === 'response.output_audio_transcript.done' || msg.type === 'response.text.done') {
           if (msg.transcript || msg.text) setAiText(msg.transcript || msg.text);
         } else if (msg.type === 'conversation.item.input_audio_transcription.completed') {
           if (msg.transcript) transcriptRef.current = msg.transcript;
         } else if (msg.type === 'input_audio_buffer.speech_started') {
-          interruptRealtime();
+          // Server VAD already interrupts the active response. A second
+          // response.cancel can race and surface a false realtime error.
+          setStatusBoth('listening');
+          setPhase('listening');
+          setVoiceLevel(0.25);
         } else if (msg.type === 'error') {
           setErrorMsg(msg.error?.message || 'Realtime voice error.');
         }
       };
 
       dc.onclose = () => {
+        if (generation !== realtimeGenerationRef.current) return;
         realtimeReadyRef.current = false;
-        if (!realtimeClosingRef.current) {
+        if (!realtimeClosingRef.current && realtimeReconnectAttemptsRef.current < 2) {
+          realtimeReconnectAttemptsRef.current += 1;
           setStatusBoth('idle');
           setErrorMsg('Voice disconnected. Reconnecting...');
-          setTimeout(() => startRealtimeSession(), 1200);
+          realtimeReconnectTimerRef.current = setTimeout(() => startRealtimeSession({ greet: false }), 1200);
+        } else if (!realtimeClosingRef.current) {
+          setStatusBoth('idle');
+          setPhase('stopped');
+          voiceModeRef.current = 'openai-tts';
+          setErrorMsg('Live voice is unavailable. Tap the microphone to continue.');
         }
       };
 
@@ -461,12 +478,14 @@ export default function AITalkMode({ onClose }) {
       await pc.setRemoteDescription({ type: 'answer', sdp: answerSdp });
     } catch (error) {
       console.error('[AITalk Realtime] failed:', error);
+      stopRealtime();
       isBusyRef.current = false;
       realtimeReadyRef.current = false;
       setStatusBoth('idle');
       setPhase('stopped');
       voiceModeRef.current = 'openai-tts';
-      setErrorMsg('');
+      setErrorMsg('Live voice is unavailable. Tap the microphone to continue.');
+      restartListeningSoon(300);
     }
   };
 
@@ -504,7 +523,18 @@ export default function AITalkMode({ onClose }) {
     try { window.speechSynthesis?.cancel?.(); } catch (e) {}
   };
 
-  const speakText = () => Promise.resolve();
+  const speakText = (text) => new Promise((resolve) => {
+    const synth = window.speechSynthesis;
+    if (!synth || !text) { resolve(); return; }
+    synth.cancel();
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = getSpeechLang(selectedLangRef.current);
+    utterance.rate = 1;
+    utterance.pitch = 1;
+    utterance.onend = resolve;
+    utterance.onerror = resolve;
+    synth.speak(utterance);
+  });
 
   // ── PLAY AUDIO ──
   const playAudio = (url) => new Promise((resolve) => {
@@ -864,14 +894,25 @@ export default function AITalkMode({ onClose }) {
       setStatusBoth('idle');
       return;
     }
-    if (status === 'listening' && realtimeReadyRef.current) return;
+    if (status === 'listening' && realtimeReadyRef.current) {
+      realtimeAudioRef.current?.play?.()
+        .then(() => setErrorMsg(''))
+        .catch(() => setErrorMsg('Voice audio is blocked. Raise the media volume and tap again.'));
+      return;
+    }
     if (status === 'listening') { triggerSendRef.current?.(); return; }
     if (status === 'idle') {
-      voiceModeRef.current = 'openai-tts';
       setMicBlocked(false);
       setErrorMsg('');
-      if (micPrimedRef.current || micPermission === 'granted') startListeningRef.current?.();
-      else requestMicAccess();
+      if (typeof RTCPeerConnection !== 'undefined') {
+        startRealtimeSession({ greet: false });
+      } else if (micPrimedRef.current || micPermission === 'granted') {
+        voiceModeRef.current = 'openai-tts';
+        startListeningRef.current?.();
+      } else {
+        voiceModeRef.current = 'openai-tts';
+        requestMicAccess();
+      }
       return;
     }
   };

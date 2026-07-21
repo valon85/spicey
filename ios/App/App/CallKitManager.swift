@@ -12,6 +12,16 @@ public class CallKitManager: NSObject {
     private var activeCallUUID: UUID?
     private var sessionIdsByUUID: [UUID: String] = [:]
     private var completionHandlers: [UUID: ((Bool) -> Void)] = [:]
+
+    static let pendingAnswerKey = "spicey.pendingCallKitAnswer"
+    static let pendingEndKey = "spicey.pendingCallKitEnd"
+
+    private func persistCallKitAction(_ payload: [String: Any], key: String) {
+        var storedPayload = payload
+        storedPayload["createdAt"] = Date().timeIntervalSince1970
+        UserDefaults.standard.set(storedPayload, forKey: key)
+        UserDefaults.standard.synchronize()
+    }
     
     override init() {
         super.init()
@@ -180,12 +190,14 @@ extension CallKitManager: CXProviderDelegate {
     public func provider(_ provider: CXProvider, perform action: CXAnswerCallAction) {
         print("[CallKit] User answered call: \(action.callUUID)")
 
+        let payload: [String: Any] = [
+            "uuid": action.callUUID.uuidString,
+            "callSessionId": sessionIdsByUUID[action.callUUID] ?? ""
+        ]
+        persistCallKitAction(payload, key: Self.pendingAnswerKey)
         NotificationCenter.default.post(
             name: NSNotification.Name("CallKitAnswerCall"),
-            object: [
-                "uuid": action.callUUID.uuidString,
-                "callSessionId": sessionIdsByUUID[action.callUUID] ?? ""
-            ]
+            object: payload
         )
 
         action.fulfill()
@@ -194,12 +206,14 @@ extension CallKitManager: CXProviderDelegate {
      public func provider(_ provider: CXProvider, perform action: CXEndCallAction) {
         print("[CallKit] User ended call: \(action.callUUID)")
 
+        let payload: [String: Any] = [
+            "uuid": action.callUUID.uuidString,
+            "callSessionId": sessionIdsByUUID[action.callUUID] ?? ""
+        ]
+        persistCallKitAction(payload, key: Self.pendingEndKey)
         NotificationCenter.default.post(
             name: NSNotification.Name("CallKitEndCall"),
-            object: [
-                "uuid": action.callUUID.uuidString,
-                "callSessionId": sessionIdsByUUID[action.callUUID] ?? ""
-            ]
+            object: payload
         )
 
         reportCallEnded(uuid: action.callUUID)

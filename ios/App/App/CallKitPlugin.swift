@@ -33,6 +33,9 @@ public class CallKitPlugin: CAPPlugin, CAPBridgedPlugin {
             name: NSNotification.Name("VoIPTokenUpdated"),
             object: nil
         )
+
+        replayPendingAction(key: CallKitManager.pendingAnswerKey, eventName: "answerCall")
+        replayPendingAction(key: CallKitManager.pendingEndKey, eventName: "endCall")
     }
 
     deinit {
@@ -40,15 +43,32 @@ public class CallKitPlugin: CAPPlugin, CAPBridgedPlugin {
     }
 
     @objc private func handleAnswerNotification(_ notification: Notification) {
+        UserDefaults.standard.removeObject(forKey: CallKitManager.pendingAnswerKey)
         notifyListeners("answerCall", data: notification.object as? [String: Any] ?? [:], retainUntilConsumed: true)
     }
 
     @objc private func handleEndNotification(_ notification: Notification) {
+        UserDefaults.standard.removeObject(forKey: CallKitManager.pendingEndKey)
         notifyListeners("endCall", data: notification.object as? [String: Any] ?? [:], retainUntilConsumed: true)
     }
 
     @objc private func handleVoipTokenNotification(_ notification: Notification) {
         notifyListeners("voipTokenUpdated", data: notification.object as? [String: Any] ?? [:], retainUntilConsumed: true)
+    }
+
+    private func replayPendingAction(key: String, eventName: String) {
+        guard let payload = UserDefaults.standard.dictionary(forKey: key) else { return }
+        let createdAt = payload["createdAt"] as? TimeInterval ?? 0
+        UserDefaults.standard.removeObject(forKey: key)
+        UserDefaults.standard.synchronize()
+
+        guard createdAt == 0 || Date().timeIntervalSince1970 - createdAt < 120 else {
+            print("[CallKitPlugin] Discarded stale pending \(eventName) action")
+            return
+        }
+
+        print("[CallKitPlugin] Replaying pending \(eventName) action")
+        notifyListeners(eventName, data: payload, retainUntilConsumed: true)
     }
     
     @objc func reportIncomingCall(_ call: CAPPluginCall) {

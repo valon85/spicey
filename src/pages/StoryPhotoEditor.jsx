@@ -295,7 +295,7 @@ export default function StoryPhotoEditor() {
             })}
           </motion.div>
           <div className="text-center">
-            <h2 className="text-white text-2xl font-bold mb-1">Story Editor</h2>
+            <h2 className="text-white text-2xl font-bold mb-1">Moment Editor</h2>
             <p className="text-white/40 text-sm">Choose a photo to get started</p>
           </div>
           <label className="cursor-pointer px-10 py-4 rounded-2xl text-white font-bold text-base"
@@ -322,7 +322,7 @@ export default function StoryPhotoEditor() {
                 style={{ background: 'linear-gradient(135deg,#ff5500,#e91e8c)' }}>
                 <Check className="w-10 h-10 text-white" />
               </div>
-              <p className="text-white text-xl font-bold">Story Posted!</p>
+              <p className="text-white text-xl font-bold">Moment Posted!</p>
             </motion.div>
           </motion.div>
         )}
@@ -338,7 +338,7 @@ export default function StoryPhotoEditor() {
             style={{ background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(8px)', border: '1px solid rgba(255,255,255,0.12)' }}>
             <ChevronLeft className="w-5 h-5 text-white" />
           </button>
-          <span className="text-white font-bold text-base tracking-wide">Story Editor</span>
+          <span className="text-white font-bold text-base tracking-wide">Moment Editor</span>
           <motion.button whileTap={{ scale: 0.93 }} onClick={publish} disabled={posting}
             className="px-5 py-2.5 rounded-full text-white font-bold text-sm disabled:opacity-50 flex items-center gap-2"
             style={{ background: 'linear-gradient(135deg,#ff5500,#e91e8c)', boxShadow: '0 0 18px rgba(255,85,0,0.5)' }}>

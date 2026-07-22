@@ -123,7 +123,7 @@ export default function ReelPublishScreen({ file, previewUrl, initialMusic = nul
           style={{ background: 'rgba(255,255,255,0.08)' }}>
           <ChevronLeft className="w-5 h-5 text-white" />
         </button>
-        <span className="text-white font-bold text-base">New Reel</span>
+        <span className="text-white font-bold text-base">New Spicey Clip</span>
         <button
           onClick={() => publishReel.mutate()}
           disabled={publishReel.isPending}
@@ -256,7 +256,7 @@ export default function ReelPublishScreen({ file, previewUrl, initialMusic = nul
               style={{ background: 'linear-gradient(135deg, #ff5500, #e91e8c)', boxShadow: '0 0 24px rgba(255,80,0,0.35)' }}>
               {publishReel.isPending
                 ? <><Loader2 className="w-5 h-5 animate-spin" /> Uploading...</>
-                : '🚀 Post Reel'}
+                : '🚀 Post Clip'}
             </motion.button>
           </div>
         </div>

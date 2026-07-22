@@ -3,7 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
 import { 
   Mic, MicOff, Video, VideoOff, X, AlertTriangle, Save, Trash2, 
-  FlipHorizontal, Send, Share2, Users, Tag, Gift, RotateCw
+  FlipHorizontal, Send, Share2, Users, Tag, Gift, RotateCw,
+  Eye, Heart, MessageCircle, ShieldCheck, MoreHorizontal, Plus
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -14,6 +15,21 @@ const GIFTS = [
   { id: 'crown', emoji: '👑', name: 'Crown', coins: 100 },
   { id: 'diamond', emoji: '💎', name: 'Diamond', coins: 200 },
   { id: 'rocket', emoji: '🚀', name: 'Rocket', coins: 500 },
+];
+
+const LIVE_REFERENCE_CHAT = [
+  { id: 'joined', type: 'join', user: 'Ardit', text: 'joined', avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=120&h=120&fit=crop&crop=faces' },
+  { id: 'valon', type: 'msg', user: 'Valon Dervishi', text: 'Amazing view! 😍', verified: true, avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=120&h=120&fit=crop&crop=faces' },
+  { id: 'elira', type: 'msg', user: 'Elira', text: 'Where is this? Looks incredible 🌅', avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&h=120&fit=crop&crop=faces' },
+  { id: 'leonard', type: 'msg', user: 'Leonard', text: 'So beautiful! 🔥🔥🔥', avatar: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=120&h=120&fit=crop&crop=faces' },
+  { id: 'diana', type: 'gift', user: 'Diana', text: 'sent a Heart ❤️', avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=120&h=120&fit=crop&crop=faces' },
+];
+
+const LIVE_REFERENCE_COHOSTS = [
+  { name: 'Valon', avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=120&h=120&fit=crop&crop=faces' },
+  { name: 'Ardian', avatar: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=120&h=120&fit=crop&crop=faces' },
+  { name: 'Elira', avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&h=120&fit=crop&crop=faces' },
+  { name: 'Leonard', avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=120&h=120&fit=crop&crop=faces' },
 ];
 
 export default function LiveStream() {
@@ -302,6 +318,21 @@ export default function LiveStream() {
   };
 
   const fmt = (s) => `${Math.floor(s / 60)}:${(s % 60).toString().padStart(2, '0')}`;
+  const displayName = userProfile?.full_name || currentUser?.full_name || 'Vlora Dervishi';
+  const displayHandle = userProfile?.username || currentUser?.email?.split('@')[0] || 'vlora.d';
+  const displayAvatar = userProfile?.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&background=ff5500&color=fff&size=128`;
+  const liveViewerLabel = viewerCount > 999 ? `${(viewerCount / 1000).toFixed(1)}K` : (viewerCount || 2400).toLocaleString();
+  const liveChatFeed = [
+    ...LIVE_REFERENCE_CHAT,
+    ...chatMessages.filter(m => m.type !== 'system').slice(-3).map(m => ({
+      id: m.id,
+      type: m.type,
+      user: m.user,
+      text: m.type === 'gift' ? `sent ${m.name} ${m.emoji}` : m.text,
+      verified: m.isMe,
+      avatar: displayAvatar,
+    })),
+  ].slice(-5);
 
   return (
     <div className="fixed inset-0 bg-black" data-prevent-light-mode="true">
@@ -566,8 +597,107 @@ export default function LiveStream() {
         )}
       </AnimatePresence>
 
+      {phase === 'live' && (
+        <div className="spicey-live-ref">
+          <div className="spicey-live-ref-top">
+            <div className="spicey-live-ref-brand">
+              <span className="spicey-live-ref-mark">S</span>
+              <span>SPICEY<sup>+</sup></span>
+            </div>
+            <div className="spicey-live-ref-status">
+              <span className="spicey-live-ref-live">LIVE</span>
+              <span className="spicey-live-ref-viewers"><Eye size={15} /> {liveViewerLabel}</span>
+            </div>
+            <button className="spicey-live-ref-close" onClick={() => setShowEndModal(true)} aria-label="End live">
+              <X size={25} />
+            </button>
+          </div>
+
+          <div className="spicey-live-ref-host">
+            <img src={displayAvatar} alt={displayName} />
+            <div>
+              <div className="spicey-live-ref-host-name">
+                {displayName}
+                <span className="spicey-live-ref-verify">✓</span>
+              </div>
+              <div className="spicey-live-ref-host-state"><span /> Live now</div>
+            </div>
+          </div>
+
+          <div className="spicey-live-ref-tools">
+            <button onClick={toggleCamera} aria-label="Camera">
+              {cameraOff ? <VideoOff size={19} /> : <ShieldCheck size={20} />}
+            </button>
+            <button onClick={() => setActivePanel(p => p === 'invite' ? null : 'invite')} aria-label="More">
+              <MoreHorizontal size={21} />
+            </button>
+          </div>
+
+          <div className="spicey-live-ref-comments">
+            {liveChatFeed.map(msg => (
+              <motion.div key={msg.id} className={`spicey-live-ref-comment ${msg.type === 'join' ? 'is-join' : ''}`} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }}>
+                <img src={msg.avatar} alt="" />
+                <div>
+                  <strong>{msg.user}</strong>
+                  {msg.verified && <span className="spicey-live-ref-mini-verify">✓</span>}
+                  <span>{msg.text}</span>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+
+          <div className="spicey-live-ref-rail">
+            <motion.button whileTap={{ scale: 0.92 }} onClick={() => sendGift(GIFTS[0])}>
+              <Heart size={27} fill="currentColor" />
+            </motion.button>
+            <span>12.4K</span>
+            <button onClick={() => setShowChat(c => !c)}>
+              <MessageCircle size={27} />
+            </button>
+            <span>512</span>
+            <button onClick={shareStream}>
+              <Share2 size={26} fill="currentColor" />
+            </button>
+            <span>Share</span>
+            <button onClick={() => sendGift(GIFTS[0])} className="is-gift">
+              <Gift size={25} />
+            </button>
+            <span>Gift</span>
+          </div>
+
+          <div className="spicey-live-ref-cohost">
+            <div className="spicey-live-ref-cohost-title">★ Co-host ›</div>
+            <div className="spicey-live-ref-cohost-row">
+              <button className="spicey-live-ref-invite" onClick={() => setActivePanel('invite')}>
+                <Plus size={30} />
+                <span>Invite</span>
+              </button>
+              {LIVE_REFERENCE_COHOSTS.map(host => (
+                <button key={host.name} className="spicey-live-ref-person" onClick={() => setCoHosts(prev => prev.includes('@' + host.name) ? prev : [...prev, '@' + host.name])}>
+                  <img src={host.avatar} alt={host.name} />
+                  <span>{host.name}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="spicey-live-ref-composer">
+            <input value={chatInput} onChange={e => setChatInput(e.target.value)} onKeyDown={e => e.key === 'Enter' && sendChat()} placeholder="Send a message..." />
+            <button className="is-send" onClick={sendChat}><Send size={23} fill="currentColor" /></button>
+            <button onClick={() => sendGift(GIFTS[0])}><Gift size={22} /></button>
+            <button onClick={shareStream}><Share2 size={22} /></button>
+            <button className="is-follow">Follow</button>
+          </div>
+
+          <div className="spicey-live-ref-camera-mini">
+            <button onClick={toggleMute}>{isMuted ? <MicOff size={17} /> : <Mic size={17} />}</button>
+            <button onClick={flipCamera}><RotateCw size={17} /></button>
+          </div>
+        </div>
+      )}
+
       {/* ── LIVE: CHAT ── */}
-      {phase === 'live' && showChat && (
+      {false && phase === 'live' && showChat && (
         <div className="absolute left-3 z-30 flex flex-col" style={{ bottom: 110, width: '68%' }}>
           <div className="space-y-1.5 overflow-y-auto max-h-48 pr-1"
             style={{ maskImage: 'linear-gradient(to bottom, transparent, black 25%)' }}>
@@ -612,7 +742,7 @@ export default function LiveStream() {
       )}
 
       {/* ── LIVE: RIGHT SIDE ACTIONS ── */}
-      {phase === 'live' && (
+      {false && phase === 'live' && (
         <div className="absolute right-3 z-30 flex flex-col gap-2.5" style={{ bottom: 130, maxHeight: '65vh', overflowY: 'auto' }}>
           {/* Chat toggle */}
           <button onClick={() => setShowChat(c => !c)}
@@ -662,7 +792,7 @@ export default function LiveStream() {
 
       {/* ── INVITE PANEL (during live) ── */}
       <AnimatePresence>
-        {activePanel === 'invite' && phase === 'live' && (
+        {false && activePanel === 'invite' && phase === 'live' && (
           <motion.div initial={{ y: 120, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 120, opacity: 0 }}
             className="absolute z-40 rounded-2xl p-4"
             style={{ bottom: 130, left: 12, right: 56, background: 'rgba(10,3,22,0.97)', border: '1px solid rgba(255,80,0,0.3)' }}>
@@ -697,7 +827,7 @@ export default function LiveStream() {
 
       {/* ── TAG PANEL ── */}
       <AnimatePresence>
-        {activePanel === 'tag' && phase === 'live' && (
+        {false && activePanel === 'tag' && phase === 'live' && (
           <motion.div initial={{ y: 120, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 120, opacity: 0 }}
             className="absolute z-40 rounded-2xl p-4"
             style={{ bottom: 130, left: 12, right: 56, background: 'rgba(10,3,22,0.97)', border: '1px solid rgba(100,80,255,0.3)' }}>
@@ -736,35 +866,7 @@ export default function LiveStream() {
       <div className="absolute inset-x-0 bottom-0 z-30 flex items-center justify-center gap-4"
         style={{ paddingBottom: 'max(36px, env(safe-area-inset-bottom) + 24px)' }}>
 
-        {phase === 'live' ? (
-          <>
-            <motion.button whileTap={{ scale: 0.9 }} onClick={toggleMute}
-              className="w-12 h-12 rounded-full flex flex-col items-center justify-center gap-0"
-              style={{ background: isMuted ? 'rgba(220,30,30,0.6)' : 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.2)' }}>
-              {isMuted ? <MicOff className="w-5 h-5 text-white" /> : <Mic className="w-5 h-5 text-white" />}
-            </motion.button>
-
-            <motion.button whileTap={{ scale: 0.95 }} onClick={flipCamera}
-              className="w-16 h-16 rounded-full flex flex-col items-center justify-center gap-1"
-              style={{ background: 'linear-gradient(135deg, #ff5500, #e91e8c)', border: '2px solid rgba(255,255,255,0.4)', boxShadow: '0 4px 20px rgba(255,85,0,0.6), 0 0 40px rgba(233,30,140,0.4)' }}>
-              <RotateCw className="w-7 h-7 text-white" style={{ filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.4))' }} />
-              <span className="text-[10px] text-white font-bold" style={{ textShadow: '0 1px 4px rgba(0,0,0,0.5)' }}>Flip</span>
-            </motion.button>
-
-            <motion.button whileTap={{ scale: 0.9 }} onClick={() => setShowEndModal(true)}
-              className="w-20 h-20 rounded-full flex flex-col items-center justify-center gap-1"
-              style={{ background: 'linear-gradient(135deg, #dc2626, #ff4444)', boxShadow: '0 0 30px rgba(220,30,30,0.7)' }}>
-              <X className="w-7 h-7 text-white" />
-              <span className="text-[9px] text-white font-bold">END</span>
-            </motion.button>
-
-            <motion.button whileTap={{ scale: 0.9 }} onClick={toggleCamera}
-              className="w-12 h-12 rounded-full flex flex-col items-center justify-center gap-0"
-              style={{ background: cameraOff ? 'rgba(220,30,30,0.6)' : 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.2)' }}>
-              {cameraOff ? <VideoOff className="w-5 h-5 text-white" /> : <Video className="w-5 h-5 text-white" />}
-            </motion.button>
-          </>
-        ) : (
+        {phase !== 'live' && (
           <>
             <motion.button whileTap={{ scale: 0.9 }} onClick={flipCamera}
               className="w-12 h-12 rounded-full flex items-center justify-center"
@@ -783,6 +885,467 @@ export default function LiveStream() {
           </>
         )}
       </div>
+
+      <style>{`
+        .spicey-live-ref {
+          position: absolute;
+          inset: 0;
+          z-index: 34;
+          color: #fff;
+          font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+          pointer-events: none;
+        }
+        .spicey-live-ref::before {
+          content: "";
+          position: absolute;
+          inset: 0;
+          pointer-events: none;
+          background:
+            linear-gradient(180deg, rgba(4, 2, 12, .72) 0%, rgba(4, 2, 12, .12) 24%, rgba(4, 2, 12, .1) 52%, rgba(4, 2, 12, .86) 100%),
+            radial-gradient(circle at 72% 20%, rgba(255, 92, 0, .2), transparent 34%),
+            radial-gradient(circle at 16% 74%, rgba(226, 31, 129, .18), transparent 32%);
+        }
+        .spicey-live-ref button,
+        .spicey-live-ref input {
+          pointer-events: auto;
+        }
+        .spicey-live-ref-top {
+          position: absolute;
+          left: 26px;
+          right: 22px;
+          top: max(24px, env(safe-area-inset-top) + 12px);
+          display: grid;
+          grid-template-columns: 1fr auto 36px;
+          align-items: center;
+          gap: 10px;
+        }
+        .spicey-live-ref-brand {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          min-width: 0;
+          color: #ff385f;
+          font-weight: 900;
+          font-size: clamp(22px, 6.6vw, 36px);
+          font-style: italic;
+          letter-spacing: .02em;
+          text-shadow: 0 0 12px rgba(255, 75, 40, .55), 0 0 22px rgba(226, 31, 129, .42);
+        }
+        .spicey-live-ref-brand sup {
+          font-style: normal;
+          font-size: .55em;
+          color: #ff2a87;
+          margin-left: 1px;
+        }
+        .spicey-live-ref-mark {
+          display: inline-grid;
+          place-items: center;
+          width: 30px;
+          height: 30px;
+          border-radius: 12px;
+          background: linear-gradient(145deg, #ff7c11, #ff245f 48%, #bb20ff);
+          color: #fff;
+          box-shadow: 0 8px 22px rgba(255, 53, 95, .32);
+          transform: skewX(-10deg);
+        }
+        .spicey-live-ref-status {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        }
+        .spicey-live-ref-live,
+        .spicey-live-ref-viewers {
+          height: 38px;
+          border-radius: 14px;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          border: 1px solid rgba(255,255,255,.18);
+          backdrop-filter: blur(14px);
+          -webkit-backdrop-filter: blur(14px);
+        }
+        .spicey-live-ref-live {
+          min-width: 74px;
+          padding: 0 17px;
+          background: linear-gradient(135deg, #ff7a18, #ff235d 58%, #d91cc8);
+          box-shadow: inset 0 1px 0 rgba(255,255,255,.35), 0 10px 26px rgba(255, 39, 92, .32);
+          font-size: 16px;
+          font-weight: 850;
+        }
+        .spicey-live-ref-viewers {
+          min-width: 88px;
+          gap: 7px;
+          padding: 0 12px;
+          background: rgba(15, 10, 27, .42);
+          color: rgba(255,255,255,.9);
+          font-size: 16px;
+          font-weight: 760;
+        }
+        .spicey-live-ref-close {
+          width: 36px;
+          height: 36px;
+          display: grid;
+          place-items: center;
+          color: #fff;
+          background: transparent;
+        }
+        .spicey-live-ref-host {
+          position: absolute;
+          left: 28px;
+          top: max(114px, env(safe-area-inset-top) + 98px);
+          display: flex;
+          align-items: center;
+          gap: 14px;
+        }
+        .spicey-live-ref-host img {
+          width: 62px;
+          height: 62px;
+          border-radius: 999px;
+          object-fit: cover;
+          border: 3px solid transparent;
+          background: linear-gradient(135deg, #ff7a18, #ff2c77, #a823ff) border-box;
+          box-shadow: 0 0 0 2px rgba(255,255,255,.18), 0 12px 26px rgba(0,0,0,.35);
+        }
+        .spicey-live-ref-host-name {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          font-size: clamp(24px, 6.2vw, 34px);
+          line-height: 1;
+          font-weight: 850;
+          text-shadow: 0 2px 12px rgba(0,0,0,.5);
+        }
+        .spicey-live-ref-verify,
+        .spicey-live-ref-mini-verify {
+          display: inline-grid;
+          place-items: center;
+          color: #fff;
+          background: linear-gradient(135deg, #8e2cff, #ad32ff);
+          border-radius: 999px;
+          font-weight: 900;
+        }
+        .spicey-live-ref-verify {
+          width: 24px;
+          height: 24px;
+          font-size: 15px;
+        }
+        .spicey-live-ref-mini-verify {
+          width: 14px;
+          height: 14px;
+          margin: 0 4px;
+          font-size: 9px;
+        }
+        .spicey-live-ref-host-state {
+          display: flex;
+          align-items: center;
+          gap: 7px;
+          margin-top: 8px;
+          color: rgba(255,255,255,.86);
+          font-size: 18px;
+        }
+        .spicey-live-ref-host-state span {
+          width: 11px;
+          height: 11px;
+          border-radius: 999px;
+          background: #24e943;
+          box-shadow: 0 0 12px rgba(36, 233, 67, .65);
+        }
+        .spicey-live-ref-tools {
+          position: absolute;
+          right: 26px;
+          top: max(146px, env(safe-area-inset-top) + 128px);
+          display: flex;
+          gap: 16px;
+        }
+        .spicey-live-ref-tools button,
+        .spicey-live-ref-rail button,
+        .spicey-live-ref-camera-mini button {
+          display: grid;
+          place-items: center;
+          border-radius: 999px;
+          color: #fff;
+          background: rgba(34, 25, 50, .48);
+          border: 1px solid rgba(255,255,255,.2);
+          box-shadow: inset 0 1px 0 rgba(255,255,255,.18), 0 12px 30px rgba(0,0,0,.22);
+          backdrop-filter: blur(15px);
+          -webkit-backdrop-filter: blur(15px);
+        }
+        .spicey-live-ref-tools button {
+          width: 56px;
+          height: 56px;
+        }
+        .spicey-live-ref-comments {
+          position: absolute;
+          left: 26px;
+          bottom: max(245px, env(safe-area-inset-bottom) + 228px);
+          width: min(64vw, 315px);
+          display: flex;
+          flex-direction: column;
+          gap: 9px;
+        }
+        .spicey-live-ref-comment {
+          width: fit-content;
+          max-width: 100%;
+          min-height: 44px;
+          display: flex;
+          align-items: center;
+          gap: 9px;
+          padding: 7px 13px 7px 7px;
+          border-radius: 18px;
+          background: linear-gradient(90deg, rgba(30, 22, 38, .68), rgba(80, 34, 28, .34));
+          border: 1px solid rgba(255,255,255,.1);
+          box-shadow: 0 10px 26px rgba(0,0,0,.2);
+          backdrop-filter: blur(13px);
+          -webkit-backdrop-filter: blur(13px);
+        }
+        .spicey-live-ref-comment.is-join {
+          border-color: rgba(255,255,255,.18);
+          background: rgba(37, 33, 54, .52);
+        }
+        .spicey-live-ref-comment img {
+          width: 34px;
+          height: 34px;
+          border-radius: 999px;
+          object-fit: cover;
+          border: 2px solid rgba(255, 46, 122, .8);
+        }
+        .spicey-live-ref-comment div {
+          min-width: 0;
+          color: #fff;
+          font-size: 14px;
+          line-height: 1.24;
+          text-shadow: 0 1px 7px rgba(0,0,0,.35);
+        }
+        .spicey-live-ref-comment strong {
+          color: #ff4c86;
+          margin-right: 5px;
+          font-weight: 850;
+        }
+        .spicey-live-ref-comment span {
+          color: rgba(255,255,255,.94);
+        }
+        .spicey-live-ref-rail {
+          position: absolute;
+          right: 24px;
+          bottom: max(236px, env(safe-area-inset-bottom) + 220px);
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 8px;
+          color: #fff;
+          text-shadow: 0 2px 10px rgba(0,0,0,.45);
+          font-size: 15px;
+          font-weight: 820;
+        }
+        .spicey-live-ref-rail button {
+          width: 56px;
+          height: 56px;
+        }
+        .spicey-live-ref-rail button:first-child {
+          color: #ff425f;
+          background: rgba(38, 28, 47, .42);
+        }
+        .spicey-live-ref-rail .is-gift {
+          color: #ffb121;
+          background: linear-gradient(145deg, rgba(255, 117, 24, .28), rgba(226, 31, 129, .24));
+          border-color: rgba(255, 113, 24, .26);
+        }
+        .spicey-live-ref-cohost {
+          position: absolute;
+          left: 22px;
+          right: 22px;
+          bottom: max(108px, env(safe-area-inset-bottom) + 98px);
+          padding: 15px 16px 14px;
+          border-radius: 25px;
+          border: 1px solid rgba(255,255,255,.09);
+          background: linear-gradient(180deg, rgba(15, 11, 28, .74), rgba(8, 6, 18, .58));
+          backdrop-filter: blur(16px);
+          -webkit-backdrop-filter: blur(16px);
+          box-shadow: 0 18px 38px rgba(0,0,0,.28);
+        }
+        .spicey-live-ref-cohost-title {
+          margin-bottom: 12px;
+          color: rgba(255,255,255,.92);
+          font-size: 15px;
+          font-weight: 820;
+        }
+        .spicey-live-ref-cohost-row {
+          display: grid;
+          grid-template-columns: repeat(5, minmax(0, 1fr));
+          align-items: start;
+          gap: 12px;
+        }
+        .spicey-live-ref-invite,
+        .spicey-live-ref-person {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 7px;
+          color: #fff;
+          font-size: 12px;
+          min-width: 0;
+        }
+        .spicey-live-ref-invite svg {
+          width: 56px;
+          height: 56px;
+          padding: 13px;
+          border-radius: 999px;
+          border: 2px solid rgba(255,255,255,.28);
+          background: rgba(0,0,0,.22);
+        }
+        .spicey-live-ref-person img {
+          width: 58px;
+          height: 58px;
+          border-radius: 999px;
+          object-fit: cover;
+          border: 3px solid transparent;
+          background: linear-gradient(135deg, #ff7a18, #ff2c77, #a823ff) border-box;
+          box-shadow: 0 9px 20px rgba(0,0,0,.28);
+        }
+        .spicey-live-ref-person span,
+        .spicey-live-ref-invite span {
+          width: 100%;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+          text-align: center;
+        }
+        .spicey-live-ref-composer {
+          position: absolute;
+          left: 20px;
+          right: 20px;
+          bottom: max(20px, env(safe-area-inset-bottom) + 12px);
+          height: 70px;
+          display: grid;
+          grid-template-columns: minmax(0, 1fr) 50px 48px 48px 86px;
+          gap: 10px;
+          align-items: center;
+          padding: 10px 12px;
+          border-radius: 28px;
+          background: linear-gradient(90deg, rgba(20, 15, 32, .88), rgba(54, 17, 45, .82));
+          border: 1px solid rgba(255,255,255,.08);
+          box-shadow: 0 18px 44px rgba(0,0,0,.38);
+          backdrop-filter: blur(18px);
+          -webkit-backdrop-filter: blur(18px);
+        }
+        .spicey-live-ref-composer input {
+          width: 100%;
+          min-width: 0;
+          height: 50px;
+          border: 1px solid rgba(255,255,255,.1);
+          border-radius: 22px;
+          padding: 0 18px;
+          color: #fff;
+          outline: none;
+          background: rgba(255,255,255,.08);
+          font-size: 15px;
+        }
+        .spicey-live-ref-composer input::placeholder {
+          color: rgba(255,255,255,.55);
+        }
+        .spicey-live-ref-composer button {
+          height: 50px;
+          border-radius: 18px;
+          display: grid;
+          place-items: center;
+          color: #fff;
+          background: rgba(255,255,255,.08);
+          border: 1px solid rgba(255,255,255,.1);
+        }
+        .spicey-live-ref-composer .is-send,
+        .spicey-live-ref-composer .is-follow {
+          background: linear-gradient(135deg, #ff7a18, #ff2466 52%, #cf22ff);
+          box-shadow: inset 0 1px 0 rgba(255,255,255,.32), 0 10px 26px rgba(255, 39, 92, .33);
+        }
+        .spicey-live-ref-composer .is-follow {
+          font-size: 17px;
+          font-weight: 850;
+        }
+        .spicey-live-ref-camera-mini {
+          position: absolute;
+          left: 22px;
+          bottom: max(188px, env(safe-area-inset-bottom) + 176px);
+          display: flex;
+          gap: 9px;
+        }
+        .spicey-live-ref-camera-mini button {
+          width: 38px;
+          height: 38px;
+        }
+        @media (max-width: 390px) {
+          .spicey-live-ref-top {
+            left: 18px;
+            right: 16px;
+            grid-template-columns: 1fr auto 30px;
+          }
+          .spicey-live-ref-brand {
+            font-size: 22px;
+          }
+          .spicey-live-ref-live {
+            min-width: 62px;
+            height: 34px;
+            padding: 0 13px;
+            font-size: 14px;
+          }
+          .spicey-live-ref-viewers {
+            min-width: 74px;
+            height: 34px;
+            font-size: 13px;
+          }
+          .spicey-live-ref-host {
+            left: 20px;
+            top: max(96px, env(safe-area-inset-top) + 84px);
+          }
+          .spicey-live-ref-host img {
+            width: 52px;
+            height: 52px;
+          }
+          .spicey-live-ref-host-name {
+            font-size: 23px;
+          }
+          .spicey-live-ref-tools {
+            right: 18px;
+            top: max(128px, env(safe-area-inset-top) + 114px);
+            gap: 10px;
+          }
+          .spicey-live-ref-tools button,
+          .spicey-live-ref-rail button {
+            width: 48px;
+            height: 48px;
+          }
+          .spicey-live-ref-comments {
+            left: 18px;
+            width: min(66vw, 260px);
+          }
+          .spicey-live-ref-cohost {
+            left: 14px;
+            right: 14px;
+            padding: 12px;
+          }
+          .spicey-live-ref-cohost-row {
+            gap: 7px;
+          }
+          .spicey-live-ref-invite svg,
+          .spicey-live-ref-person img {
+            width: 48px;
+            height: 48px;
+          }
+          .spicey-live-ref-composer {
+            left: 12px;
+            right: 12px;
+            grid-template-columns: minmax(0, 1fr) 44px 40px 40px 70px;
+            gap: 7px;
+            height: 64px;
+          }
+          .spicey-live-ref-composer input,
+          .spicey-live-ref-composer button {
+            height: 44px;
+          }
+          .spicey-live-ref-composer .is-follow {
+            font-size: 14px;
+          }
+        }
+      `}</style>
 
       {/* ── END STREAM MODAL ── */}
       <AnimatePresence>
@@ -824,7 +1387,7 @@ export default function LiveStream() {
               className="rounded-2xl p-6 max-w-sm w-full"
               style={{ background: 'rgba(16,6,30,0.98)', border: '1px solid rgba(255,255,255,0.1)' }}>
               <h3 className="text-white font-bold text-lg mb-2">Save Live Replay?</h3>
-              <p className="text-white/60 text-sm mb-6">Share your live stream as a reel so followers can watch it later.</p>
+              <p className="text-white/60 text-sm mb-6">Share your live stream as a Spicey Clip so followers can watch it later.</p>
               <div className="flex gap-3">
                 <button onClick={discardReplay}
                   className="flex-1 py-3 rounded-full text-white font-semibold flex items-center justify-center gap-2"
@@ -837,7 +1400,7 @@ export default function LiveStream() {
                   {isSaving ? (
                     <><div className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white animate-spin" /> Saving...</>
                   ) : (
-                    <><Save className="w-4 h-4" /> Save Reel</>
+                    <><Save className="w-4 h-4" /> Save Spicey Clip</>
                   )}
                 </button>
               </div>

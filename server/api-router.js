@@ -69,6 +69,10 @@ import handler67 from './api-routes/subscriptions/gift/index.js';
 import handler68 from './api-routes/subscriptions/status.js';
 import handler69 from './api-routes/users/search.js';
 import handler70 from './api-routes/youtube/reels.js';
+import handler71 from './api-routes/openai/video.js';
+import handler72 from './api-routes/subscriptions/checkout.js';
+import handler73 from './api-routes/subscriptions/stripe-webhook.js';
+import handler74 from './api-routes/push/engagement.js';
 
 const ROUTES = [
   { group: 'account-legal', pattern: '/api/account/delete', handler: handler0 },
@@ -122,6 +126,7 @@ const ROUTES = [
   { group: 'openai', pattern: '/api/openai/realtime-session', handler: handler47 },
   { group: 'openai', pattern: '/api/openai/text', handler: handler48 },
   { group: 'openai', pattern: '/api/openai/voice-chat', handler: handler49 },
+  { group: 'openai', pattern: '/api/openai/video', handler: handler71 },
   { group: 'content-social', pattern: '/api/posts/:postId', handler: handler50 },
   { group: 'content-social', pattern: '/api/posts', handler: handler51 },
   { group: 'profiles-users', pattern: '/api/preset-avatars', handler: handler52 },
@@ -132,6 +137,7 @@ const ROUTES = [
   { group: 'profiles-users', pattern: '/api/profile/me', handler: handler57 },
   { group: 'admin-push', pattern: '/api/push/diagnostics', handler: handler58 },
   { group: 'admin-push', pattern: '/api/push/register-device', handler: handler59 },
+  { group: 'admin-push', pattern: '/api/push/engagement', handler: handler74 },
   { group: 'content-social', pattern: '/api/reactions', handler: handler60 },
   { group: 'content-social', pattern: '/api/reels', handler: handler61 },
   { group: 'notifications-reports', pattern: '/api/reports', handler: handler62 },
@@ -141,6 +147,8 @@ const ROUTES = [
   { group: 'subscriptions', pattern: '/api/subscriptions/admin', handler: handler66 },
   { group: 'subscriptions', pattern: '/api/subscriptions/gift', handler: handler67 },
   { group: 'subscriptions', pattern: '/api/subscriptions/status', handler: handler68 },
+  { group: 'subscriptions', pattern: '/api/subscriptions/checkout', handler: handler72 },
+  { group: 'subscriptions', pattern: '/api/subscriptions/stripe-webhook', handler: handler73 },
   { group: 'profiles-users', pattern: '/api/users/search', handler: handler69 },
   { group: 'media', pattern: '/api/youtube/reels', handler: handler70 },
 ];

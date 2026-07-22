@@ -1,7 +1,7 @@
 import { handleOptions, sendJson, setCors } from '../_lib/http.js';
 import { getSupabaseUser, supabaseAdminAuth, supabaseTable } from '../_lib/supabaseRest.js';
 
-const ADMIN_EMAILS = new Set(['info@spicey.live', 'valondervishi13@gmail.com']);
+const ADMIN_EMAILS = new Set(['info@spicey.live', 'valondervishi13@gmail.com', 'vlora.dervisi@gmail.com']);
 const DAY_MS = 86400000;
 
 async function requireAdmin(req) {

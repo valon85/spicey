@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Music2, Play, Pause, Check, Search, Loader2 } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
+import { fallbackMusicResults, normalizeMusicTrack } from './musicUtils';
 
 const TRENDING_SEARCHES = ['trending 2024', 'pop hits', 'hip hop', 'viral songs', 'summer hits'];
 
@@ -28,9 +29,10 @@ export default function MusicPickerSheet({ open, onClose, onSelect, selectedTrac
     setLoading(true);
     try {
       const res = await base44.functions.invoke('searchMusic', { query });
-      setTracks(res.data?.results || []);
+      const results = res.data?.results || [];
+      setTracks(results.length ? results : fallbackMusicResults(query));
     } catch {
-      setTracks([]);
+      setTracks(fallbackMusicResults(query));
     }
     setLoading(false);
   };
@@ -78,16 +80,10 @@ export default function MusicPickerSheet({ open, onClose, onSelect, selectedTrac
   const handleSelect = (track) => {
     stopAudio();
     setPlayingId(null);
-    onSelect({
-      id: track.trackId,
-      title: track.trackName,
-      artist: track.artistName,
-      duration: track.trackTimeMillis ? `${Math.floor(track.trackTimeMillis / 60000)}:${String(Math.floor((track.trackTimeMillis % 60000) / 1000)).padStart(2, '0')}` : '',
-      artwork: track.artworkUrl60,
-      previewUrl: track.previewUrl,
-      emoji: '🎵',
-      color: '#e91e8c',
-    });
+    onSelect(normalizeMusicTrack({
+      ...track,
+      duration: track.trackTimeMillis ? `${Math.floor(track.trackTimeMillis / 60000)}:${String(Math.floor((track.trackTimeMillis % 60000) / 1000)).padStart(2, '0')}` : track.duration,
+    }));
     onClose();
   };
 

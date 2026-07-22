@@ -1,7 +1,7 @@
 import { handleOptions, readJson, sendJson, setCors } from '../../_lib/http.js';
 import { getSupabaseUser, supabaseTable } from '../../_lib/supabaseRest.js';
 
-const ADMIN_EMAILS = new Set(['info@spicey.live', 'valondervishi13@gmail.com']);
+const ADMIN_EMAILS = new Set(['info@spicey.live', 'valondervishi13@gmail.com', 'vlora.dervisi@gmail.com']);
 
 function readSubscriptionId(req) {
   const url = new URL(req.url, 'http://spicey.local');

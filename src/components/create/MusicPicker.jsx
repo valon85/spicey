@@ -1,5 +1,6 @@
 import React from 'react';
 import { Music, Search, Play, Trash2 } from 'lucide-react';
+import { fallbackMusicResults, normalizeMusicTrack } from './musicUtils';
 
 export default function MusicPicker({
   music,
@@ -11,10 +12,14 @@ export default function MusicPicker({
   onSearch,
   isLight,
 }) {
+  const displayResults = (musicResults?.length ? musicResults : fallbackMusicResults(musicSearch)).map(normalizeMusicTrack);
+  const submitSearch = () => onSearch(musicSearch || 'viral hits');
+
   return (
     <div className="space-y-4">
       {/* Search Bar */}
-      <div className="relative">
+      <div className="relative flex gap-2">
+        <div className="relative flex-1">
         <div className="absolute left-4 top-1/2 -translate-y-1/2" style={{ color: '#FF6A00' }}>
           <Search className="w-5 h-5" />
         </div>
@@ -22,7 +27,7 @@ export default function MusicPicker({
           type="text"
           value={musicSearch}
           onChange={(e) => setMusicSearch(e.target.value)}
-          onKeyPress={(e) => e.key === 'Enter' && onSearch(musicSearch)}
+          onKeyDown={(e) => e.key === 'Enter' && submitSearch()}
           placeholder="Search for songs..."
           className="w-full pl-12 pr-4 py-3.5 rounded-2xl font-medium"
           style={{
@@ -35,6 +40,18 @@ export default function MusicPicker({
           onFocus={(e) => e.target.style.borderColor = '#FF6A00'}
           onBlur={(e) => e.target.style.borderColor = isLight ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.12)'}
         />
+        </div>
+        <button
+          type="button"
+          onClick={submitSearch}
+          className="px-4 rounded-2xl text-white text-sm font-bold flex-shrink-0"
+          style={{
+            background: 'linear-gradient(135deg,#ff6a00,#ff2d8f)',
+            boxShadow: '0 8px 20px rgba(255,45,143,0.22)',
+          }}
+        >
+          Search
+        </button>
       </div>
       
       {/* Searching State */}
@@ -46,18 +63,13 @@ export default function MusicPicker({
       )}
 
       {/* Results */}
-      {musicResults.length > 0 && (
+      {displayResults.length > 0 && (
         <div className="space-y-2 max-h-72 overflow-y-auto -mx-2 px-2">
-          {musicResults.map((track, i) => (
+          {displayResults.map((track, i) => (
             <button
               key={i}
               onClick={() => {
-                setMusic({
-                  title: track.title,
-                  artist: track.artist,
-                  preview_url: track.preview_url,
-                  artwork_url: track.artwork_url,
-                });
+                setMusic(normalizeMusicTrack(track));
               }}
               className="w-full flex items-center gap-3 p-3 rounded-2xl transition-all hover:scale-[1.02] active:scale-[0.98]"
               style={{
@@ -69,9 +81,9 @@ export default function MusicPicker({
                   : `1px solid ${isLight ? 'rgba(0,0,0,0.05)' : 'rgba(255,255,255,0.06)'}`,
               }}
             >
-              {track.artwork_url ? (
+              {track.artworkUrl ? (
                 <img 
-                  src={track.artwork_url} 
+                  src={track.artworkUrl}
                   alt={track.title} 
                   className="w-14 h-14 rounded-xl object-cover shadow-md"
                   style={{ boxShadow: '0 2px 8px rgba(0,0,0,0.2)' }}
@@ -100,7 +112,7 @@ export default function MusicPicker({
       )}
 
       {/* No Results */}
-      {musicResults.length === 0 && !searchingMusic && musicSearch && (
+      {musicResults.length === 0 && !searchingMusic && musicSearch && displayResults.length === 0 && (
         <div className="text-center py-8">
           <Music className="w-12 h-12 mx-auto mb-3" style={{ color: isLight ? 'rgba(0,0,0,0.3)' : 'rgba(255,255,255,0.3)' }} />
           <p className="text-sm font-medium" style={{ color: isLight ? 'rgba(0,0,0,0.5)' : 'rgba(255,255,255,0.5)' }}>No songs found</p>

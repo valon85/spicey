@@ -84,6 +84,7 @@ export default function CallSheet({ open, onClose, convo, isVideo, isIncoming = 
   const ringRef = useRef(null);
   const timerRef = useRef(null);
   const pollRef = useRef(null);
+  const callTimeoutRef = useRef(null);
   const localStreamRef = useRef(null);
   const localVideoRef = useRef(null);
   const remoteVideoRef = useRef(null);
@@ -91,6 +92,7 @@ export default function CallSheet({ open, onClose, convo, isVideo, isIncoming = 
   const sidRef = useRef(callSession?.id);
   const appliedIceRef = useRef(0);
   const setupDoneRef = useRef(false);
+  const connectedSavedRef = useRef(false);
 
   const formatTime = s => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
 
@@ -98,6 +100,7 @@ export default function CallSheet({ open, onClose, convo, isVideo, isIncoming = 
     clearInterval(ringRef.current);
     clearInterval(timerRef.current);
     clearInterval(pollRef.current);
+    clearTimeout(callTimeoutRef.current);
     clearTimeout(iceFlushTimerRef.current);
     iceBatchRef.current = [];
     if (pcRef.current) { try { pcRef.current.close(); } catch(e) {} pcRef.current = null; }
@@ -106,14 +109,44 @@ export default function CallSheet({ open, onClose, convo, isVideo, isIncoming = 
     if (remoteVideoRef.current) remoteVideoRef.current.srcObject = null;
     appliedIceRef.current = 0;
     setupDoneRef.current = false;
+    connectedSavedRef.current = false;
     setDuration(0); setConnected(false); setPhase('init');
+  };
+
+  const markConnected = async () => {
+    if (connectedSavedRef.current) {
+      setConnected(true);
+      setPhase('connected');
+      return;
+    }
+    connectedSavedRef.current = true;
+    clearInterval(ringRef.current);
+    setConnected(true); setPhase('connected');
+    clearInterval(timerRef.current);
+    timerRef.current = setInterval(() => setDuration(d => d + 1), 1000);
+    if (sidRef.current) {
+      base44.entities.CallSession.update(sidRef.current, {
+        status: 'connected',
+        connected_at: new Date().toISOString()
+      }).catch(() => {});
+    }
   };
 
   const handleClose = async () => {
     const sid = sidRef.current;
-    if (sid) base44.entities.CallSession.update(sid, { status: 'ended', ended_at: new Date().toISOString() }).catch(() => {});
-    stopAll();
-    onClose();
+    try {
+      if (sid) {
+        await base44.entities.CallSession.update(sid, {
+          status: 'ended',
+          ended_at: new Date().toISOString()
+        });
+      }
+    } catch (error) {
+      console.error('[RTC] Failed to publish terminal call state:', error);
+    } finally {
+      stopAll();
+      onClose();
+    }
   };
 
   useEffect(() => {
@@ -177,10 +210,14 @@ export default function CallSheet({ open, onClose, convo, isVideo, isIncoming = 
       pc.oniceconnectionstatechange = () => {
         console.log('[RTC] ICE:', pc.iceConnectionState);
         if (pc.iceConnectionState === 'connected' || pc.iceConnectionState === 'completed') {
-          clearInterval(ringRef.current);
-          setConnected(true); setPhase('connected');
-          clearInterval(timerRef.current);
-          timerRef.current = setInterval(() => setDuration(d => d + 1), 1000);
+          markConnected();
+        }
+      };
+      pc.onconnectionstatechange = () => {
+        console.log('[RTC] PC:', pc.connectionState);
+        if (pc.connectionState === 'connected') markConnected();
+        if (pc.connectionState === 'failed' || pc.connectionState === 'disconnected') {
+          setPhase('connecting');
         }
       };
 
@@ -197,6 +234,20 @@ export default function CallSheet({ open, onClose, convo, isVideo, isIncoming = 
         setPhase('calling');
         ringOnce();
         ringRef.current = setInterval(ringOnce, 3400);
+        callTimeoutRef.current = setTimeout(async () => {
+          if (connectedSavedRef.current || !sidRef.current) return;
+          try {
+            await base44.entities.CallSession.update(sidRef.current, {
+              status: 'missed',
+              ended_at: new Date().toISOString()
+            });
+          } catch (error) {
+            console.error('[RTC] Failed to mark unanswered call as missed:', error);
+          } finally {
+            stopAll();
+            onClose();
+          }
+        }, 55000);
 
         const offer = await pc.createOffer({ offerToReceiveAudio: true, offerToReceiveVideo: isVideo });
         await pc.setLocalDescription(offer);
@@ -214,7 +265,7 @@ export default function CallSheet({ open, onClose, convo, isVideo, isIncoming = 
           const s = await fetchSession(sidRef.current);
           if (!s) return;
 
-          if (s.status === 'ended' || s.status === 'declined') { stopAll(); onClose(); return; }
+          if (['ended', 'declined', 'missed', 'cancelled'].includes(s.status)) { stopAll(); onClose(); return; }
 
           // Apply answer once (check if changed to avoid re-applying)
           if (s.answer_sdp && s.answer_sdp !== lastAnswerSdp && pc.signalingState === 'have-local-offer') {
@@ -235,7 +286,7 @@ export default function CallSheet({ open, onClose, convo, isVideo, isIncoming = 
             console.log('[RTC] Caller: applied', newOnes.length, 'receiver ICE');
             lastIceCount = s.receiver_ice.length;
           }
-        }, 2500);
+        }, 1000);
 
       } else {
         // ── RECEIVER: poll for offer, send answer ──
@@ -249,7 +300,7 @@ export default function CallSheet({ open, onClose, convo, isVideo, isIncoming = 
           const s = await fetchSession(sidRef.current);
           if (!s) return;
 
-          if (s.status === 'ended' || s.status === 'declined') { stopAll(); onClose(); return; }
+          if (['ended', 'declined', 'missed', 'cancelled'].includes(s.status)) { stopAll(); onClose(); return; }
 
           // Apply offer + create answer (once, when in stable state)
           if (!setupDoneRef.current && s.offer_sdp && s.offer_sdp !== lastOfferSdp && pc.signalingState === 'stable') {
@@ -289,7 +340,7 @@ export default function CallSheet({ open, onClose, convo, isVideo, isIncoming = 
             console.log('[RTC] Receiver: applied', newOnes.length, 'new caller ICE');
             lastCallerIceCount = s.caller_ice.length;
           }
-        }, 2500);
+        }, 1000);
       }
     };
 
@@ -418,7 +469,7 @@ export default function CallSheet({ open, onClose, convo, isVideo, isIncoming = 
         <motion.div
           initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
           transition={{ duration: 0.2 }}
-          className="fixed inset-0 z-[100] flex flex-col overflow-hidden"
+          className="fixed inset-0 z-[10000] flex flex-col overflow-hidden"
           style={{ width: '100vw', height: '100dvh', top: 0, left: 0, background: 'linear-gradient(160deg, #ff6eb4 0%, #ff9a5c 50%, #ffb347 100%)' }}>
 
           {/* Remote video — fullscreen */}
@@ -441,7 +492,7 @@ export default function CallSheet({ open, onClose, convo, isVideo, isIncoming = 
             style={{ paddingTop: 'max(48px, env(safe-area-inset-top, 48px))', paddingBottom: 12 }}>
             <motion.button whileTap={{ scale: 0.9 }} onClick={handleClose}
               className="w-10 h-10 rounded-full flex items-center justify-center"
-              style={{ background: 'rgba(255,255,255,0.25)', backdropFilter: 'blur(12px)' }}>
+              style={{ background: 'rgba(255,255,255,0.18)', border: '1px solid rgba(255,255,255,0.28)', backdropFilter: 'blur(12px)' }}>
               <X className="w-5 h-5 text-white" strokeWidth={2.5} />
             </motion.button>
 
@@ -461,10 +512,11 @@ export default function CallSheet({ open, onClose, convo, isVideo, isIncoming = 
               </div>
             </div>
 
-            <motion.button whileTap={{ scale: 0.9 }}
-              className="w-10 h-10 rounded-full flex items-center justify-center"
-              style={{ background: 'rgba(255,255,255,0.25)', backdropFilter: 'blur(12px)' }}>
-              <MoreHorizontal className="w-5 h-5 text-white" />
+            <motion.button whileTap={{ scale: 0.9 }} onClick={handleClose}
+              className="h-10 rounded-full flex items-center justify-center gap-1.5 px-3"
+              style={{ background: 'linear-gradient(135deg, #ff3b30, #d7193f)', border: '1px solid rgba(255,255,255,0.26)', boxShadow: '0 8px 22px rgba(215,25,63,0.38)', backdropFilter: 'blur(12px)' }}>
+              <PhoneOff className="w-4 h-4 text-white" />
+              <span className="text-white text-[12px] font-black">End</span>
             </motion.button>
           </div>
 
@@ -611,8 +663,8 @@ export default function CallSheet({ open, onClose, convo, isVideo, isIncoming = 
 
           {/* ── MAIN CONTROLS ROW ── */}
           <div className="absolute left-0 right-0 z-30 px-4"
-            style={{ bottom: 'max(100px, env(safe-area-inset-bottom, 16px) + 84px)' }}>
-            <div className="flex items-center justify-between px-2 py-4 rounded-3xl"
+            style={{ bottom: 'max(92px, env(safe-area-inset-bottom, 16px) + 76px)' }}>
+            <div className="flex items-center justify-center gap-4 px-3 py-4 rounded-3xl"
               style={{ background: 'rgba(255,255,255,0.18)', backdropFilter: 'blur(24px)', border: '1px solid rgba(255,255,255,0.3)' }}>
 
               {/* Mute */}
@@ -659,21 +711,31 @@ export default function CallSheet({ open, onClose, convo, isVideo, isIncoming = 
                 <span className="text-white text-[11px] font-medium">Speaker</span>
               </div>
 
-              {/* End Call */}
-              <div className="flex flex-col items-center gap-1">
-                <motion.button whileTap={{ scale: 0.92 }} onClick={handleClose}
-                  className="rounded-full flex items-center justify-center"
-                  style={{ width: 56, height: 56, background: 'linear-gradient(135deg, #ef4444, #dc2626)', boxShadow: '0 4px 20px rgba(220,38,38,0.7)' }}>
-                  <PhoneOff className="w-6 h-6 text-white" />
-                </motion.button>
-                <span className="text-white text-[11px] font-bold">End Call</span>
-              </div>
             </div>
+          </div>
+
+          {/* ── ALWAYS VISIBLE END CALL ── */}
+          <div className="absolute left-0 right-0 z-40 flex justify-center px-6 pointer-events-none"
+            style={{ bottom: 'max(22px, env(safe-area-inset-bottom, 8px) + 12px)' }}>
+            <motion.button
+              whileTap={{ scale: 0.92 }}
+              onClick={handleClose}
+              className="pointer-events-auto h-16 rounded-full flex items-center justify-center gap-3 px-8"
+              style={{
+                minWidth: 184,
+                background: 'linear-gradient(135deg, #ff453a 0%, #e11d48 58%, #b91c1c 100%)',
+                border: '1.5px solid rgba(255,255,255,0.34)',
+                boxShadow: '0 18px 34px rgba(185,28,28,0.48), 0 0 26px rgba(255,69,58,0.34), inset 0 1px 0 rgba(255,255,255,0.25)',
+                backdropFilter: 'blur(18px)',
+              }}>
+              <PhoneOff className="w-7 h-7 text-white" />
+              <span className="text-white text-[16px] font-black tracking-wide">End Call</span>
+            </motion.button>
           </div>
 
           {/* ── BOTTOM SECONDARY ROW ── */}
           <div className="absolute left-0 right-0 z-30 flex items-center justify-around px-8"
-            style={{ bottom: 'max(40px, env(safe-area-inset-bottom, 8px) + 24px)' }}>
+            style={{ display: 'none' }}>
             <div className="flex flex-col items-center gap-1">
               <motion.button whileTap={{ scale: 0.9 }} onClick={toggleSpeaker}
                 className="w-10 h-10 rounded-full flex items-center justify-center">

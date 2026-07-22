@@ -4,9 +4,9 @@ import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
   TrendingUp, Users, Eye, Heart, Flame, MessageCircle, Share2,
-  ArrowLeft, Calendar, DollarSign, Zap, Crown, BarChart3,
-  Clock, Target, Award, Activity
+  ArrowLeft, Crown, BarChart3, Award
 } from 'lucide-react';
+import { isAdminEmail } from '@/lib/adminAccess';
 
 export default function VIPAnalytics() {
   const navigate = useNavigate();
@@ -38,11 +38,11 @@ export default function VIPAnalytics() {
         status: 'active' 
       });
       
-      const hasPremium = user.email === 'info@spicey.live' || subscriptions.length > 0;
+      const hasPremium = isAdminEmail(user) || subscriptions.length > 0;
       if (subscriptions.length > 0) {
         setPlanType(subscriptions[0].plan_type);
       }
-      if (user.email === 'info@spicey.live') {
+      if (isAdminEmail(user)) {
         setPlanType('business'); // Admin has all access
       }
 

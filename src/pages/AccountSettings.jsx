@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ChevronLeft, ChevronRight, User, Lock, Shield, ShieldCheck, EyeOff, Users, HelpCircle, Flag, AlertTriangle, Trash2, LogOut, Crown, Settings as SettingsIcon, Database, Bell, Globe, Moon, Zap, Search, Unlock, X, Key, Languages, FileText, Mail, MessageCircle, Rocket, Camera, Sparkles } from 'lucide-react';
+import { ChevronLeft, ChevronRight, User, Lock, Shield, EyeOff, Users, HelpCircle, Flag, AlertTriangle, LogOut, Crown, Settings as SettingsIcon, Database, Bell, X, Key, Languages, FileText, Mail, Rocket } from 'lucide-react';
 import { usePageBackground } from '@/hooks/usePageBackground';
 import SpiceyLogoText from '@/components/shared/SpiceyLogoText';
 import VerifiedBadge from '@/components/shared/VerifiedBadge';
@@ -11,18 +11,14 @@ import { motion, AnimatePresence } from 'framer-motion';
 import EditProfileSheet from '@/components/panels/EditProfileSheet';
 import { hasAdminAccess } from '@/lib/adminAccess';
 
-function SettingsRow({ icon: Icon, iconBg, label, sub, onClick, danger, right, isLight }) {
+function SettingsRow({ label, sub, onClick, danger, right, isLight }) {
   return (
     <motion.button whileTap={{ scale: 0.98 }} onClick={onClick}
-      className="w-full flex items-center gap-2.5 px-3.5 py-2.5 active:opacity-70 transition-all"
+      className="w-full flex items-center px-4 py-3 active:opacity-70 transition-all"
       style={{
         background: 'transparent',
         borderBottom: isLight ? '1px solid rgba(0,0,0,0.06)' : '1px solid rgba(255,255,255,0.06)',
       }}>
-      <div className="w-8 h-8 rounded-[10px] flex items-center justify-center flex-shrink-0"
-        style={{ background: danger ? 'rgba(255,59,48,0.12)' : (iconBg || 'rgba(255,107,53,0.1)') }}>
-        <Icon size={16} style={{ color: danger ? '#FF3B30' : 'white' }} />
-      </div>
       <div className="flex-1 text-left">
         <p className="font-semibold text-[13px]" style={{ color: danger ? '#FF3B30' : (isLight ? '#1C1C1E' : 'rgba(255,255,255,0.9)') }}>{label}</p>
         {sub && <p className="text-[10.5px] mt-0.5" style={{ color: isLight ? '#8E8E93' : 'rgba(255,255,255,0.35)' }}>{sub}</p>}
@@ -88,7 +84,12 @@ function InfoPanel({ open, onClose, title, children, isLight }) {
           <motion.div initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
             transition={{ type: 'spring', damping: 28, stiffness: 300 }}
             className="fixed bottom-0 left-0 right-0 z-50 rounded-t-3xl max-h-[85vh] overflow-y-auto"
-            style={{ background: isLight ? '#FFFFFF' : '#1C1C1E', paddingBottom: 'max(24px, env(safe-area-inset-bottom))' }}>
+            style={{
+              background: isLight ? '#FFFFFF' : '#1C1C1E',
+              paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 88px)',
+              scrollPaddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 104px)',
+              WebkitOverflowScrolling: 'touch',
+            }}>
             <div className="sticky top-0 flex items-center justify-between px-5 pt-5 pb-4"
               style={{ background: isLight ? '#FFFFFF' : '#1C1C1E', borderBottom: isLight ? '1px solid rgba(0,0,0,0.07)' : '1px solid rgba(255,255,255,0.07)' }}>
               <h3 className="font-bold text-lg" style={{ color: isLight ? '#1C1C1E' : 'white' }}>{title}</h3>
@@ -119,6 +120,8 @@ export default function AccountSettings() {
   const [showDeactivateConfirm, setShowDeactivateConfirm] = useState(false);
   const [showEditProfile, setShowEditProfile] = useState(false);
   const [showSecurity, setShowSecurity] = useState(false);
+  const [showAdvancedAccount, setShowAdvancedAccount] = useState(false);
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [showBlocked, setShowBlocked] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [showLanguage, setShowLanguage] = useState(false);
@@ -130,6 +133,7 @@ export default function AccountSettings() {
 
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState('');
+  const [deleteConfirmationText, setDeleteConfirmationText] = useState('');
   const [currentUser, setCurrentUser] = useState(null);
   const [profileUser, setProfileUser] = useState(null);
   const [isPrivate, setIsPrivate] = useState(false);
@@ -220,7 +224,11 @@ export default function AccountSettings() {
   };
 
   return (
-    <div style={{ minHeight: '100%', background: pageBg, position: 'relative' }}>
+    <div style={{
+      minHeight: '100dvh', height: '100dvh', overflowY: 'auto',
+      WebkitOverflowScrolling: 'touch', overscrollBehaviorY: 'contain',
+      background: pageBg, position: 'relative',
+    }}>
 
       {/* Header */}
       <div className="sticky top-0 z-40"
@@ -308,16 +316,9 @@ export default function AccountSettings() {
                 boxShadow: isLight ? '0 8px 24px rgba(255,107,53,0.16)' : '0 10px 30px rgba(233,30,140,0.18)',
                 display: 'flex',
                 alignItems: 'center',
-                gap: 12,
                 cursor: 'pointer',
               }}
             >
-              <div
-                className="w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0"
-                style={{ background: 'linear-gradient(135deg, #FF6B35, #e91e8c, #8b5cf6)' }}
-              >
-                <Rocket size={22} color="white" />
-              </div>
               <div className="flex-1 text-left">
                 <p style={{ color: isLight ? '#1C1C1E' : 'white', fontSize: 16, fontWeight: 800, margin: 0 }}>
                   Publish & Downloads
@@ -339,10 +340,7 @@ export default function AccountSettings() {
 
         {/* Privacy */}
         <SectionCard title="Privacy" icon={Lock} iconColor="#8b5cf6" isLight={isLight}>
-          <div className="flex items-center gap-2.5 px-3.5 py-2.5" style={{ borderBottom: isLight ? '1px solid rgba(0,0,0,0.06)' : '1px solid rgba(255,255,255,0.06)' }}>
-            <div className="w-8 h-8 rounded-[10px] flex items-center justify-center flex-shrink-0" style={{ background: 'linear-gradient(135deg, #8b5cf6, #5E5CE6)' }}>
-              {isPrivate ? <Lock size={16} color="white" /> : <Unlock size={16} color="white" />}
-            </div>
+          <div className="flex items-center px-4 py-3" style={{ borderBottom: isLight ? '1px solid rgba(0,0,0,0.06)' : '1px solid rgba(255,255,255,0.06)' }}>
             <div className="flex-1 text-left">
               <p className="font-semibold text-[13px]" style={{ color: isLight ? '#1C1C1E' : 'rgba(255,255,255,0.9)' }}>Private Account</p>
               <p className="text-[10.5px] mt-0.5" style={{ color: isLight ? '#8E8E93' : 'rgba(255,255,255,0.35)' }}>{isPrivate ? 'Only followers see your content' : 'Everyone can see your content'}</p>
@@ -361,10 +359,7 @@ export default function AccountSettings() {
           <SettingsRow icon={Bell} iconBg="linear-gradient(135deg, #8b5cf6, #e91e8c)" label="Notifications" sub="Customize alerts" onClick={() => setShowNotifications(true)} isLight={isLight} />
           <SettingsRow icon={Languages} iconBg="linear-gradient(135deg, #8b5cf6, #5E5CE6)" label="Language" sub="Choose your language" onClick={() => setShowLanguage(true)} isLight={isLight} right="English" />
           {/* Dark Mode toggle */}
-          <div className="flex items-center gap-2.5 px-3.5 py-2.5">
-            <div className="w-8 h-8 rounded-[10px] flex items-center justify-center flex-shrink-0" style={{ background: 'linear-gradient(135deg, #8b5cf6, #5E5CE6)' }}>
-              <Moon size={16} color="white" />
-            </div>
+          <div className="flex items-center px-4 py-3">
             <div className="flex-1 text-left">
               <p className="font-semibold text-[13px]" style={{ color: isLight ? '#1C1C1E' : 'rgba(255,255,255,0.9)' }}>Dark Mode</p>
               <p className="text-[10.5px] mt-0.5" style={{ color: isLight ? '#8E8E93' : 'rgba(255,255,255,0.35)' }}>Switch between light and dark</p>
@@ -385,8 +380,6 @@ export default function AccountSettings() {
         {/* Admin */}
         {isAdmin && (
           <SectionCard title="Admin Panel" icon={Shield} iconColor="#FF3B30" isLight={isLight}>
-            <SettingsRow icon={Camera} iconBg="linear-gradient(135deg, #FF6B35, #e91e8c, #8b5cf6)" label="Home Feed V2 Test" sub="Private visual sandbox for the new Spicey feed" onClick={() => navigate('/admin/home-feed-v2')} isLight={isLight} />
-            <SettingsRow icon={Sparkles} iconBg="linear-gradient(135deg, #FF9500, #FF2FAF, #7A2BFF)" label="🧪 Home Feed V3" sub="Experimental Apple-style design laboratory" onClick={() => navigate('/admin/home-feed-v3')} isLight={isLight} />
             <SettingsRow icon={Rocket} iconBg="linear-gradient(135deg, #FF6B35, #e91e8c, #8b5cf6)" label="Publish & Downloads" sub="Web publish, iOS and Android release tools" onClick={() => navigate('/admin/release')} isLight={isLight} />
             <SettingsRow icon={Database} iconBg="linear-gradient(135deg, #FF3B30, #FF6B35)" label="Admin Dashboard" sub="Manage users & content" onClick={() => navigate('/admin/dashboard')} isLight={isLight} />
             <SettingsRow icon={Users} iconBg="linear-gradient(135deg, #FF3B30, #e91e8c)" label="User Management" onClick={() => navigate('/admin/users')} isLight={isLight} />
@@ -403,29 +396,21 @@ export default function AccountSettings() {
           <SettingsRow icon={FileText} iconBg="linear-gradient(135deg, #8b5cf6, #5E5CE6)" label="About Spicey" sub="Version 1.0.0" onClick={() => setShowAbout(true)} isLight={isLight} />
         </SectionCard>
 
-        {/* Log Out */}
+        {/* Logout stays accessible, but always requires confirmation. */}
         <div style={{ margin: '0 16px 12px' }}>
-          <motion.button whileTap={{ scale: 0.97 }} onClick={async () => await logout()}
+          <motion.button whileTap={{ scale: 0.97 }} onClick={() => setShowLogoutConfirm(true)}
             style={{
               width: '100%', borderRadius: 14, background: isLight ? 'rgba(255,255,255,0.9)' : 'rgba(255,255,255,0.05)',
-              border: isLight ? '1px solid rgba(255,59,48,0.15)' : '1px solid rgba(255,59,48,0.2)',
-              padding: '10px 14px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 10,
+              border: isLight ? '1px solid rgba(0,0,0,0.06)' : '1px solid rgba(255,255,255,0.06)',
+              padding: '10px 14px', cursor: 'pointer', display: 'flex', alignItems: 'center',
             }}>
-            <div style={{ width: 32, height: 32, borderRadius: 10, background: 'rgba(255,59,48,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <LogOut size={16} style={{ color: '#FF3B30' }} />
-            </div>
             <div className="flex-1 text-left">
-              <p style={{ color: '#FF3B30', fontSize: 13, fontWeight: 700, margin: 0 }}>Log Out</p>
-              <p style={{ color: isLight ? '#8E8E93' : 'rgba(255,255,255,0.35)', fontSize: 10.5, margin: '2px 0 0' }}>Sign out from your account</p>
+              <p style={{ color: isLight ? '#1C1C1E' : '#FFFFFF', fontSize: 13, fontWeight: 700, margin: 0 }}>Log Out</p>
+              <p style={{ color: isLight ? '#8E8E93' : 'rgba(255,255,255,0.35)', fontSize: 10.5, margin: '2px 0 0' }}>Confirmation required</p>
             </div>
+            <ChevronRight size={14} style={{ color: isLight ? '#C7C7CC' : 'rgba(255,255,255,0.2)' }} />
           </motion.button>
         </div>
-
-        {/* Danger Zone */}
-        <SectionCard title="Danger Zone" icon={AlertTriangle} iconColor="#FF3B30" isLight={isLight}>
-          <SettingsRow icon={AlertTriangle} label="Deactivate Account" sub="Temporarily hide your profile" onClick={() => setShowDeactivateConfirm(true)} danger isLight={isLight} />
-          <SettingsRow icon={Trash2} label="Delete Account" sub="This action cannot be undone" onClick={() => setShowDeleteConfirm(true)} danger isLight={isLight} />
-        </SectionCard>
 
       </div>
 
@@ -448,10 +433,41 @@ export default function AccountSettings() {
           </div>
           <div style={{ padding: 16, borderRadius: 14, background: isLight ? '#F2F2F7' : 'rgba(255,255,255,0.06)', border: isLight ? '1px solid rgba(0,0,0,0.08)' : '1px solid rgba(255,255,255,0.08)' }}>
             <p className="font-semibold text-sm mb-1" style={{ color: isLight ? '#1C1C1E' : 'white' }}>Login Sessions</p>
-            <p className="text-xs" style={{ color: isLight ? '#8E8E93' : 'rgba(255,255,255,0.4)' }}>You are currently logged in. Log out to end your session on this device.</p>
+            <p className="text-xs" style={{ color: isLight ? '#8E8E93' : 'rgba(255,255,255,0.4)' }}>You are currently logged in on this device.</p>
           </div>
+          <button type="button" onClick={() => { setShowSecurity(false); setShowAdvancedAccount(true); }}
+            className="w-full flex items-center justify-between px-4 py-3 rounded-2xl"
+            style={{ background: 'transparent', border: isLight ? '1px solid rgba(0,0,0,0.08)' : '1px solid rgba(255,255,255,0.08)', color: isLight ? '#8E8E93' : 'rgba(255,255,255,0.45)' }}>
+            <span className="text-xs font-semibold">Advanced Account Controls</span>
+            <ChevronRight size={14} />
+          </button>
         </div>
       </InfoPanel>
+
+      <InfoPanel open={showAdvancedAccount} onClose={() => setShowAdvancedAccount(false)} title="Advanced Account Controls" isLight={isLight}>
+        <div className="space-y-3">
+          <p className="text-xs px-1 pb-1" style={{ color: isLight ? '#8E8E93' : 'rgba(255,255,255,0.4)' }}>These actions can hide or permanently remove your account. Review each option carefully.</p>
+          <SettingsRow label="Deactivate Account" sub="Temporarily hide your profile" onClick={() => setShowDeactivateConfirm(true)} danger isLight={isLight} />
+          <SettingsRow label="Permanently Delete Account" sub="Requires typing DELETE to continue" onClick={() => { setDeleteConfirmationText(''); setShowDeleteConfirm(true); }} danger isLight={isLight} />
+        </div>
+      </InfoPanel>
+
+      <AnimatePresence>
+        {showLogoutConfirm && (
+          <>
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setShowLogoutConfirm(false)} className="fixed inset-0 z-[60]" style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(8px)' }} />
+            <motion.div initial={{ scale: 0.92, opacity: 0, y: 20 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 0.92, opacity: 0, y: 20 }} className="fixed left-4 right-4 top-1/2 -translate-y-1/2 z-[60] max-w-sm mx-auto rounded-3xl p-6" style={{ background: isLight ? '#FFFFFF' : '#1C1C1E', boxShadow: '0 24px 60px rgba(0,0,0,0.4)' }}>
+              <div className="w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-4" style={{ background: 'rgba(255,59,48,0.12)' }}><LogOut size={25} style={{ color: '#FF3B30' }} /></div>
+              <p className="font-bold text-lg text-center mb-2" style={{ color: isLight ? '#1C1C1E' : 'white' }}>Log out of Spicey?</p>
+              <p className="text-sm text-center mb-6" style={{ color: isLight ? '#8E8E93' : 'rgba(255,255,255,0.55)' }}>You will need to sign in again on this device.</p>
+              <div className="flex gap-3">
+                <button onClick={() => setShowLogoutConfirm(false)} className="flex-1 py-3 rounded-2xl font-semibold text-sm" style={{ background: isLight ? '#F2F2F7' : 'rgba(255,255,255,0.1)', color: isLight ? '#1C1C1E' : 'white' }}>Cancel</button>
+                <button onClick={async () => { setShowLogoutConfirm(false); await logout(); }} className="flex-1 py-3 rounded-2xl font-bold text-sm text-white" style={{ background: '#FF3B30' }}>Log Out</button>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
 
       {/* Blocked Users Panel */}
       <InfoPanel open={showBlocked} onClose={() => setShowBlocked(false)} title="Blocked Users" isLight={isLight}>
@@ -520,7 +536,6 @@ export default function AccountSettings() {
             <button onClick={() => window.open('mailto:info@spicey.live', '_blank')} className="px-4 py-2 rounded-full text-xs font-semibold" style={{ background: 'rgba(255,107,53,0.12)', color: '#FF6B35', border: '1px solid rgba(255,107,53,0.25)' }}>Contact Us</button>
             <button onClick={() => navigate('/privacy-policy')} className="px-4 py-2 rounded-full text-xs font-semibold" style={{ background: isLight ? '#F2F2F7' : 'rgba(255,255,255,0.07)', color: isLight ? '#8E8E93' : 'rgba(255,255,255,0.5)' }}>Privacy Policy</button>
             <button onClick={() => navigate('/terms-of-service')} className="px-4 py-2 rounded-full text-xs font-semibold" style={{ background: isLight ? '#F2F2F7' : 'rgba(255,255,255,0.07)', color: isLight ? '#8E8E93' : 'rgba(255,255,255,0.5)' }}>Terms of Service</button>
-            <button onClick={() => navigate('/community-guidelines')} className="px-4 py-2 rounded-full text-xs font-semibold" style={{ background: isLight ? '#F2F2F7' : 'rgba(255,255,255,0.07)', color: isLight ? '#8E8E93' : 'rgba(255,255,255,0.5)' }}>Community Guidelines</button>
           </div>
         </div>
       </InfoPanel>
@@ -596,12 +611,14 @@ export default function AccountSettings() {
               </div>
               <p className="font-bold text-lg text-center mb-2" style={{ color: isLight ? '#1C1C1E' : 'white' }}>Delete Account?</p>
               <p className="text-sm text-center mb-6" style={{ color: isLight ? '#8E8E93' : 'rgba(255,255,255,0.55)' }}>This cannot be undone. All your posts, messages, and profile data will be permanently deleted.</p>
+              <label className="block text-xs font-semibold mb-2" style={{ color: isLight ? '#636366' : 'rgba(255,255,255,0.65)' }}>Type DELETE to confirm</label>
+              <input value={deleteConfirmationText} onChange={(event) => setDeleteConfirmationText(event.target.value)} autoCapitalize="characters" autoCorrect="off" placeholder="DELETE" className="w-full px-4 py-3 rounded-2xl mb-4 text-sm font-bold outline-none" style={{ background: isLight ? '#F2F2F7' : 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,59,48,0.25)', color: isLight ? '#1C1C1E' : 'white' }} />
               {deleteError && <p className="text-xs text-center mb-4" style={{ color: '#FF3B30' }}>{deleteError}</p>}
               <div className="flex gap-3">
-                <button onClick={() => setShowDeleteConfirm(false)} disabled={deleting} className="flex-1 py-3 rounded-2xl font-semibold text-sm"
+                <button onClick={() => { setShowDeleteConfirm(false); setDeleteConfirmationText(''); }} disabled={deleting} className="flex-1 py-3 rounded-2xl font-semibold text-sm"
                   style={{ background: isLight ? '#F2F2F7' : 'rgba(255,255,255,0.1)', color: isLight ? '#1C1C1E' : 'white' }}>Cancel</button>
-                <button onClick={handleDeleteAccount} disabled={deleting} className="flex-1 py-3 rounded-2xl font-bold text-sm text-white"
-                  style={{ background: '#FF3B30' }}>{deleting ? 'Deleting…' : 'Delete'}</button>
+                <button onClick={handleDeleteAccount} disabled={deleting || deleteConfirmationText.trim().toUpperCase() !== 'DELETE'} className="flex-1 py-3 rounded-2xl font-bold text-sm text-white"
+                  style={{ background: '#FF3B30', opacity: deleteConfirmationText.trim().toUpperCase() === 'DELETE' ? 1 : 0.4 }}>{deleting ? 'Deleting…' : 'Delete'}</button>
               </div>
             </motion.div>
           </>

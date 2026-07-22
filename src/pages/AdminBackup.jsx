@@ -7,7 +7,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
-const ADMIN_EMAILS = ['info@spicey.live', 'valondervishi13@gmail.com'];
+const ADMIN_EMAILS = ['info@spicey.live', 'valondervishi13@gmail.com', 'vlora.dervisi@gmail.com'];
 
 const VIP_COLORS = {
   vip: { bg: 'rgba(245,158,11,0.2)', text: '#f59e0b', label: 'VIP' },

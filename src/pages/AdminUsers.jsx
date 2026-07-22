@@ -4,7 +4,7 @@ import { ChevronLeft, Search, MessageCircle, Mail, User, Shield, Crown, X, Send,
 import { base44 } from '@/api/base44Client';
 import { motion, AnimatePresence } from 'framer-motion';
 
-const ADMIN_EMAILS = ['info@spicey.live', 'valondervishi13@gmail.com'];
+const ADMIN_EMAILS = ['info@spicey.live', 'valondervishi13@gmail.com', 'vlora.dervisi@gmail.com'];
 
 export default function AdminUsers() {
   const navigate = useNavigate();

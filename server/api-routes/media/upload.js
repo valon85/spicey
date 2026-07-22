@@ -1,5 +1,5 @@
 import { handleOptions, sendJson, setCors } from '../_lib/http.js';
-import { getSupabaseUser, requireSupabaseEnv } from '../_lib/supabaseRest.js';
+import { apiErrorStatus, getSupabaseUser, requireSupabaseEnv } from '../_lib/supabaseRest.js';
 import { readMultipartFile } from '../_lib/multipart.js';
 
 const SUPABASE_URL = (process.env.SUPABASE_URL || '').replace(/\/$/, '');
@@ -52,6 +52,9 @@ export default async function handler(req, res) {
       file_url: publicUrl,
     });
   } catch (error) {
-    return sendJson(res, 400, { error: error.message || 'Upload failed' });
+    return sendJson(res, apiErrorStatus(error), {
+      error: error.message || 'Upload failed',
+      code: error.code || 'UPLOAD_FAILED',
+    });
   }
 }

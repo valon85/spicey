@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Home, MessageCircle, User, Zap, X, Bell } from 'lucide-react';
 import CreateHub from './CreateHub';
+import { base44 } from '@/api/base44Client';
 
 const HIDDEN_PATHS = ['/live', '/stories', '/create-text', '/create-youtube', '/create-story-photo', '/create-story-video', '/create-photo', '/create-video', '/create-v2', '/reels', '/create'];
 
@@ -11,31 +12,56 @@ export default function BottomNav() {
   const [hubOpen, setHubOpen] = useState(false);
   const [isLightMode, setIsLightMode] = useState(false);
   const [keyboardOpen, setKeyboardOpen] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  useEffect(() => {
+    let cancelled = false;
+    const refreshUnread = async () => {
+      try {
+        const response = await base44.functions.invoke('getUserChats', {});
+        const chats = response.data?.chats || response.data || [];
+        const total = chats.reduce((sum, chat) => sum + Number(chat.unread_count || 0), 0);
+        if (!cancelled) setUnreadCount(total);
+      } catch (_) {}
+    };
+    refreshUnread();
+    const timer = setInterval(refreshUnread, 5000);
+    return () => { cancelled = true; clearInterval(timer); };
+  }, [location.pathname]);
 
   useEffect(() => {
     const handleFocusIn = (e) => {
       const target = e.target;
-      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') {
-        const isMessagesPage = window.location.pathname.startsWith('/messages');
-        if (isMessagesPage) setKeyboardOpen(true);
+      if (target?.tagName === 'INPUT' || target?.tagName === 'TEXTAREA' || target?.isContentEditable) {
+        setKeyboardOpen(true);
       }
     };
     const handleFocusOut = (e) => {
       const target = e.target;
-      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') {
+      if (target?.tagName === 'INPUT' || target?.tagName === 'TEXTAREA' || target?.isContentEditable) {
         setTimeout(() => {
           const activeEl = document.activeElement;
-          const isInput = activeEl?.tagName === 'INPUT' || activeEl?.tagName === 'TEXTAREA';
-          const isMessagesPage = window.location.pathname.startsWith('/messages');
-          setKeyboardOpen(isInput && isMessagesPage);
+          const isInput = activeEl?.tagName === 'INPUT' || activeEl?.tagName === 'TEXTAREA' || activeEl?.isContentEditable;
+          setKeyboardOpen(Boolean(isInput));
         }, 50);
+      }
+    };
+    const handleViewportResize = () => {
+      const viewport = window.visualViewport;
+      if (!viewport) return;
+      const keyboardLikelyOpen = viewport.height < window.innerHeight - 120;
+      if (keyboardLikelyOpen) setKeyboardOpen(true);
+      else if (!(document.activeElement?.tagName === 'INPUT' || document.activeElement?.tagName === 'TEXTAREA' || document.activeElement?.isContentEditable)) {
+        setKeyboardOpen(false);
       }
     };
     document.addEventListener('focusin', handleFocusIn);
     document.addEventListener('focusout', handleFocusOut);
+    window.visualViewport?.addEventListener('resize', handleViewportResize);
     return () => {
       document.removeEventListener('focusin', handleFocusIn);
       document.removeEventListener('focusout', handleFocusOut);
+      window.visualViewport?.removeEventListener('resize', handleViewportResize);
     };
   }, []);
 
@@ -143,6 +169,15 @@ export default function BottomNav() {
           {/* Messages */}
           <NavBtn to="/messages" active={isMsgs}>
             <MessageCircle className="w-[26px] h-[26px]" style={iconStyle(isMsgs)} />
+            {unreadCount > 0 && (
+              <span style={{
+                position: 'absolute', top: 2, right: 6, minWidth: 18, height: 18,
+                padding: '0 5px', borderRadius: 10, display: 'flex', alignItems: 'center',
+                justifyContent: 'center', background: 'linear-gradient(135deg,#ff3b30,#ff2d8d)',
+                color: '#fff', fontSize: 10, fontWeight: 900, border: 'none',
+                boxShadow: '0 0 10px rgba(255,45,120,.85)'
+              }}>{unreadCount > 99 ? '99+' : unreadCount}</span>
+            )}
           </NavBtn>
 
           {/* Center Orb — Create */}

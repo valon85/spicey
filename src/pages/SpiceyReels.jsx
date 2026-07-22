@@ -4,14 +4,85 @@ import { base44 } from '@/api/base44Client';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   ArrowLeft, Heart, MessageCircle, Share2, Volume2, VolumeX,
-  Loader2, AlertCircle, Plus, Flame, MoreVertical, Trash2, Youtube
+  Loader2, AlertCircle, Plus, MoreVertical, Trash2, Youtube,
+  Search, Eye, Pause, Play
 } from 'lucide-react';
-import SideAction from '@/components/feed/SideAction';
 import CommentsSheet from '@/components/feed/CommentsSheet';
 import ShareSheet from '@/components/panels/ShareSheet';
 import DeleteConfirmSheet from '@/components/shared/DeleteConfirmSheet';
 import YouTubeReelItem from '@/components/reels/YouTubeReelItem';
 import { toast } from 'sonner';
+
+const SPICEY_REEL_REACTION_STORE_KEY = 'spicey_reel_reactions_v2';
+const YOUTUBE_REEL_QUERIES = [
+  'viral shorts',
+  'travel shorts',
+  'fashion shorts',
+  'city night shorts',
+  'dance shorts',
+  'music shorts',
+  'food shorts',
+  'luxury lifestyle shorts',
+  'funny short videos',
+];
+
+function currentYouTubeReelQuery() {
+  const slot = Math.floor(Date.now() / (1000 * 60 * 60 * 6));
+  return YOUTUBE_REEL_QUERIES[slot % YOUTUBE_REEL_QUERIES.length];
+}
+
+function rotateReelList(items = []) {
+  if (!items.length) return [];
+  const slot = Math.floor(Date.now() / (1000 * 60 * 60 * 6));
+  const start = slot % items.length;
+  return [...items.slice(start), ...items.slice(0, start)];
+}
+
+const compactCount = (value) => {
+  const count = Number(value || 0);
+  if (count >= 1000000) return `${(count / 1000000).toFixed(1)}M`;
+  if (count >= 1000) return `${(count / 1000).toFixed(count >= 10000 ? 0 : 1)}K`;
+  return String(count);
+};
+
+function ClipAction({ icon: Icon, count, active, onClick, label }) {
+  return (
+    <button type="button" onClick={(event) => { event.stopPropagation(); onClick?.(); }} className="spicey-clip-action" aria-label={label}>
+      <span className={`spicey-clip-action-circle${active ? ' active' : ''}`}>
+        <Icon size={27} strokeWidth={2.15} fill={active ? 'currentColor' : 'none'} />
+      </span>
+      <span className="spicey-clip-action-count">{compactCount(count)}</span>
+    </button>
+  );
+}
+
+function ClipCaption({ text }) {
+  if (!text) return null;
+  return <p className="spicey-clip-caption">{String(text).split(/(#[\p{L}\p{N}_]+)/gu).map((part, index) => part.startsWith('#') ? <span key={`${part}-${index}`}>{part}</span> : part)}</p>;
+}
+
+function getSpiceyReelKey(reel) {
+  const raw = reel?.id || reel?.youtubeVideoId || reel?.youtube_video_id || reel?.video_url || reel?.image_url || reel?.caption || 'reel';
+  return String(raw).replace(/\s+/g, '-').slice(0, 180);
+}
+
+function readSpiceyReelReactionStore() {
+  try {
+    return JSON.parse(localStorage.getItem(SPICEY_REEL_REACTION_STORE_KEY) || '{}') || {};
+  } catch {
+    return {};
+  }
+}
+
+function writeSpiceyReelReactionState(reelKey, state) {
+  try {
+    const store = readSpiceyReelReactionStore();
+    store[reelKey] = { ...(store[reelKey] || {}), ...state, updatedAt: Date.now() };
+    localStorage.setItem(SPICEY_REEL_REACTION_STORE_KEY, JSON.stringify(store));
+  } catch {
+    // UI still updates even if private mode blocks storage.
+  }
+}
 
 /* ─────────────────────────────────────────────────────────────────────
    Photo reel — auto-slides + Ken Burns zoom so photos feel alive
@@ -130,7 +201,7 @@ function PhotoReel({ urls, musicUrl, isMuted, externalMusicRef }) {
 function ReelItem({
   reel, isMuted, onMuteToggle, audioUnlocked,
   currentUser, following, onFollow,
-  liked, onLike, fired, onFire,
+  liked, onLike, likesCount, fired, onFire, fireCount,
   onComment, onShare, onDelete, onVideoEnd,
 }) {
   const videoRef = useRef(null);
@@ -140,6 +211,8 @@ function ReelItem({
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [videoDuration, setVideoDuration] = useState(0);
+  const [videoTime, setVideoTime] = useState(0);
+  const [isPaused, setIsPaused] = useState(false);
 
   const isOwner = currentUser && (currentUser.id === reel.author_id || currentUser.role === 'admin');
 
@@ -147,7 +220,7 @@ function ReelItem({
     setDeleting(true);
     try {
       await base44.entities.Post.delete(reel.id);
-      toast.success('Reel deleted');
+      toast.success('Clip deleted');
       setShowDeleteConfirm(false);
       onDelete?.(reel.id);
     } catch {
@@ -191,6 +264,7 @@ function ReelItem({
    console.log('[ReelVideo] Setting up autoplay for reel:', reel.id);
 
    const handleLoadedMetadata = () => { if (!destroyed) setVideoDuration(video.duration || 0); };
+   const handleTimeUpdate = () => { if (!destroyed) setVideoTime(video.currentTime || 0); };
    const handleEnded = () => {
      if (destroyed) return;
      console.log('[ReelVideo] Video ended, triggering onVideoEnd');
@@ -208,6 +282,7 @@ function ReelItem({
    };
 
    video.addEventListener('loadedmetadata', handleLoadedMetadata);
+   video.addEventListener('timeupdate', handleTimeUpdate);
    video.addEventListener('ended', handleEnded);
    video.addEventListener('play', () => { if (playCheckTimeout) clearTimeout(playCheckTimeout); });
    video.addEventListener('playing', handlePlayCheck);
@@ -275,6 +350,7 @@ function ReelItem({
      destroyed = true;
      if (playCheckTimeout) clearTimeout(playCheckTimeout);
      video.removeEventListener('loadedmetadata', handleLoadedMetadata);
+     video.removeEventListener('timeupdate', handleTimeUpdate);
      video.removeEventListener('ended', handleEnded);
      video.removeEventListener('play', handlePlayCheck);
      video.removeEventListener('playing', handlePlayCheck);
@@ -313,8 +389,16 @@ function ReelItem({
     }
   }, [isMuted, isPhoto]);
 
-  const avatarSrc = reel.author_avatar
-    || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=128&h=128&fit=crop&crop=face';
+  const displayAuthorName = reel.author_name || reel.author_username || 'Spicey Creator';
+  const fallbackAvatar = `https://ui-avatars.com/api/?name=${encodeURIComponent(displayAuthorName)}&background=ff2b83&color=ffffff&size=160`;
+  const rawAvatar = String(reel.author_avatar || reel.avatar_url || '').trim();
+  const avatarSrc = rawAvatar && !['?', 'null', 'undefined'].includes(rawAvatar.toLowerCase())
+    ? rawAvatar
+    : fallbackAvatar;
+  const handleAvatarError = (event) => {
+    event.currentTarget.onerror = null;
+    event.currentTarget.src = fallbackAvatar;
+  };
 
   return (
     <div className="relative bg-black w-full h-full">
@@ -387,7 +471,7 @@ function ReelItem({
               onClick={() => { setShowMenu(false); setShowDeleteConfirm(true); }}
               className="w-full flex items-center gap-3 px-4 py-3.5 rounded-2xl text-red-400 font-semibold text-sm mb-2"
               style={{ background: 'rgba(220,30,30,0.1)', border: '1px solid rgba(220,30,30,0.25)' }}>
-              <Trash2 className="w-5 h-5" /> Delete Reel
+              <Trash2 className="w-5 h-5" /> Delete Clip
             </button>
             <button
               onClick={() => setShowMenu(false)}
@@ -405,89 +489,73 @@ function ReelItem({
         onClose={() => setShowDeleteConfirm(false)}
         onConfirm={handleDelete}
         loading={deleting}
-        title="Delete this Reel?"
-        description="This reel will be permanently removed. This cannot be undone."
+        title="Delete this Clip?"
+        description="This clip will be permanently removed. This cannot be undone."
       />
 
-      {/* Mute button — show for ALL post types */}
-      <button
-        onClick={(e) => { e.preventDefault(); e.stopPropagation(); onMuteToggle(); }}
-        onTouchStart={(e) => { e.preventDefault(); e.stopPropagation(); }}
-        onTouchEnd={(e) => { e.preventDefault(); e.stopPropagation(); }}
-        className="absolute right-4 z-40 active:scale-125 transition-transform duration-150"
-        style={{ top: 'calc(max(12px, env(safe-area-inset-top)) + 56px)' }}
-      >
-        {isMuted
-          ? <VolumeX className="w-7 h-7 text-white/60" style={{ filter: 'drop-shadow(0 2px 6px rgba(0,0,0,0.9))' }} />
-          : <Volume2 className="w-7 h-7 text-white" style={{ filter: 'drop-shadow(0 2px 6px rgba(0,0,0,0.9))' }} />}
-      </button>
-
-      {/* Video duration badge */}
-      {!isPhoto && videoDuration > 0 && (
-        <div className="absolute bottom-4 right-4 z-40 px-2.5 py-1 rounded-lg"
-          style={{ background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(8px)', border: '1px solid rgba(255,255,255,0.15)' }}>
-          <span className="text-white text-xs font-bold">
-            {Math.floor(videoDuration)}s
-          </span>
-        </div>
-      )}
-
       {/* Right actions */}
-      <div className="absolute right-3 z-40 flex flex-col items-center gap-6"
-        style={{ bottom: 'max(2rem, env(safe-area-inset-bottom) + 1.5rem)' }}>
+      <div className="spicey-clip-actions">
         <div className="relative">
-          <div className="w-14 h-14 rounded-full p-[2.5px]"
+          <div className="spicey-clip-avatar-ring"
             style={{ background: 'conic-gradient(from 0deg,#ff5500,#e91e8c,#7700bb,#ff5500)', boxShadow: '0 0 20px rgba(255,80,0,0.6)' }}>
-            <img src={avatarSrc} alt="" className="w-full h-full rounded-full object-cover border-[3px] border-black" />
+            <img src={avatarSrc} alt={displayAuthorName} onError={handleAvatarError} />
           </div>
           {!following && reel.author_id !== currentUser?.id && (
             <button onClick={(e) => { e.stopPropagation(); onFollow(); }}
-              className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-7 h-7 rounded-full flex items-center justify-center z-10 active:scale-90 transition-transform"
+              className="spicey-clip-avatar-plus"
               style={{ background: 'linear-gradient(135deg,#ff5500,#e91e8c)', boxShadow: '0 0 12px rgba(255,80,0,0.8)' }}>
-              <Plus className="w-4 h-4 text-white" />
+              <Plus size={16} strokeWidth={3} />
             </button>
           )}
         </div>
-        <div onClick={(e) => e.stopPropagation()}>
-          <SideAction icon={Heart} count={reel.likes_count || 0} onClick={onLike} active={liked} type="heart" />
-        </div>
-        <div onClick={(e) => e.stopPropagation()}>
-          <SideAction icon={Flame} count={reel.fire_count || 0} onClick={onFire} active={fired} type="fire" />
-        </div>
-        <div onClick={(e) => e.stopPropagation()}>
-          <SideAction icon={MessageCircle} count={reel.comments_count || 0} onClick={onComment} active={false} type="comment" />
-        </div>
-        <div onClick={(e) => e.stopPropagation()}>
-          <SideAction icon={Share2} count={reel.shares_count || 0} onClick={onShare} active={false} type="share" />
-        </div>
+        <ClipAction icon={Heart} count={likesCount ?? reel.likes_count ?? 0} onClick={onLike} active={liked} label="Like" />
+        <ClipAction icon={MessageCircle} count={reel.comments_count || 0} onClick={onComment} label="Comments" />
+        <ClipAction icon={Share2} count={reel.shares_count || 0} onClick={onShare} label="Share" />
+        <button type="button" onClick={(event) => event.stopPropagation()} className="spicey-clip-more" aria-label="More"><MoreVertical size={27} /></button>
       </div>
 
-      {/* Bottom info — caption, location, music */}
-      <div className="absolute left-4 right-20 z-40 pointer-events-none"
-        style={{ bottom: 'calc(max(2rem, env(safe-area-inset-bottom) + 1.5rem) + 200px)' }}>
-        <p className="font-bold text-sm" style={{ color: '#ffffff', textShadow: '0 1px 6px rgba(0,0,0,0.9)' }}>
-           @{reel.author_username || reel.author_name || 'user'}
-        </p>
-        {reel.caption && (
-          <p className="text-xs leading-snug line-clamp-3 mt-0.5" style={{ color: '#ffffff', textShadow: '0 1px 4px rgba(0,0,0,0.9)' }}>{reel.caption}</p>
-        )}
+      {/* Profile and caption */}
+      <div className="spicey-clip-details">
+        <div className="spicey-clip-profile-row">
+          <img src={avatarSrc} alt={displayAuthorName} onError={handleAvatarError} />
+          <strong>{displayAuthorName}</strong>
+          <span className="spicey-clip-verified" aria-label="Verified">✓</span>
+          {!following && reel.author_id !== currentUser?.id && <button type="button" onClick={(event) => { event.stopPropagation(); onFollow(); }}>Follow</button>}
+        </div>
+        <ClipCaption text={reel.caption} />
         {reel.location && (
-          <div className="flex items-center gap-1 mt-1">
-            <span className="text-[10px]">📍</span>
-            <p className="text-white/80 text-[11px]" style={{ textShadow: '0 1px 4px rgba(0,0,0,0.9)' }}>{reel.location}</p>
-          </div>
+          <p className="spicey-clip-location">📍 {reel.location}</p>
         )}
         {reel.music_title && (
-          <div className="flex items-center gap-1.5 mt-1.5 px-2.5 py-1 rounded-full w-fit"
-            style={{ background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(8px)', border: '1px solid rgba(255,255,255,0.15)' }}>
-            <div className="w-3 h-3 rounded-full flex-shrink-0"
-              style={{ background: 'linear-gradient(135deg,#ff5500,#e91e8c)', animation: 'spin 2s linear infinite' }} />
-            <p className="text-white text-[11px] font-semibold truncate" style={{ maxWidth: 160 }}>
-              {reel.music_title}{reel.music_artist ? ` · ${reel.music_artist}` : ''}
-            </p>
-          </div>
+          <p className="spicey-clip-music">♫ {reel.music_title}{reel.music_artist ? ` · ${reel.music_artist}` : ''}</p>
         )}
       </div>
+
+      {!isPhoto && !isTextOnly && videoDuration > 0 && (
+        <div className="spicey-clip-player-controls">
+          <button
+            type="button"
+            onClick={(event) => {
+              event.stopPropagation();
+              const video = videoRef.current;
+              if (!video) return;
+              if (video.paused) { video.play().catch(() => {}); setIsPaused(false); }
+              else { video.pause(); setIsPaused(true); }
+            }}
+            className="spicey-clip-play"
+          >
+            {isPaused ? <Play className="w-5 h-5" fill="currentColor" /> : <Pause className="w-5 h-5" fill="currentColor" />}
+          </button>
+          <span>0:{String(Math.floor(videoTime)).padStart(2, '0')}</span>
+          <div className="spicey-clip-progress">
+            <div style={{ width: `${Math.min(100, (videoTime / videoDuration) * 100)}%` }}><i /></div>
+          </div>
+          <span>0:{String(Math.floor(videoDuration)).padStart(2, '0')}</span>
+          <button type="button" onClick={(event) => { event.stopPropagation(); onMuteToggle(); }} className="spicey-clip-volume">
+            {isMuted ? <VolumeX size={25} /> : <Volume2 size={25} />}
+          </button>
+        </div>
+      )}
     </div>
   );
 }
@@ -507,7 +575,10 @@ export default function SpiceyReels() {
   const [showShare, setShowShare] = useState(false);
   const [likedReels, setLikedReels] = useState({});
   const [firedReels, setFiredReels] = useState({});
+  const [reelLikeCounts, setReelLikeCounts] = useState({});
+  const [reelFireCounts, setReelFireCounts] = useState({});
   const [followingMap, setFollowingMap] = useState({});
+  const [clipTab, setClipTab] = useState('For You');
   const [currentUser, setCurrentUser] = useState(null);
   const [deletedIds, setDeletedIds] = useState(new Set());
   const autoNextRef = useRef(null);
@@ -548,8 +619,11 @@ export default function SpiceyReels() {
     if (ytLoaded || ytLoading) return;
     setYtLoading(true);
     try {
-      const res = await base44.functions.invoke('getYouTubeReels', {});
-      const videos = res?.data?.videos || [];
+      const res = await base44.functions.invoke('getYouTubeReels', {
+        query: currentYouTubeReelQuery(),
+        limit: 12,
+      });
+      const videos = rotateReelList(res?.data?.videos || []);
       console.log('[SpiceyReels] YouTube fallback loaded:', videos.length, 'videos');
       setYoutubeVideos(videos);
     } catch (e) {
@@ -591,26 +665,85 @@ export default function SpiceyReels() {
   }, []);
 
   const spiceyReels = rawReels.filter(r => !deletedIds.has(r.id));
+  const requestedCreatorId = new URLSearchParams(window.location.search).get('creator');
+  const orderedSpiceyReels = requestedCreatorId
+    ? [...spiceyReels].sort((a, b) => {
+        const aMatches = String(a.author_id || a.user_id || '') === requestedCreatorId;
+        const bMatches = String(b.author_id || b.user_id || '') === requestedCreatorId;
+        return Number(bMatches) - Number(aMatches);
+      })
+    : spiceyReels;
   // Combined feed: real Spicey reels first, then YouTube fallback
   const allReels = [
-    ...spiceyReels.map(r => ({ ...r, _source: 'spicey' })),
+    ...orderedSpiceyReels.map(r => ({ ...r, _source: 'spicey' })),
     ...youtubeVideos.map(v => ({ ...v, id: `yt_${v.youtubeVideoId}`, _source: 'youtube' })),
   ];
   const allReelsRef = useRef([]);
   allReelsRef.current = allReels;
 
+  // Deep-link a notification to the exact Spicey reel once the feed arrives.
+  useEffect(() => {
+    const requestedReelId = new URLSearchParams(window.location.search).get('reelId');
+    if (!requestedReelId || !allReels.length) return;
+    const requestedIndex = allReels.findIndex((reel) =>
+      String(reel.id) === requestedReelId ||
+      String(reel.post_id || '') === requestedReelId ||
+      String(reel.youtubeVideoId || '') === requestedReelId
+    );
+    if (requestedIndex >= 0) setCurrentIndex(requestedIndex);
+  }, [allReels.length, rawReels, youtubeVideos]);
+
   const spiceyCount = spiceyReels.length;
   const ytCount = youtubeVideos.length;
 
-  // Keep the selected reel valid if an unavailable YouTube result is removed.
   useEffect(() => {
-    setCurrentIndex((index) => Math.max(0, Math.min(index, allReelsRef.current.length - 1)));
-  }, [allReels.length]);
+    if (!allReels.length) return;
+    const saved = readSpiceyReelReactionStore();
+    const nextLiked = {};
+    const nextFired = {};
+    const nextLikes = {};
+    const nextFires = {};
 
-  const handleYouTubeUnavailable = useCallback((videoId, errorCode) => {
-    console.warn('[SpiceyReels] Removing unavailable YouTube video:', videoId, errorCode);
-    setYoutubeVideos((videos) => videos.filter((video) => video.youtubeVideoId !== videoId));
-  }, []);
+    allReels.forEach((item) => {
+      const key = getSpiceyReelKey(item);
+      const savedState = saved[key];
+      nextLiked[key] = !!savedState?.liked;
+      nextFired[key] = !!savedState?.fired;
+      nextLikes[key] = Number.isFinite(savedState?.likesCount) ? savedState.likesCount : Number(item.likes_count || 0);
+      nextFires[key] = Number.isFinite(savedState?.fireCount) ? savedState.fireCount : Number(item.fire_count || 0);
+    });
+
+    setLikedReels(nextLiked);
+    setFiredReels(nextFired);
+    setReelLikeCounts(nextLikes);
+    setReelFireCounts(nextFires);
+  }, [rawReels, youtubeVideos]);
+
+  const handleReelReaction = useCallback((item, type) => {
+    const key = getSpiceyReelKey(item);
+    const activeMap = type === 'like' ? likedReels : firedReels;
+    const countMap = type === 'like' ? reelLikeCounts : reelFireCounts;
+    const setActiveMap = type === 'like' ? setLikedReels : setFiredReels;
+    const setCountMap = type === 'like' ? setReelLikeCounts : setReelFireCounts;
+    const baseCount = type === 'like' ? item.likes_count : item.fire_count;
+    const wasActive = !!activeMap[key];
+    const nextActive = !wasActive;
+    const currentCount = Number(countMap[key] ?? baseCount ?? 0);
+    const nextCount = nextActive ? currentCount + 1 : Math.max(0, currentCount - 1);
+
+    setActiveMap(prev => ({ ...prev, [key]: nextActive }));
+    setCountMap(prev => ({ ...prev, [key]: nextCount }));
+    writeSpiceyReelReactionState(key, {
+      liked: type === 'like' ? nextActive : !!likedReels[key],
+      fired: type === 'fire' ? nextActive : !!firedReels[key],
+      likesCount: type === 'like' ? nextCount : Number(reelLikeCounts[key] ?? item.likes_count ?? 0),
+      fireCount: type === 'fire' ? nextCount : Number(reelFireCounts[key] ?? item.fire_count ?? 0),
+    });
+
+    if (item._source !== 'youtube' && item.id && currentUser) {
+      base44.functions.invoke('toggleReaction', { post_id: item.id, type }).catch(() => {});
+    }
+  }, [currentUser, firedReels, likedReels, reelFireCounts, reelLikeCounts]);
 
   const goNext = useCallback(() => {
     setSlideDir(1);
@@ -722,7 +855,7 @@ export default function SpiceyReels() {
         <ArrowLeft className="w-5 h-5 text-white" />
       </button>
       <Loader2 className="w-10 h-10 text-pink-500 animate-spin" />
-      <p className="text-white/60 text-sm">Loading Reels…</p>
+      <p className="text-white/60 text-sm">Loading Spicey Clips…</p>
     </div>
   );
 
@@ -736,8 +869,8 @@ export default function SpiceyReels() {
         <ArrowLeft className="w-5 h-5 text-white" />
       </button>
       <span className="text-4xl">🎬</span>
-      <p className="text-white/60 text-lg font-semibold">No reels available</p>
-      <p className="text-white/35 text-sm">Be the first to post a reel!</p>
+      <p className="text-white/60 text-lg font-semibold">No clips available</p>
+      <p className="text-white/35 text-sm">Be the first to post a Spicey Clip!</p>
       <button onClick={() => navigate('/')} className="mt-2 px-6 py-3 rounded-full font-bold text-white" style={{ background: 'linear-gradient(135deg, #ff5500, #e91e8c)' }}>
         Go to Feed
       </button>
@@ -778,10 +911,150 @@ export default function SpiceyReels() {
           from { transform: rotate(0deg); }
           to   { transform: rotate(360deg); }
         }
+        .spicey-clips-header {
+          padding-bottom: 34px;
+          background: linear-gradient(180deg, rgba(3,2,8,.88) 0%, rgba(3,2,8,.52) 58%, transparent 100%);
+        }
+        .spicey-clips-shell {
+          width: min(100vw, 480px);
+          left: 50% !important;
+          right: auto !important;
+          transform: translateX(-50%);
+          box-shadow: 0 0 80px rgba(231,25,126,.12);
+        }
+        .spicey-clips-brand {
+          height: 48px;
+          display: flex;
+          align-items: center;
+          gap: 5px;
+          border: 0;
+          padding: 0;
+          color: #fff;
+          background: transparent;
+        }
+        .spicey-clips-brand img { width: 42px; height: 42px; object-fit: contain; }
+        .spicey-clips-brand strong {
+          font-size: 23px;
+          line-height: 1;
+          font-weight: 950;
+          font-style: italic;
+          letter-spacing: -.06em;
+          background: linear-gradient(90deg,#ff5a12,#ff263c 44%,#f018a0);
+          -webkit-background-clip: text;
+          background-clip: text;
+          color: transparent;
+        }
+        .spicey-clips-brand span { font-size: 23px; font-weight: 500; letter-spacing: -.05em; color: #fff; }
+        .spicey-clips-round {
+          width: 42px;
+          height: 42px;
+          border: 0;
+          border-radius: 50%;
+          display: grid;
+          place-items: center;
+          color: #fff;
+          background: rgba(5,4,10,.3);
+        }
+        .spicey-clips-views {
+          height: 38px;
+          min-width: 72px;
+          padding: 0 12px;
+          border-radius: 999px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 6px;
+          color: #fff;
+          background: rgba(4,3,9,.46);
+          border: 1px solid rgba(255,255,255,.16);
+          backdrop-filter: blur(12px);
+          font-size: 13px;
+          font-weight: 750;
+        }
+        .spicey-clips-tabs {
+          display: flex;
+          gap: 25px;
+          margin-top: 9px;
+          padding: 0 18px 5px;
+          overflow-x: auto;
+          scrollbar-width: none;
+        }
+        .spicey-clips-tabs::-webkit-scrollbar { display: none; }
+        .spicey-clips-tabs button {
+          position: relative;
+          flex: 0 0 auto;
+          padding: 7px 0 10px;
+          border: 0;
+          color: rgba(255,255,255,.66);
+          background: transparent;
+          font-size: 13px;
+          font-weight: 650;
+        }
+        .spicey-clips-tabs button.active { color: #fff; }
+        .spicey-clips-tabs button.active::after {
+          content: '';
+          position: absolute;
+          left: 20%;
+          right: 20%;
+          bottom: 1px;
+          height: 2px;
+          border-radius: 999px;
+          background: #ff2b83;
+          box-shadow: 0 0 10px rgba(255,43,131,.9);
+        }
+        .spicey-clip-actions {
+          position: absolute; right: 13px; bottom: max(168px, calc(env(safe-area-inset-bottom) + 154px)); z-index: 40;
+          display: flex; flex-direction: column; align-items: center; gap: 13px; color: #fff;
+        }
+        .spicey-clip-avatar-ring { width: 56px; height: 56px; border-radius: 50%; padding: 2px; }
+        .spicey-clip-avatar-ring img { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; border: 3px solid #08060b; }
+        .spicey-clip-avatar-plus {
+          position: absolute; left: 50%; bottom: -8px; transform: translateX(-50%); z-index: 2;
+          width: 27px; height: 27px; border-radius: 50%; display: grid; place-items: center; border: 2px solid #100812; color: #fff;
+        }
+        .spicey-clip-action { border: 0; padding: 0; display: flex; flex-direction: column; align-items: center; gap: 3px; color: #fff; background: transparent; }
+        .spicey-clip-action-circle {
+          width: 52px; height: 52px; border-radius: 50%; display: grid; place-items: center;
+          background: rgba(9,6,13,.48); border: 1px solid rgba(255,255,255,.16); backdrop-filter: blur(13px);
+          box-shadow: 0 8px 24px rgba(0,0,0,.28); text-shadow: 0 2px 8px #000;
+        }
+        .spicey-clip-action-circle.active { color: #ff2b77; background: rgba(55,5,30,.62); border-color: rgba(255,43,119,.48); }
+        .spicey-clip-action-count { color: #fff; font-size: 12px; line-height: 1; font-weight: 750; text-shadow: 0 2px 7px #000; }
+        .spicey-clip-more { width: 50px; height: 36px; display: grid; place-items: center; border: 0; color: #fff; background: transparent; filter: drop-shadow(0 2px 7px #000); }
+        .spicey-clip-details {
+          position: absolute; left: 16px; right: 80px; bottom: max(78px, calc(env(safe-area-inset-bottom) + 68px)); z-index: 40;
+          color: #fff; text-shadow: 0 2px 9px rgba(0,0,0,.92); pointer-events: none;
+        }
+        .spicey-clip-profile-row { display: flex; align-items: center; gap: 8px; margin-bottom: 9px; pointer-events: auto; }
+        .spicey-clip-profile-row img { width: 39px; height: 39px; flex: 0 0 auto; object-fit: cover; border-radius: 50%; border: 2px solid #ff397f; }
+        .spicey-clip-profile-row strong { min-width: 0; max-width: 148px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 15px; }
+        .spicey-clip-profile-row button { margin-left: 5px; min-width: 76px; height: 32px; border-radius: 999px; border: 1px solid #ff2b83; color: #ff4b96; background: rgba(15,5,12,.42); font-size: 13px; font-weight: 750; backdrop-filter: blur(8px); }
+        .spicey-clip-verified { width: 17px; height: 17px; flex: 0 0 auto; border-radius: 5px; display: grid; place-items: center; color: #fff; background: linear-gradient(135deg,#b44cff,#7228eb); font-size: 11px; font-weight: 950; text-shadow: none; transform: rotate(8deg); }
+        .spicey-clip-caption { font-size: 14px; line-height: 1.35; font-weight: 550; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+        .spicey-clip-caption span { color: #ff2b78; font-weight: 750; }
+        .spicey-clip-location, .spicey-clip-music { margin-top: 5px; color: rgba(255,255,255,.9); font-size: 11px; font-weight: 650; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .spicey-clip-player-controls {
+          position: absolute; left: 13px; right: 12px; bottom: max(10px, env(safe-area-inset-bottom)); z-index: 45;
+          height: 55px; display: flex; align-items: center; gap: 10px; color: #fff;
+        }
+        .spicey-clip-player-controls > span { font-size: 12px; font-weight: 700; font-variant-numeric: tabular-nums; text-shadow: 0 2px 8px #000; }
+        .spicey-clip-play { width: 36px; height: 44px; flex: 0 0 auto; display: grid; place-items: center; border: 0; color: #fff; background: transparent; filter: drop-shadow(0 2px 7px #000); }
+        .spicey-clip-progress { position: relative; height: 5px; flex: 1; border-radius: 999px; background: rgba(255,255,255,.35); box-shadow: 0 2px 8px rgba(0,0,0,.5); }
+        .spicey-clip-progress > div { position: absolute; inset: 0 auto 0 0; min-width: 1px; border-radius: inherit; background: linear-gradient(90deg,#ff5c12,#ff1f88); }
+        .spicey-clip-progress i { position: absolute; right: -7px; top: 50%; width: 15px; height: 15px; transform: translateY(-50%); border-radius: 50%; background: #fff; box-shadow: 0 2px 10px rgba(0,0,0,.7); }
+        .spicey-clip-volume { width: 48px; height: 48px; flex: 0 0 auto; display: grid; place-items: center; border-radius: 50%; color: #fff; background: rgba(7,5,10,.52); border: 1px solid rgba(255,255,255,.17); backdrop-filter: blur(12px); }
+        @media (max-width: 380px) {
+          .spicey-clips-brand img { width: 36px; height: 36px; }
+          .spicey-clips-brand strong, .spicey-clips-brand span { font-size: 20px; }
+          .spicey-clips-tabs { gap: 20px; }
+          .spicey-clip-actions { right: 9px; gap: 10px; }
+          .spicey-clip-action-circle { width: 48px; height: 48px; }
+          .spicey-clip-details { left: 13px; right: 68px; }
+        }
       `}</style>
 
       <div
-        className="fixed inset-0 bg-black overflow-hidden"
+        className="fixed inset-y-0 bg-black overflow-hidden spicey-clips-shell"
         data-prevent-light-mode="true"
         onTouchStart={handleContainerTouchStart}
         onTouchMove={handleContainerTouchMove}
@@ -812,12 +1085,10 @@ export default function SpiceyReels() {
             <YouTubeReelItem
               key={`yt-${reel.youtubeVideoId}-${currentIndex}`}
               video={reel}
-              onBack={() => navigate('/')}
               onVideoEnd={() => {
                 setSlideDir(1);
                 setCurrentIndex(i => Math.min(allReelsRef.current.length - 1, i + 1));
               }}
-              onVideoUnavailable={handleYouTubeUnavailable}
             />
           ) : (
             <ReelItem
@@ -833,10 +1104,12 @@ export default function SpiceyReels() {
                 }
               }}
               currentUser={currentUser}
-              liked={!!likedReels[reel.id]}
-              onLike={() => setLikedReels(prev => ({ ...prev, [reel.id]: !prev[reel.id] }))}
-              fired={!!firedReels[reel.id]}
-              onFire={() => setFiredReels(prev => ({ ...prev, [reel.id]: !prev[reel.id] }))}
+              liked={!!likedReels[getSpiceyReelKey(reel)]}
+              likesCount={reelLikeCounts[getSpiceyReelKey(reel)] ?? reel.likes_count ?? 0}
+              onLike={() => handleReelReaction(reel, 'like')}
+              fired={!!firedReels[getSpiceyReelKey(reel)]}
+              fireCount={reelFireCounts[getSpiceyReelKey(reel)] ?? reel.fire_count ?? 0}
+              onFire={() => handleReelReaction(reel, 'fire')}
               onComment={() => setShowComments(true)}
               onShare={() => setShowShare(true)}
               onDelete={handleReelDeleted}
@@ -853,29 +1126,24 @@ export default function SpiceyReels() {
           )}
         </div>
 
-        {/* Header — only show for Spicey reels (YouTube item has its own header) */}
-        {!isYouTubeReel && (
-        <div className="absolute top-0 left-0 right-0 z-50 pointer-events-none"
-          style={{ paddingTop: 'max(12px, env(safe-area-inset-top))', background: 'linear-gradient(to bottom, rgba(0,0,0,0.85) 0%, transparent 100%)' }}>
-          <div className="flex items-center justify-between px-4 pb-2 pointer-events-auto">
-            <button
-              onClick={() => navigate('/')}
-              className="w-11 h-11 rounded-full flex items-center justify-center active:scale-90 transition-transform"
-              style={{ background: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(10px)', border: '1.5px solid rgba(255,255,255,0.2)', boxShadow: '0 2px 12px rgba(0,0,0,0.6)' }}>
-              <ArrowLeft className="w-5 h-5 text-white" />
+        <header className="absolute top-0 left-0 right-0 z-50 pointer-events-none spicey-clips-header"
+          style={{ paddingTop: 'max(12px, env(safe-area-inset-top))' }}>
+          <div className="flex items-center justify-between px-4 pointer-events-auto">
+            <button type="button" onClick={() => navigate('/')} className="spicey-clips-brand" aria-label="Back to Spicey">
+              <img src="/spicey-assets/spicey-sidebar-neon-logo.png" alt="" />
+              <strong>SPICEY</strong><span>clips</span>
             </button>
             <div className="flex items-center gap-2">
-              <h1 className="text-white font-bold text-base tracking-widest">REELS</h1>
-              {/* Spicey badge for user-uploaded content */}
-              <div className="px-2 py-0.5 rounded-full text-[10px] font-bold text-white"
-                style={{ background: 'linear-gradient(135deg, #ff5500, #e91e8c)' }}>
-                Spicey
-              </div>
+              <button type="button" onClick={() => navigate('/explore')} className="spicey-clips-round" aria-label="Search clips"><Search className="w-5 h-5" /></button>
+              <div className="spicey-clips-views"><Eye className="w-4 h-4" /><span>{allReels.length > 999 ? `${(allReels.length / 1000).toFixed(1)}K` : allReels.length}</span></div>
             </div>
-            <div className="w-11" />
           </div>
-        </div>
-        )}
+          <nav className="spicey-clips-tabs pointer-events-auto" aria-label="Spicey Clips categories">
+            {['For You', 'Following', 'Trending', 'Music', 'Travel', 'Funny'].map((tab) => (
+              <button type="button" key={tab} className={clipTab === tab ? 'active' : ''} onClick={() => setClipTab(tab)}>{tab}</button>
+            ))}
+          </nav>
+        </header>
 
         {/* YouTube loading indicator */}
         {ytLoading && (

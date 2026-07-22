@@ -1,10 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { ChevronLeft, Send, Phone, Video, Mic, Image as ImageIcon, Smile, Check, CheckCheck, MoreVertical, Camera, Film, MapPin, Gift, Play } from 'lucide-react';
+import { ChevronLeft, Send, Phone, Video, Mic, Image as ImageIcon, Smile, Check, CheckCheck, Heart, Camera, Film, MapPin, Gift, Play } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { base44 } from '@/api/base44Client';
 import { useAuth } from '@/lib/AuthContext';
-import { Capacitor } from '@capacitor/core';
-import { Keyboard, KeyboardResize } from '@capacitor/keyboard';
+import CallSheet from '../panels/CallSheet.jsx';
 
 function useIsLightMode() {
   const [isLight, setIsLight] = React.useState(() => document.documentElement.classList.contains('light-mode'));
@@ -251,14 +250,13 @@ function MsgBubble({ msg, convoImg, onDelete, onReact, isLight }) {
 export default function ChatView({ convo, onBack }) {
   const { setActiveCall } = useAuth();
   const isLight = useIsLightMode();
-  const [messages, setMessages] = useState(INITIAL_MESSAGES);
+  const [messages, setMessages] = useState(convo.previewMessages || INITIAL_MESSAGES);
   const [input, setInput] = useState('');
   const [mediaPreview, setMediaPreview] = useState(null);
   const [currentUser, setCurrentUser] = useState(null);
   const [sending, setSending] = useState(false);
   const [chatId, setChatId] = useState(convo.chatId || null);
   const [keyboardOpen, setKeyboardOpen] = useState(false);
-  const [viewport, setViewport] = useState(() => ({ height: window.innerHeight, offsetTop: 0 }));
   const [showEmojiPanel, setShowEmojiPanel] = useState(false);
   const [emojiCategory, setEmojiCategory] = useState(0);
   const chatIdRef = useRef(convo.chatId || null);
@@ -268,19 +266,24 @@ export default function ChatView({ convo, onBack }) {
   const videoInputRef = useRef(null);
   const deletedIdsRef = useRef(new Set());
   const inputRef = useRef(null);
-  const didInitialScrollRef = useRef(false);
 
   const mapMessages = (msgs, userId, prevMsgs = []) => {
     const prevReactions = Object.fromEntries(prevMsgs.map(m => [m.id, m.reaction]));
-    return msgs
+    return [...msgs]
       .filter(m => !deletedIdsRef.current.has(m.id))
+      .sort((a, b) => {
+        const aTime = new Date(a.created_at || a.created_date || a.inserted_at || 0).getTime();
+        const bTime = new Date(b.created_at || b.created_date || b.inserted_at || 0).getTime();
+        if (aTime !== bTime) return aTime - bTime;
+        return String(a.id || '').localeCompare(String(b.id || ''));
+      })
       .map(m => ({
         id: m.id,
         text: m.text,
         image: m.image_url && !m.image_url.match(/\.(mp4|mov|webm|avi)$/i) ? m.image_url : null,
         video: m.image_url && m.image_url.match(/\.(mp4|mov|webm|avi)$/i) ? m.image_url : null,
         from: m.sender_id === userId ? 'me' : 'them',
-        time: timeAgo(m.created_date),
+        time: timeAgo(m.created_at || m.created_date || m.inserted_at),
         read: m.read_by?.includes(userId) || false,
         senderId: m.sender_id,
         isTemp: false,
@@ -317,33 +320,15 @@ export default function ChatView({ convo, onBack }) {
     }
   }, []);
 
-  // Keep the composer attached to the real iOS visual viewport and remove the
-  // previous/next/done accessory strip that creates the large keyboard gap.
-  useEffect(() => {
-    if (Capacitor.isNativePlatform()) {
-      Keyboard.setResizeMode({ mode: KeyboardResize.Native }).catch(() => {});
-      Keyboard.setAccessoryBarVisible({ isVisible: false }).catch(() => {});
-    }
-    const visualViewport = window.visualViewport;
-    const updateViewport = () => {
-      const height = Math.round(visualViewport?.height || window.innerHeight);
-      const offsetTop = Math.round(visualViewport?.offsetTop || 0);
-      setViewport({ height, offsetTop });
-      setKeyboardOpen(window.innerHeight - height > 100 || document.activeElement === inputRef.current);
-    };
-    updateViewport();
-    visualViewport?.addEventListener('resize', updateViewport);
-    visualViewport?.addEventListener('scroll', updateViewport);
-    window.addEventListener('resize', updateViewport);
-    return () => {
-      visualViewport?.removeEventListener('resize', updateViewport);
-      visualViewport?.removeEventListener('scroll', updateViewport);
-      window.removeEventListener('resize', updateViewport);
-    };
-  }, []);
-
   // Load current user and chat history
   useEffect(() => {
+    setMessages([]);
+    setChatId(null);
+    chatIdRef.current = null;
+    currentUserRef.current = null;
+
+    if (convo.isPreview) return;
+
     const loadChat = async () => {
       const user = await base44.auth.me();
       setCurrentUser(user);
@@ -366,6 +351,7 @@ export default function ChatView({ convo, onBack }) {
         const msgRes = await base44.functions.invoke('getChatMessages', { chat_id: resolvedChatId });
         const msgs = msgRes.data?.messages || [];
         setMessages(prev => mapMessages(msgs, user.id, prev));
+        await base44.functions.invoke('markChatRead', { chat_id: resolvedChatId }).catch(() => {});
       } catch (err) {
         console.error('Failed to load chat:', err);
       }
@@ -382,8 +368,11 @@ export default function ChatView({ convo, onBack }) {
         const msgRes = await base44.functions.invoke('getChatMessages', { chat_id: cid });
         const msgs = msgRes.data?.messages || [];
         setMessages(prev => mapMessages(msgs, usr.id, prev));
+        if (msgs.some((message) => message.sender_id !== usr.id && !(message.read_by || []).includes(usr.id))) {
+          await base44.functions.invoke('markChatRead', { chat_id: cid }).catch(() => {});
+        }
       } catch (_) {}
-    }, 15000);
+    }, 2000);
 
     return () => { clearInterval(interval); };
   }, [convo.userId, convo.chatId]);
@@ -392,25 +381,12 @@ export default function ChatView({ convo, onBack }) {
   useEffect(() => {
     const el = scrollContainerRef.current;
     if (!el) return;
-    if (!didInitialScrollRef.current && messages.length > 0) {
-      didInitialScrollRef.current = true;
-      requestAnimationFrame(() => {
-        el.scrollTop = el.scrollHeight;
-        bottomRef.current?.scrollIntoView({ behavior: 'auto', block: 'end' });
-      });
-      return;
-    }
     // Only auto-scroll if user is near bottom (within 120px)
     const distFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
     if (distFromBottom < 120) {
       bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
     }
   }, [messages]);
-
-  useEffect(() => {
-    if (!keyboardOpen) return;
-    requestAnimationFrame(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' }));
-  }, [keyboardOpen]);
 
   const send = async () => {
     const content = input?.trim();
@@ -507,6 +483,24 @@ export default function ChatView({ convo, onBack }) {
 
   const initiateCall = async (callType) => {
     if (!currentUser || !convo.userId) return;
+    const optimisticCallId = `outgoing-${Date.now()}`;
+    const outgoingCall = {
+      id: optimisticCallId,
+      caller_id: currentUser.id,
+      receiver_id: convo.userId,
+      type: callType,
+      status: 'ringing',
+      isIncoming: false,
+      callerName: currentUser.full_name || currentUser.email?.split('@')[0] || 'User',
+      callerAvatar: currentUser.avatar_url || null,
+      receiverName: convo.name || 'User',
+      receiverAvatar: convo.img || null,
+    };
+
+    // Show the outgoing-call screen immediately. Network/APNs setup must not
+    // make the Call button appear dead while the server creates the session.
+    setActiveCall(outgoingCall);
+
     try {
       const result = await base44.functions.invoke('initiateCall', {
         receiver_id: convo.userId,
@@ -514,29 +508,40 @@ export default function ChatView({ convo, onBack }) {
       });
       const callSession = result.data.call_session;
       setActiveCall({
-        id: callSession.id,
-        caller_id: callSession.caller_id,
-        receiver_id: callSession.receiver_id,
-        type: callSession.type,
-        isIncoming: false,
-        callerName: convo.name || currentUser.full_name || 'User',
-        callerAvatar: convo.img || null,
-        receiverName: convo.name || 'User',
-        receiverAvatar: convo.img || null,
+        ...outgoingCall,
+        id: callSession?.id || optimisticCallId,
+        caller_id: callSession?.caller_id || currentUser.id,
+        receiver_id: callSession?.receiver_id || convo.userId,
+        type: callSession?.type || callType,
+        status: callSession?.status || 'ringing',
       });
     } catch (err) {
       console.error('Failed to initiate call:', err);
+      setActiveCall(null);
+      window.alert('The call could not connect. Please check your connection and try again.');
     }
   };
 
   return (
-    <div className="fixed left-0 right-0 flex flex-col overflow-hidden spicey-chat-screen" style={{ background: isLight ? 'linear-gradient(160deg, #FFFFFF 0%, #F8F8FC 52%, #FFF7F2 100%)' : '#050407', height: `${viewport.height}px`, top: `${viewport.offsetTop}px` }}>
+    <div className={`fixed inset-y-0 left-1/2 flex flex-col overflow-hidden spicey-chat-screen ${isLight ? 'is-light' : 'is-dark'}`} style={{ height: '100dvh', transform: 'translateX(-50%)' }}>
       <style>{`
         .spicey-chat-screen {
           --spicey-orange: #ff6a18;
           --spicey-pink: #ff2e93;
           --spicey-purple: #a42cff;
+          width: min(100vw, 390px);
+          max-width: 390px;
           color: white;
+          box-shadow: 0 0 0 1px rgba(255,255,255,0.06), 0 24px 80px rgba(0,0,0,0.55);
+          background: #030307;
+        }
+        .spicey-chat-screen.is-light {
+          color: #12111a;
+          background:
+            radial-gradient(circle at 92% 24%, rgba(255, 107, 53, 0.16), transparent 24%),
+            radial-gradient(circle at 14% 72%, rgba(164, 44, 255, 0.10), transparent 30%),
+            linear-gradient(160deg, #ffffff 0%, #f9f9fd 52%, #fff7fb 100%);
+          box-shadow: 0 24px 80px rgba(50, 36, 75, 0.16);
         }
         .spicey-chat-bg {
           position: absolute;
@@ -544,126 +549,230 @@ export default function ChatView({ convo, onBack }) {
           overflow: hidden;
           pointer-events: none;
           background:
-            radial-gradient(circle at 88% 35%, rgba(255, 96, 18, 0.12), transparent 22%),
-            radial-gradient(circle at 30% 58%, rgba(160, 44, 255, 0.12), transparent 30%),
-            linear-gradient(180deg, #050208 0%, #090513 46%, #030204 100%);
+            radial-gradient(circle at 80% 14%, rgba(255, 46, 147, 0.14), transparent 28%),
+            radial-gradient(circle at 12% 74%, rgba(164, 44, 255, 0.10), transparent 30%),
+            linear-gradient(180deg, #05050a 0%, #030307 44%, #05030a 100%);
+        }
+        .spicey-chat-screen.is-light .spicey-chat-bg {
+          background:
+            radial-gradient(circle at 86% 19%, rgba(255, 107, 53, 0.18), transparent 24%),
+            radial-gradient(circle at 8% 76%, rgba(255, 46, 147, 0.12), transparent 28%),
+            linear-gradient(180deg, #ffffff 0%, #fbfbff 52%, #fff7fb 100%);
         }
         .spicey-chat-bg::before,
         .spicey-chat-bg::after {
           content: "";
           position: absolute;
-          left: -30%;
-          width: 165%;
-          height: 240px;
-          opacity: 0.55;
-          filter: blur(14px);
+          left: -34%;
+          width: 150%;
+          height: 110px;
+          opacity: 0.20;
+          filter: blur(18px);
           background:
-            linear-gradient(105deg, transparent 4%, rgba(255, 96, 18, 0.18) 24%, rgba(255, 46, 147, 0.42) 48%, rgba(164, 44, 255, 0.24) 66%, transparent 88%);
+            linear-gradient(105deg, transparent 4%, rgba(255, 116, 20, 0.18) 23%, rgba(255, 28, 118, 0.64) 48%, rgba(162, 35, 255, 0.34) 67%, transparent 90%);
           border-radius: 50%;
           transform-origin: center;
         }
         .spicey-chat-bg::before {
-          top: 28%;
-          transform: rotate(-12deg) skewX(-18deg);
+          top: 34%;
+          transform: rotate(-8deg) skewX(-8deg);
         }
         .spicey-chat-bg::after {
-          bottom: 12%;
-          transform: rotate(-14deg) skewX(-14deg) scale(1.05);
-          opacity: 0.66;
+          bottom: 20%;
+          transform: rotate(-9deg) skewX(-7deg) scale(1.02);
+          opacity: 0.16;
+          background:
+            linear-gradient(105deg, transparent 8%, rgba(143, 35, 255, 0.18) 27%, rgba(255, 28, 118, 0.5) 52%, rgba(255, 116, 20, 0.32) 72%, transparent 91%);
         }
         .spicey-chat-wave-line {
           position: absolute;
           left: -22%;
           width: 150%;
           height: 3px;
-          background: linear-gradient(90deg, transparent, #ff7a18, #ff2e93 48%, #a42cff, transparent);
-          box-shadow: 0 0 20px rgba(255,46,147,0.68), 0 0 42px rgba(255,106,24,0.32);
-          opacity: 0.86;
+          background: linear-gradient(90deg, transparent, #ff7a18 38%, #fff1e8 50%, #ff2e93 58%, transparent);
+          box-shadow: 0 0 20px rgba(255,46,147,0.68), 0 0 42px rgba(255,106,24,0.48);
+          opacity: 0.16;
           transform: rotate(-13deg);
         }
-        .spicey-chat-wave-line.one { top: 58%; }
-        .spicey-chat-wave-line.two { top: 72%; opacity: 0.5; transform: rotate(-15deg); }
+        .spicey-chat-wave-line.one { top: 29%; transform: rotate(0deg); left: 18%; width: 72%; }
+        .spicey-chat-wave-line.two { top: 58%; opacity: 0.62; transform: rotate(-15deg); }
+        .spicey-chat-screen.is-light .spicey-chat-wave-line {
+          opacity: 0.22;
+          filter: blur(10px);
+        }
         .spicey-chat-header {
           position: relative;
           z-index: 10;
           flex-shrink: 0;
-          background:
-            radial-gradient(circle at 90% 78%, rgba(255, 90, 20, 0.18), transparent 18%),
-            linear-gradient(180deg, rgba(32,8,44,0.88), rgba(13,5,20,0.70));
-          border-bottom: 1px solid rgba(255,46,147,0.12);
+          padding: max(0.68rem, calc(env(safe-area-inset-top) + 0.08rem)) 12px 0;
+          background: linear-gradient(180deg, rgba(5,4,7,0.98), rgba(5,4,7,0.80) 70%, rgba(5,4,7,0));
           backdrop-filter: blur(20px);
         }
+        .spicey-chat-screen.is-light .spicey-chat-header {
+          background: linear-gradient(180deg, rgba(255,255,255,0.98), rgba(255,255,255,0.88) 72%, rgba(255,255,255,0));
+        }
         .spicey-chat-topbar {
-          display: flex;
+          display: grid;
+          grid-template-columns: 36px minmax(0, 1fr) auto;
           align-items: center;
-          gap: 14px;
-          padding: max(3rem, calc(env(safe-area-inset-top) + 0.82rem)) 24px 18px;
+          gap: 8px;
+          min-height: 38px;
         }
         .spicey-chat-back {
-          color: #ff6a18;
-          width: 34px;
-          height: 44px;
+          color: #ff4fa0;
+          width: 36px;
+          height: 38px;
           display: flex;
           align-items: center;
-          justify-content: flex-start;
+          justify-content: center;
           flex-shrink: 0;
         }
+        .spicey-chat-brand {
+          justify-self: center;
+          font-family: "Snell Roundhand", "Brush Script MT", "Segoe Script", cursive;
+          font-size: 23px;
+          line-height: 1;
+          font-weight: 700;
+          letter-spacing: 0;
+          background: linear-gradient(105deg, #ff6433 0%, #ff2e93 52%, #a42cff 100%);
+          -webkit-background-clip: text;
+          background-clip: text;
+          color: transparent;
+          text-shadow: 0 0 14px rgba(255, 46, 147, 0.24);
+          transform: translateY(0);
+        }
+        .spicey-chat-profile-card {
+          position: relative;
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          min-height: 56px;
+          margin: 4px 0 8px;
+          padding: 7px 10px 7px 8px;
+          border-radius: 20px;
+          border: 1px solid transparent;
+          background:
+            linear-gradient(rgba(8, 7, 12, 0.86), rgba(8, 7, 12, 0.78)) padding-box,
+            linear-gradient(105deg, rgba(255,46,147,0.60), rgba(164,44,255,0.16), rgba(255,106,24,0.72)) border-box;
+          box-shadow: 0 16px 38px rgba(0,0,0,0.34), inset 0 1px 0 rgba(255,255,255,0.06);
+          overflow: hidden;
+        }
+        .spicey-chat-profile-card::after {
+          content: "";
+          position: absolute;
+          right: 12px;
+          top: 50%;
+          width: 34px;
+          height: 34px;
+          transform: translateY(-50%);
+          background: url('/spicey-assets/spicey-s-symbol.svg') center / contain no-repeat;
+          filter: drop-shadow(0 0 9px rgba(255,46,147,0.46)) drop-shadow(0 0 8px rgba(255,106,24,0.24));
+          opacity: 0.96;
+          pointer-events: none;
+        }
+        .spicey-chat-screen.is-light .spicey-chat-profile-card {
+          background:
+            linear-gradient(rgba(255,255,255,0.88), rgba(255,255,255,0.78)) padding-box,
+            linear-gradient(105deg, rgba(255,46,147,0.24), rgba(164,44,255,0.10), rgba(255,106,24,0.22)) border-box;
+          box-shadow: 0 16px 36px rgba(35, 21, 48, 0.12), inset 0 1px 0 rgba(255,255,255,0.96);
+        }
         .spicey-chat-profile-ring {
-          padding: 3px;
+          padding: 2px;
           border-radius: 999px;
           background: conic-gradient(from 20deg, #ff6a18, #ff2e93, #a42cff, #ff6a18);
           box-shadow: 0 0 20px rgba(255,46,147,0.38);
         }
         .spicey-chat-profile-ring img {
-          width: 56px;
-          height: 56px;
+          width: 36px;
+          height: 36px;
           border-radius: 999px;
           object-fit: cover;
-          border: 3px solid #050407;
+          border: 2px solid #050407;
           display: block;
         }
         .spicey-chat-online-dot {
           position: absolute;
           right: -2px;
-          bottom: 4px;
-          width: 16px;
-          height: 16px;
+          bottom: 2px;
+          width: 11px;
+          height: 11px;
           border-radius: 999px;
-          background: #6bff3d;
-          border: 3px solid #050407;
+          background: #ffb12a;
+          border: 2px solid #050407;
           box-shadow: 0 0 10px rgba(107,255,61,0.6);
         }
         .spicey-chat-title {
           color: white;
-          font-size: 22px;
+          font-size: 17px;
           line-height: 1.05;
           font-weight: 800;
-          letter-spacing: -0.03em;
+          letter-spacing: 0;
+          max-width: 100%;
         }
+        .spicey-chat-screen.is-light .spicey-chat-title { color: #111018; }
         .spicey-chat-status {
-          margin-top: 4px;
-          color: #68ff47;
-          font-size: 16px;
+          margin-top: 3px;
+          color: rgba(231, 218, 255, 0.76);
+          font-size: 12px;
           line-height: 1;
           font-weight: 600;
+          white-space: nowrap;
+        }
+        .spicey-chat-status::before {
+          content: "";
+          display: inline-block;
+          width: 7px;
+          height: 7px;
+          margin-right: 5px;
+          border-radius: 999px;
+          background: #18d463;
+          box-shadow: 0 0 10px rgba(24,212,99,0.56);
+          vertical-align: 1px;
+        }
+        .spicey-chat-screen.is-light .spicey-chat-status { color: rgba(20, 18, 26, 0.78); }
+        .spicey-chat-actions {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          flex-shrink: 0;
         }
         .spicey-chat-action {
-          width: 42px;
-          height: 42px;
+          width: 31px;
+          height: 31px;
           border-radius: 999px;
           display: flex;
           align-items: center;
           justify-content: center;
-          color: #ff3fa2;
-          background: transparent;
-          border: 0;
-          filter: drop-shadow(0 0 8px rgba(255,46,147,0.42));
+          color: white;
+          border: 1px solid rgba(255,255,255,0.16);
+          background:
+            radial-gradient(circle at 32% 18%, rgba(255,255,255,0.44), transparent 30%),
+            linear-gradient(145deg, rgba(255,106,24,0.18), rgba(255,46,147,0.16) 52%, rgba(164,44,255,0.20));
+          box-shadow: inset 0 1px 0 rgba(255,255,255,0.16), 0 8px 20px rgba(0,0,0,0.32), 0 0 14px rgba(255,46,147,0.18);
+          backdrop-filter: blur(12px);
+        }
+        .spicey-chat-action svg {
+          width: 17px;
+          height: 17px;
+        }
+        .spicey-chat-screen.is-light .spicey-chat-action {
+          color: #ff1471;
+          background: rgba(255,255,255,0.78);
+          border-color: rgba(255,46,147,0.13);
+          box-shadow: 0 12px 24px rgba(35,21,48,0.10), inset 0 1px 0 rgba(255,255,255,0.9);
+        }
+        .spicey-chat-action-primary {
+          border-color: rgba(255,122,36,0.48);
+          background:
+            radial-gradient(circle at 32% 18%, rgba(255,255,255,0.56), transparent 28%),
+            linear-gradient(135deg, #ff7a18 0%, #ff2e93 58%, #a42cff 100%);
+          box-shadow: 0 0 20px rgba(255,46,147,0.40), 0 0 16px rgba(255,106,24,0.26), inset 0 1px 0 rgba(255,255,255,0.22);
         }
         .spicey-chat-row {
           display: flex;
           align-items: flex-end;
           gap: 10px;
-          margin: 10px 0;
+          margin: 8px 0;
         }
         .spicey-chat-row-me { justify-content: flex-end; }
         .spicey-chat-row-them { justify-content: flex-start; }
@@ -671,11 +780,11 @@ export default function ChatView({ convo, onBack }) {
           display: flex;
           flex-direction: column;
           gap: 3px;
-          max-width: min(74vw, 540px);
+          max-width: min(73%, 280px);
         }
         .spicey-message-avatar {
-          width: 38px;
-          height: 38px;
+          width: 30px;
+          height: 30px;
           border-radius: 999px;
           object-fit: cover;
           border: 2px solid transparent;
@@ -687,22 +796,28 @@ export default function ChatView({ convo, onBack }) {
         }
         .spicey-message-bubble {
           position: relative;
-          min-width: 118px;
-          padding: 12px 22px 12px 16px;
-          border-radius: 22px;
+          min-width: 112px;
+          padding: 10px 13px 12px;
+          border-radius: 19px;
           border: 1px solid transparent;
           background:
             linear-gradient(135deg, rgba(22, 12, 28, 0.9), rgba(44, 16, 57, 0.78)) padding-box,
             linear-gradient(135deg, var(--spicey-orange), var(--spicey-pink), var(--spicey-purple)) border-box;
-          box-shadow: 0 9px 18px rgba(0,0,0,0.24), inset 0 1px 0 rgba(255,255,255,0.08);
+          box-shadow: 0 10px 20px rgba(0,0,0,0.26), inset 0 1px 0 rgba(255,255,255,0.08);
           backdrop-filter: blur(18px);
         }
         .spicey-bubble-me {
           border-bottom-right-radius: 18px;
           background:
-            linear-gradient(135deg, rgba(255, 46, 147, 0.92), rgba(134, 28, 224, 0.95)) padding-box,
-            linear-gradient(135deg, rgba(255,255,255,0.72), var(--spicey-pink), var(--spicey-purple)) border-box;
-          box-shadow: 0 0 14px rgba(255,46,147,0.18), 0 9px 18px rgba(0,0,0,0.26);
+            linear-gradient(135deg, #ff1471 0%, #e600d8 50%, #731cff 100%) padding-box,
+            linear-gradient(135deg, rgba(255,255,255,0.82), var(--spicey-pink), var(--spicey-purple)) border-box;
+          box-shadow: 0 10px 22px rgba(255,46,147,0.20), 0 8px 16px rgba(0,0,0,0.20);
+        }
+        .spicey-chat-screen.is-light .spicey-bubble-me {
+          background:
+            linear-gradient(135deg, #c42cd7 0%, #ff2e93 50%, #ff8a22 100%) padding-box,
+            linear-gradient(135deg, rgba(255,255,255,0.72), #ff2e93, #ff8a22) border-box;
+          box-shadow: 0 14px 30px rgba(255,46,147,0.20), 0 8px 18px rgba(35,21,48,0.08);
         }
         .spicey-bubble-them {
           border-bottom-left-radius: 18px;
@@ -711,20 +826,57 @@ export default function ChatView({ convo, onBack }) {
             linear-gradient(135deg, rgba(22, 14, 31, 0.88), rgba(42, 29, 56, 0.80)) padding-box,
             linear-gradient(135deg, rgba(164,44,255,0.35), rgba(255,255,255,0.08), rgba(255,106,24,0.25)) border-box;
         }
+        .spicey-chat-screen.is-light .spicey-bubble-them {
+          background:
+            linear-gradient(135deg, rgba(255,255,255,0.96), rgba(255,255,255,0.86)) padding-box,
+            linear-gradient(135deg, rgba(255,46,147,0.06), rgba(164,44,255,0.06), rgba(255,106,24,0.06)) border-box;
+          box-shadow: 0 14px 28px rgba(40,25,60,0.10), inset 0 1px 0 rgba(255,255,255,0.94);
+        }
         .spicey-message-bubble::after,
         .spicey-bubble-me::after,
         .spicey-bubble-them::after { display: none; }
+        .spicey-bubble-me::after {
+          content: "";
+          position: absolute;
+          right: -12px;
+          bottom: 1px;
+          width: 12px;
+          height: 12px;
+          background: linear-gradient(135deg, #d600d8, #ff1471);
+          clip-path: polygon(0 0, 100% 100%, 0 78%);
+          filter: none;
+        }
+        .spicey-bubble-them::after {
+          content: "";
+          position: absolute;
+          left: -12px;
+          bottom: 1px;
+          width: 12px;
+          height: 12px;
+          background: linear-gradient(135deg, rgba(22, 14, 31, 0.96), rgba(42, 29, 56, 0.86));
+          clip-path: polygon(100% 0, 0 100%, 100% 78%);
+        }
+        .spicey-chat-screen.is-light .spicey-bubble-me::after {
+          background: linear-gradient(135deg, #ff2e93, #ff8a22);
+          filter: none;
+        }
+        .spicey-chat-screen.is-light .spicey-bubble-them::after {
+          background: linear-gradient(135deg, rgba(255,255,255,0.98), rgba(255,255,255,0.88));
+        }
         .spicey-message-bubble p {
           margin: 0;
           color: white;
-          font-size: 16px;
-          line-height: 1.42;
-          font-weight: 500;
-          letter-spacing: -0.01em;
-          padding-right: 42px;
+          font-size: 15px;
+          line-height: 1.28;
+          font-weight: 520;
+          letter-spacing: 0;
+          padding-right: 0;
+          overflow-wrap: anywhere;
+          word-break: normal;
         }
+        .spicey-chat-screen.is-light .spicey-bubble-them p { color: #111018; }
         .spicey-inline-meta {
-          display: flex;
+          display: none;
           align-items: center;
           gap: 5px;
           position: absolute;
@@ -738,7 +890,7 @@ export default function ChatView({ convo, onBack }) {
         .spicey-media-bubble {
           position: relative;
           overflow: hidden;
-          border-radius: 26px;
+          border-radius: 22px;
           border: 1px solid transparent;
           background:
             linear-gradient(#050407, #050407) padding-box,
@@ -750,8 +902,9 @@ export default function ChatView({ convo, onBack }) {
         .spicey-media-bubble img,
         .spicey-media-bubble video {
           display: block;
-          min-width: 235px;
-          border-radius: 24px;
+          min-width: 198px;
+          max-height: 178px;
+          border-radius: 20px;
         }
         .spicey-media-time {
           position: absolute;
@@ -807,28 +960,28 @@ export default function ChatView({ convo, onBack }) {
         .spicey-composer-wrap {
           position: relative;
           z-index: 20;
-          padding: 12px 28px max(20px, env(safe-area-inset-bottom));
-          background: linear-gradient(to top, rgba(4,3,6,1) 76%, rgba(4,3,6,0));
+          padding: 7px 12px max(82px, calc(env(safe-area-inset-bottom) + 68px));
+          background: linear-gradient(to top, rgba(4,3,6,0.98) 70%, rgba(4,3,6,0));
         }
-        .spicey-composer-wrap.keyboard-open {
-          padding-bottom: 6px;
+        .spicey-chat-screen.is-light .spicey-composer-wrap {
+          background: linear-gradient(to top, rgba(255,255,255,0.98) 70%, rgba(255,255,255,0));
         }
         .spicey-composer-row {
           display: grid;
-          grid-template-columns: minmax(0, 1fr) 62px;
-          gap: 13px;
+          grid-template-columns: 38px minmax(0, 1fr);
+          gap: 7px;
           align-items: center;
         }
         .spicey-plus-btn,
         .spicey-round-btn {
-          width: 52px;
-          height: 52px;
+          width: 38px;
+          height: 38px;
           border-radius: 999px;
           display: flex;
           align-items: center;
           justify-content: center;
           color: #ff7a2e;
-          font-size: 34px;
+          font-size: 28px;
           line-height: 1;
           border: 1px solid transparent;
           background:
@@ -836,14 +989,19 @@ export default function ChatView({ convo, onBack }) {
             linear-gradient(135deg, var(--spicey-orange), var(--spicey-pink), var(--spicey-purple)) border-box;
           box-shadow: 0 0 18px rgba(255,46,147,0.22);
         }
-        .spicey-plus-btn { order: 2; width: 60px; height: 60px; color: white; font-size: 38px; background: linear-gradient(135deg, #ff7a18, #ff2e93 55%, #a42cff); box-shadow: 0 0 26px rgba(255,46,147,0.46), 0 0 34px rgba(255,106,24,0.30); }
+        .spicey-plus-btn { order: 1; width: 38px; height: 38px; color: #ff2e93; font-size: 25px; background: linear-gradient(rgba(12, 9, 18, 0.90), rgba(12, 9, 18, 0.90)) padding-box, linear-gradient(135deg, #ff7a18, #ff2e93 55%, #a42cff) border-box; box-shadow: 0 0 14px rgba(255,46,147,0.18); }
+        .spicey-chat-screen.is-light .spicey-plus-btn {
+          background: #ffffff;
+          border: 1px solid rgba(255,46,147,0.08);
+          box-shadow: 0 10px 24px rgba(40,25,60,0.08);
+        }
         .spicey-input-shell {
-          order: 1;
-          min-height: 60px;
+          order: 2;
+          min-height: 44px;
           display: flex;
           align-items: center;
-          gap: 8px;
-          padding: 0 16px 0 24px;
+          gap: 6px;
+          padding: 0 7px 0 15px;
           border-radius: 999px;
           border: 1px solid transparent;
           background:
@@ -852,19 +1010,26 @@ export default function ChatView({ convo, onBack }) {
           backdrop-filter: blur(20px);
           box-shadow: inset 0 1px 0 rgba(255,255,255,0.06);
         }
+        .spicey-chat-screen.is-light .spicey-input-shell {
+          background: rgba(255,255,255,0.92);
+          border: 1px solid rgba(255,46,147,0.06);
+          box-shadow: 0 12px 28px rgba(35,21,48,0.08), inset 0 1px 0 rgba(255,255,255,0.96);
+        }
         .spicey-input-shell input {
           min-width: 0;
           flex: 1;
           background: transparent;
           outline: none;
           color: white;
-          font-size: 17px;
+          font-size: 15px;
           font-weight: 500;
         }
+        .spicey-chat-screen.is-light .spicey-input-shell input { color: #111018; }
+        .spicey-chat-screen.is-light .spicey-input-shell input::placeholder { color: rgba(20,18,26,0.34); }
         .spicey-input-shell input::placeholder { color: rgba(255,255,255,0.34); }
         .spicey-input-icon {
-          width: 40px;
-          height: 40px;
+          width: 30px;
+          height: 30px;
           border-radius: 999px;
           display: flex;
           align-items: center;
@@ -873,9 +1038,13 @@ export default function ChatView({ convo, onBack }) {
           border: 1px solid rgba(255,46,147,0.35);
           background: rgba(255,255,255,0.03);
         }
+        .spicey-chat-screen.is-light .spicey-input-icon {
+          background: rgba(255,255,255,0.72);
+          border-color: rgba(255,46,147,0.08);
+        }
         .spicey-send-btn {
-          width: 40px;
-          height: 40px;
+          width: 30px;
+          height: 30px;
           border-radius: 999px;
           display: flex;
           align-items: center;
@@ -912,8 +1081,17 @@ export default function ChatView({ convo, onBack }) {
           box-shadow: inset 0 1px 0 rgba(255,255,255,0.06);
         }
         @media (max-width: 380px) {
-          .spicey-message-bubble p { font-size: 16px; }
-          .spicey-chat-stack { max-width: 76vw; }
+          .spicey-message-bubble p { font-size: 14px; }
+          .spicey-chat-topbar { grid-template-columns: 34px minmax(0, 1fr) auto; gap: 6px; }
+          .spicey-chat-brand { font-size: 21px; }
+          .spicey-chat-title { font-size: 16px; }
+          .spicey-chat-status { font-size: 11px; }
+          .spicey-chat-profile-ring img { width: 34px; height: 34px; }
+          .spicey-chat-profile-card::after { width: 31px; height: 31px; right: 10px; }
+          .spicey-chat-actions { gap: 5px; }
+          .spicey-chat-action { width: 29px; height: 29px; }
+          .spicey-chat-action svg { width: 16px; height: 16px; }
+          .spicey-chat-stack { max-width: 78%; }
           .spicey-attach-row { gap: 8px; }
           .spicey-attach-icon { width: 46px; height: 46px; border-radius: 16px; }
         }
@@ -926,13 +1104,28 @@ export default function ChatView({ convo, onBack }) {
       {/* ── Header ── */}
       <div className="spicey-chat-header">
         <div className="spicey-chat-topbar">
-          {/* Back */}
           <motion.button onClick={onBack} whileTap={{ scale: 0.88 }}
             className="spicey-chat-back">
-            <ChevronLeft className="w-8 h-8" />
+            <ChevronLeft className="w-7 h-7" />
           </motion.button>
 
-          {/* Avatar */}
+          <div className="spicey-chat-brand">Spicey</div>
+
+          <div className="spicey-chat-actions">
+            <motion.button whileTap={{ scale: 0.88 }} onClick={() => initiateCall('voice')}
+              className="spicey-chat-action"
+              aria-label="Voice call">
+              <Phone className="w-5 h-5" />
+            </motion.button>
+            <motion.button whileTap={{ scale: 0.88 }} onClick={() => initiateCall('video')}
+              className="spicey-chat-action spicey-chat-action-primary"
+              aria-label="Video call">
+              <Video className="w-5 h-5" />
+            </motion.button>
+          </div>
+        </div>
+
+        <div className="spicey-chat-profile-card">
           <div className="relative flex-shrink-0">
             <div className="spicey-chat-profile-ring">
               <img src={convo.img} alt={convo.name} />
@@ -942,26 +1135,9 @@ export default function ChatView({ convo, onBack }) {
             )}
           </div>
 
-          {/* Name + status */}
-          <div className="flex-1 min-w-0">
-            <p className="spicey-chat-title truncate">{convo.name} <span style={{ color: '#9d55ff', fontSize: 18 }}>✹</span></p>
-            <p className="spicey-chat-status">{convo.online ? 'Active now' : 'Last seen recently'}</p>
-          </div>
-
-          {/* Actions */}
-          <div className="flex items-center gap-3">
-            <motion.button whileTap={{ scale: 0.88 }} onClick={() => initiateCall('voice')}
-              className="spicey-chat-action">
-              <Phone className="w-7 h-7" />
-            </motion.button>
-            <motion.button whileTap={{ scale: 0.88 }} onClick={() => initiateCall('video')}
-              className="spicey-chat-action">
-              <Video className="w-7 h-7" />
-            </motion.button>
-            <motion.button whileTap={{ scale: 0.88 }}
-              className="spicey-chat-action">
-              <MoreVertical className="w-7 h-7" />
-            </motion.button>
+          <div className="min-w-0 pr-12">
+            <p className="spicey-chat-title truncate">{convo.name}</p>
+            <p className="spicey-chat-status">{convo.online ? 'Online now' : 'Last seen recently'}</p>
           </div>
         </div>
       </div>
@@ -1016,7 +1192,7 @@ export default function ChatView({ convo, onBack }) {
       </AnimatePresence>
 
       {/* ── Input bar ── */}
-      <div className={`spicey-composer-wrap ${keyboardOpen ? 'keyboard-open' : ''}`}>
+      <div className="spicey-composer-wrap">
         <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
         <input ref={videoInputRef} type="file" accept="video/*" className="hidden" onChange={handleFileChange} />
 
@@ -1035,9 +1211,6 @@ export default function ChatView({ convo, onBack }) {
               autoCorrect="off"
               spellCheck="false"
               autoCapitalize="off"
-              autoComplete="off"
-              inputMode="text"
-              enterKeyHint="send"
             />
             <motion.button
               whileTap={{ scale: 0.88 }}

@@ -19,6 +19,8 @@ const FAKE_REELS = [
   { id: 'fr-6', username: 'sofianature', avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=120&h=120&fit=crop&crop=face', thumb: 'https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=200&h=320&fit=crop' },
 ];
 
+const LIGHT_STORY_LABELS = ['@sarah.luv', '@jordan.fx', '@valeria', '@marko', '@luna'];
+
 // Global reels cache to prevent rate limiting
 const REELS_CACHE = { reels: [], lastFetched: 0 };
 
@@ -72,6 +74,29 @@ export default function StoryBar() {
     return () => obs.disconnect();
   }, []);
 
+  const { data: meForStory = null } = useQuery({
+    queryKey: ['storybar-current-user-avatar'],
+    queryFn: async () => {
+      const user = await base44.auth.me().catch(() => null);
+      if (!user?.id) return null;
+      const profiles = await base44.entities.UserProfile
+        .filter({ user_id: user.id }, '-created_date', 1)
+        .catch(() => []);
+      const profile = Array.isArray(profiles) ? profiles[0] : null;
+      return {
+        ...user,
+        avatar_url: profile?.avatar_url || user.avatar_url || user.photo_url || '',
+        full_name: profile?.full_name || user.full_name || user.username || user.email?.split('@')[0] || 'You',
+      };
+    },
+    staleTime: 60 * 1000,
+    refetchOnWindowFocus: true,
+  });
+
+  const myStoryAvatar = meForStory?.avatar_url
+    || `https://ui-avatars.com/api/?name=${encodeURIComponent(meForStory?.full_name || 'You')}&background=ff5500&color=fff&size=160`;
+  const myStoryAvatarIsVideo = /\.(mp4|mov|webm|m4v)(\?|#|$)/i.test(myStoryAvatar);
+
   // Fetch active stories (not expired)
   const { data: allStories = [] } = useQuery({
     queryKey: ['active-stories'],
@@ -115,7 +140,7 @@ export default function StoryBar() {
         return REELS_CACHE.reels;
       }
       const currentUser = await base44.auth.me().catch(() => null);
-      // Fetch posts with video OR music (photo reels)
+      // Fetch posts with video OR music (photo clips)
       const posts = await base44.entities.Post.list('-created_date', 50);
       let filtered = asArray(posts).filter(p => {
         const hasVideo = !!p.video_url && p.video_url.trim() !== '';
@@ -220,7 +245,7 @@ export default function StoryBar() {
                 <div className="w-10 h-1 rounded-full" style={{ background: 'rgba(255,255,255,0.2)' }} />
               </div>
               <div className="flex items-center justify-between mb-5">
-                <span className="text-white font-bold text-base">Create Story</span>
+                <span className="text-white font-bold text-base">Create Moment</span>
                 <button
                   onPointerUp={() => setStoryMenuOpen(false)}
                   className="w-8 h-8 flex items-center justify-center rounded-full"
@@ -253,8 +278,56 @@ export default function StoryBar() {
           </>
         )}
       </AnimatePresence>
+      {isLight && (
+        <div className="spicey-light-story-row">
+          <button type="button" onClick={() => setStoryMenuOpen(true)} className="spicey-light-story-item">
+            <span className="spicey-light-story-ring">
+              {myStoryAvatarIsVideo ? (
+                <video
+                  src={myStoryAvatar}
+                  className="spicey-light-story-avatar"
+                  muted
+                  playsInline
+                  autoPlay
+                  loop
+                />
+              ) : (
+                <img
+                  src={myStoryAvatar}
+                  alt="Your Story"
+                  className="spicey-light-story-avatar"
+                  onError={e => { e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(meForStory?.full_name || 'You')}&background=ff5500&color=fff&size=160`; }}
+                />
+              )}
+              <span className="spicey-light-story-plus"><Plus className="w-3 h-3" /></span>
+            </span>
+            <span className="spicey-light-story-label">Your Moment</span>
+          </button>
+
+          {asArray(reelsDisplay).slice(0, 5).map((reel, index) => (
+            <button
+              type="button"
+              key={reel.id}
+              onClick={() => reel.isStory ? setViewingStories({ stories: reel.storiesData, startIndex: 0 }) : navigate('/reels')}
+              className="spicey-light-story-item"
+            >
+              <span className="spicey-light-story-ring">
+                <img
+                  src={reel.avatar}
+                  alt={reel.username}
+                  className="spicey-light-story-avatar"
+                  onError={e => { e.target.src = `https://ui-avatars.com/api/?name=${reel.username}&background=ff5500&color=fff&size=120`; }}
+                />
+                <span className="spicey-light-story-live-dot" />
+              </span>
+              <span className="spicey-light-story-label">{LIGHT_STORY_LABELS[index] || `@${reel.username}`}</span>
+            </button>
+          ))}
+        </div>
+      )}
+
       {/* STORIES ROW — Live sessions only */}
-      {Array.isArray(liveSessions) && liveSessions.length > 0 && (
+      {!isLight && Array.isArray(liveSessions) && liveSessions.length > 0 && (
         <div className="mb-2">
           <div className="flex items-center gap-2 mb-2 px-0.5">
             <div className="w-1 h-4 rounded-full" style={{ background: 'linear-gradient(to bottom, #e11d48, #ff5500)' }} />
@@ -306,10 +379,12 @@ export default function StoryBar() {
       )}
 
       {/* REELS SECTION — Map + Reel circles */}
+      {!isLight && (
+      <>
       <div className="flex items-center justify-between mb-1.5 px-0.5">
         <div className="flex items-center gap-2">
           <div className="w-1 h-4 rounded-full" style={{ background: isLight ? 'linear-gradient(to bottom, #FF6A00, #FF2D55)' : 'linear-gradient(to bottom, #ff5500, #e91e8c)' }} />
-          <span className="text-[11px] font-bold tracking-widest uppercase" style={{ color: isLight ? '#111111' : 'rgba(255,255,255,0.75)' }}>Reels</span>
+          <span className="text-[11px] font-bold tracking-widest uppercase" style={{ color: isLight ? '#111111' : 'rgba(255,255,255,0.75)' }}>Spicey Clips</span>
         </div>
         <button onClick={() => navigate('/reels')}
           className="text-[10px] font-semibold px-2.5 py-1 rounded-full active:scale-95 transition-transform"
@@ -323,6 +398,37 @@ export default function StoryBar() {
       </div>
 
       <div className="flex gap-2.5 overflow-x-auto" style={{ scrollbarWidth: 'none' }}>
+        {/* Your Story */}
+        <motion.button
+          whileTap={{ scale: 0.96 }}
+          onClick={() => setStoryMenuOpen(true)}
+          className="flex-shrink-0 relative rounded-full overflow-hidden flex flex-col items-center"
+          style={{ width: 56, height: 56 }}
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+        >
+          <div className="absolute inset-0 rounded-full"
+            style={{ background: 'linear-gradient(135deg, #FF6A00 0%, #FF2D55 48%, #C100FF 100%)', padding: '2px' }}>
+            <div className="w-full h-full rounded-full" style={{ background: '#0a0014' }} />
+          </div>
+          <div className="absolute inset-0 flex items-center justify-center p-[3px]">
+            {myStoryAvatarIsVideo ? (
+              <video src={myStoryAvatar} className="w-full h-full rounded-full object-cover" muted playsInline autoPlay loop />
+            ) : (
+              <img
+                src={myStoryAvatar}
+                alt="Your Story"
+                className="w-full h-full rounded-full object-cover"
+                onError={e => { e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(meForStory?.full_name || 'You')}&background=ff5500&color=fff&size=120`; }}
+              />
+            )}
+          </div>
+          <span className="absolute right-0 bottom-0 w-4 h-4 rounded-full flex items-center justify-center"
+            style={{ background: 'linear-gradient(135deg, #ff6a18, #ff2e93)', border: '1.5px solid #050407' }}>
+            <Plus className="w-2.5 h-2.5 text-white" />
+          </span>
+        </motion.button>
+
         {/* Spicey Map */}
         <motion.button
           whileTap={{ scale: 0.96 }}
@@ -359,7 +465,7 @@ export default function StoryBar() {
               </defs>
               <circle cx="15" cy="15" r="5" fill="white" fillOpacity="0.95" />
             </svg>
-            <span style={{ fontSize: 6.5, fontWeight: 800, color: 'white', textShadow: '0 1px 4px rgba(0,0,0,0.9)', lineHeight: 1 }}>Map</span>
+            <span style={{ fontSize: 6.5, fontWeight: 800, color: 'white', textShadow: '0 1px 4px rgba(0,0,0,0.9)', lineHeight: 1 }}>Spicey Map</span>
           </div>
         </motion.button>
 
@@ -408,6 +514,8 @@ export default function StoryBar() {
 
       {/* Divider */}
       <div className="mt-2 h-px rounded-full" style={{ background: isLight ? '#ECECF2' : 'rgba(255,255,255,0.06)' }} />
+      </>
+      )}
     </div>
   );
 }

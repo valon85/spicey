@@ -1,5 +1,5 @@
 import supabaseApi from './supabaseApi';
-import { spiceyApi, spiceySession } from './spiceyApi';
+import { ensureFreshSpiceySession, spiceyApi, spiceySession } from './spiceyApi';
 import { Preferences } from '@capacitor/preferences';
 
 const TOKEN_KEY = 'spicey_session';
@@ -15,7 +15,7 @@ const LEGACY_KEYS = [
   'base44_server_url',
   'token',
 ];
-const ROOT_ADMIN_EMAILS = ['info@spicey.live', 'valondervishi13@gmail.com'];
+const ROOT_ADMIN_EMAILS = ['info@spicey.live', 'valondervishi13@gmail.com', 'vlora.dervisi@gmail.com'];
 
 const AI_TALK_GREETINGS = {
   en: "Hi! Welcome to Spicey AI. I'm your AI assistant. How can I help you today?",
@@ -418,6 +418,13 @@ async function invokeFunction(name, payload = {}) {
         return { data: { hasSubscription: false, planType: null, subscription: null } };
       }
     }
+    case 'toggleFollow': {
+      const targetUserId = payload.target_user_id || payload.targetUserId || payload.userId;
+      if (!targetUserId) throw new Error('Missing target user id');
+      return { data: await spiceyApi.follows.toggle(targetUserId) };
+    }
+    case 'stripeCheckout':
+      return { data: await spiceyApi.subscriptions.checkout(payload) };
     case 'aiVoiceChat': {
       const prompt = payload.text_override || payload.prompt || payload.message || payload.command ||
         (payload.is_greeting ? aiTalkGreeting(payload.language) : '');
@@ -450,8 +457,9 @@ async function invokeFunction(name, payload = {}) {
       } catch (error) {
         console.warn('[Spicey Reels] Using local reel fallback:', error.message);
       }
-      const reels = result?.reels?.length ? result.reels : funnyYoutubeReels();
-      return { data: { reels } };
+      // Keep YouTube items out of the Spicey reel collection. SpiceyReels loads
+      // them through getYouTubeReels so they always use the official player.
+      return { data: { reels: result?.reels || [] } };
     }
     case 'getYouTubeReels': {
       let result = null;
@@ -516,9 +524,7 @@ async function invokeFunction(name, payload = {}) {
           console.warn('[Spicey Users] Supabase profile fallback failed:', error.message);
         }
       }
-      // Demo/Base44 IDs are not valid Supabase UUIDs. Never expose those
-      // placeholders in production because follow/chat actions cannot target them.
-      if (!users.length && import.meta.env.DEV) users = fallbackPeople(query, limit);
+      if (!users.length) users = fallbackPeople(query, limit);
       return { data: { users: users.map(normalizeUser), profiles: users.map(normalizeUser) } };
     }
     case 'searchMusic':
@@ -530,25 +536,32 @@ async function invokeFunction(name, payload = {}) {
     case 'getChatMessages': {
       const chatId = payload.chat_id || payload.chatId;
       if (!chatId) throw new Error('Missing chat id');
+      const chatResult = await spiceyApi.chats.list();
+      const allowedChats = Array.isArray(chatResult?.chats) ? chatResult.chats : [];
+      const allowed = allowedChats.some((chat) => String(chat.id) === String(chatId));
+      if (!allowed) throw new Error('Chat access denied');
       return { data: await spiceyApi.messages.list(chatId) };
+    }
+    case 'markChatRead': {
+      const chatId = payload.chat_id || payload.chatId;
+      if (!chatId) throw new Error('Missing chat id');
+      return { data: await spiceyApi.messages.markRead(chatId) };
     }
     case 'sendDirectMessage': {
       const chatId = payload.chat_id || payload.chatId;
-      if (chatId) return { data: await spiceyApi.messages.create(chatId, payload) };
+      if (chatId) {
+        const chatResult = await spiceyApi.chats.list();
+        const allowedChats = Array.isArray(chatResult?.chats) ? chatResult.chats : [];
+        const allowed = allowedChats.some((chat) => String(chat.id) === String(chatId));
+        if (!allowed) throw new Error('Chat access denied');
+        return { data: await spiceyApi.messages.create(chatId, payload) };
+      }
       const receiverId = payload.receiver_id || payload.to_user_id || payload.receiverId;
       const chat = await spiceyApi.chats.create({ other_user_id: receiverId });
       return { data: await spiceyApi.messages.create(chat.chat?.id || chat.id, payload) };
     }
     case 'initiateCall':
-      try {
-        return { data: await spiceyApi.callSessions.create(payload) };
-      } catch (error) {
-        warnMissingCallSessions(error);
-        const user = await currentUser().catch(() => null);
-        const callSession = makeLocalCallSession(payload, user);
-        LOCAL_CALL_SESSIONS.set(callSession.id, callSession);
-        return { data: { call_session: callSession, session: callSession, voip: { sent: false, local_only: true } } };
-      }
+      return { data: await spiceyApi.callSessions.create(payload) };
     case 'notifyNewMessage':
       return { data: { ok: true } };
     case 'sendCallNotification':
@@ -573,11 +586,12 @@ async function invokeFunction(name, payload = {}) {
     case 'adminModerateUser':
       return { data: await spiceyApi.admin.moderateUser(payload) };
     case 'giftVIPAccess':
+    case 'grantVIPAccess':
       return { data: await spiceyApi.subscriptions.gift(payload) };
     case 'getVIPUsers':
       return { data: await spiceyApi.subscriptions.adminList() };
     case 'removeVIPAccess':
-      return { data: await spiceyApi.subscriptions.adminUpdate(payload.subscription_id || payload.id, { status: 'cancelled' }) };
+      return { data: await spiceyApi.subscriptions.adminUpdate(payload.subscriptionId || payload.subscription_id || payload.id, { status: 'cancelled', cancellation_reason: payload.reason || null }) };
     case 'getClientInfo':
       return { data: { user_agent: navigator.userAgent, captured_at: new Date().toISOString() } };
     default:
@@ -593,7 +607,12 @@ export const TokenStorage = {
       const { value } = await Preferences.get({ key: TOKEN_KEY });
       if (!value) return null;
       try {
-        return JSON.parse(value)?.access_token || value;
+        const storedSession = JSON.parse(value);
+        if (storedSession?.access_token) {
+          spiceySession.set(storedSession);
+          return storedSession.access_token;
+        }
+        return value;
       } catch (_) {
         return value;
       }
@@ -603,7 +622,10 @@ export const TokenStorage = {
   },
   async set(value) {
     if (!value) return;
-    const session = { access_token: value, token_type: 'bearer' };
+    const existingSession = spiceySession.get() || {};
+    const session = typeof value === 'object'
+      ? { ...existingSession, ...value }
+      : { ...existingSession, access_token: value, token_type: existingSession.token_type || 'bearer' };
     spiceySession.set(session);
     try { await Preferences.set({ key: TOKEN_KEY, value: JSON.stringify(session) }); } catch (_) {}
   },
@@ -703,26 +725,14 @@ const wrappedEntities = {
       }
     },
     async create(payload = {}) {
-      try {
-        return await supabaseApi.entities.CallSession.create(payload);
-      } catch (error) {
-        warnMissingCallSessions(error);
-        const user = await currentUser().catch(() => null);
-        const callSession = makeLocalCallSession(payload, user);
-        LOCAL_CALL_SESSIONS.set(callSession.id, callSession);
-        return callSession;
-      }
+      const result = await spiceyApi.callSessions.create(payload);
+      const session = result?.call_session || result?.session || result;
+      if (!session?.id) throw new Error('Call session was not created');
+      return session;
     },
     async update(id, payload = {}) {
-      try {
-        return await supabaseApi.entities.CallSession.update(id, payload);
-      } catch (error) {
-        warnMissingCallSessions(error);
-        const current = LOCAL_CALL_SESSIONS.get(id) || makeLocalCallSession({ id }, null);
-        const updated = { ...current, ...payload, updated_at: new Date().toISOString() };
-        LOCAL_CALL_SESSIONS.set(id, updated);
-        return updated;
-      }
+      const result = await spiceyApi.callSessions.update(id, payload);
+      return result?.call_session || result?.session || result;
     },
   },
 };
@@ -730,7 +740,10 @@ const wrappedEntities = {
 export const base44 = {
   auth: {
     me: currentUser,
-    getToken: () => Promise.resolve(spiceySession.token()),
+    getToken: async () => {
+      await ensureFreshSpiceySession();
+      return spiceySession.token();
+    },
     setToken: injectSDKToken,
     loginViaEmailPassword: async ({ email, password }) => {
       const result = await spiceyApi.auth.login({ email, password });
@@ -768,19 +781,22 @@ export const base44 = {
           return `Spicey AI preview is ready. ${userText ? `For "${userText}", ` : ''}try a short hook, one clear idea, and a clean finish with 3 focused hashtags.`;
         }
       },
-      GenerateImage: ({ prompt, existing_image_urls = [] } = {}) => {
+      GenerateImage: ({ prompt, existing_image_urls = [], size, quality } = {}) => {
         const sourceUrl = existing_image_urls?.[0];
         if (sourceUrl) return spiceyApi.ai.enhanceImage({ image_url: sourceUrl, prompt });
-        return spiceyApi.ai.generateImage({ prompt });
+        return spiceyApi.ai.generateImage({ prompt, size, quality });
       },
-      GenerateVideo: async ({ prompt, source_url } = {}) => ({
-        url: source_url || 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4',
-        prompt,
-        status: 'preview',
-        message: source_url
-          ? 'Your uploaded video is ready for AI styling preview.'
-          : 'AI video generation is using a preview clip until the video model is connected.',
-      }),
+      GenerateVideo: async ({ prompt, size, seconds } = {}) => {
+        const created = await spiceyApi.ai.generateVideo({ prompt, size, seconds });
+        if (!created?.id || created.url) return created;
+        for (let attempt = 0; attempt < 40; attempt += 1) {
+          await new Promise((resolve) => setTimeout(resolve, 3000));
+          const status = await spiceyApi.ai.getVideo(created.id);
+          if (status?.status === 'failed') throw new Error(status.error?.message || 'AI video generation failed.');
+          if (status?.url) return status;
+        }
+        throw new Error('Video is still processing. Please try again in a moment.');
+      },
       GenerateSpeech: async ({ text } = {}) => ({ audio_url: '', text }),
       TranscribeAudio: async () => ({ text: '' }),
     },

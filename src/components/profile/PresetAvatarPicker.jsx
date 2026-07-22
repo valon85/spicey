@@ -149,7 +149,7 @@ export default function PresetAvatarPicker({ open, onClose, onSelect }) {
 
   useEffect(() => {
     if (!open) return;
-    setSelectedVideo(null);
+    setSelectedVideo(VIDEO_AVATARS[0] || null);
   }, [open]);
 
   useEffect(() => {
@@ -165,6 +165,11 @@ export default function PresetAvatarPicker({ open, onClose, onSelect }) {
 
   const filteredVideos = filter === 'all' ? VIDEO_AVATARS : VIDEO_AVATARS.filter(v => v.gender === filter);
   const hasAnything = !!selectedVideo;
+
+  useEffect(() => {
+    if (!open) return;
+    setSelectedVideo(filteredVideos[0] || VIDEO_AVATARS[0] || null);
+  }, [open, filter]);
 
   const handleConfirm = async () => {
     const avatarUrl = selectedVideo?.url;
@@ -220,9 +225,10 @@ export default function PresetAvatarPicker({ open, onClose, onSelect }) {
               position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 300,
               background: '#0a0008',
               borderTopLeftRadius: 28, borderTopRightRadius: 28,
-              maxHeight: '92vh',
+              height: '94dvh',
+              maxHeight: '94dvh',
               display: 'flex', flexDirection: 'column',
-              paddingBottom: 'max(24px, env(safe-area-inset-bottom, 24px))',
+              paddingBottom: 0,
               border: '1px solid rgba(193,0,255,0.15)',
               boxShadow: '0 -20px 60px rgba(193,0,255,0.2)',
             }}>
@@ -265,7 +271,7 @@ export default function PresetAvatarPicker({ open, onClose, onSelect }) {
             </div>
 
             {/* Grid */}
-            <div style={{ flex: 1, overflowY: 'auto', padding: '0 14px', WebkitOverflowScrolling: 'touch' }}>
+            <div style={{ flex: 1, overflowY: 'auto', padding: '0 14px 184px', WebkitOverflowScrolling: 'touch' }}>
               {filteredVideos.length > 0 ? (
                 <>
                   <div style={{ color: 'rgba(255,255,255,0.35)', fontSize: 10, fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase', marginBottom: 8 }}>🎬 Video Avatars</div>
@@ -288,7 +294,19 @@ export default function PresetAvatarPicker({ open, onClose, onSelect }) {
             </div>
 
             {/* Action Buttons */}
-            <div style={{ padding: '10px 16px max(96px, calc(env(safe-area-inset-bottom, 0px) + 86px))', display: 'flex', gap: 10, minHeight: 60 }}>
+            <div style={{
+              position: 'absolute',
+              left: 0,
+              right: 0,
+              bottom: 'max(76px, calc(env(safe-area-inset-bottom, 0px) + 64px))',
+              padding: '10px 16px 12px',
+              display: 'flex',
+              gap: 10,
+              minHeight: 60,
+              background: 'linear-gradient(to top, rgba(10,0,8,0.98) 0%, rgba(10,0,8,0.92) 72%, transparent 100%)',
+              borderTop: '1px solid rgba(255,255,255,0.08)',
+              zIndex: 4,
+            }}>
               <motion.button
                 whileTap={{ scale: 0.96 }}
                 onClick={handleConfirm}

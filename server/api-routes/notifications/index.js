@@ -1,5 +1,6 @@
 import { handleOptions, readJson, sendJson, setCors } from '../_lib/http.js';
 import { getSupabaseUser, supabaseTable } from '../_lib/supabaseRest.js';
+import { sendRegularPush } from '../_lib/apns.js';
 
 async function currentProfile(token, user) {
   const rows = await supabaseTable('profiles', {
@@ -52,6 +53,24 @@ export default async function handler(req, res) {
           read: false,
         },
       });
+      const devices = await supabaseTable('push_devices', {
+        serviceRole: true,
+        query: `?select=token,environment&user_id=eq.${encodeURIComponent(body.user_id)}&token_type=eq.apns&enabled=eq.true`,
+      }).catch(() => []);
+      await Promise.all(devices.map((device) => sendRegularPush({
+        token: device.token,
+        environment: device.environment,
+        title: profile.full_name || profile.username || 'Spicey',
+        body: body.message || 'You have a new notification',
+        data: {
+          type: body.type || 'system',
+          notificationId: rows[0]?.id,
+          postId: body.post_id || null,
+          reelId: body.reel_id || body.post_id || null,
+          chatId: body.chat_id || null,
+          actorId: user.id,
+        },
+      }).catch(() => null)));
       return sendJson(res, 201, { notification: rows[0] });
     }
 

@@ -6,6 +6,14 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X, Music2, MapPin, Users, Type, ChevronLeft, ChevronRight, Loader2, ImagePlus, Check } from 'lucide-react';
 import MusicPickerSheet from '@/components/create/MusicPickerSheet';
 import SpiceLogo from '@/components/shared/SpiceLogo';
+import { postMusicPayload } from '@/components/create/musicUtils';
+
+const MOVIE_MOOD = {
+  title: 'CITY NIGHTS',
+  caption: 'A moment. A story. A movie.',
+  gradient: 'linear-gradient(180deg, #ff25b8 0%, #ff356c 46%, #ff8b2a 100%)',
+  glow: 'rgba(255,45,143,0.34)',
+};
 
 export default function NewPost() {
   const navigate = useNavigate();
@@ -15,12 +23,14 @@ export default function NewPost() {
 
   const [photos, setPhotos] = useState([]);
   const [activeIdx, setActiveIdx] = useState(0);
+  const [movieMode, setMovieMode] = useState(true);
+  const [posterTitle, setPosterTitle] = useState('');
   const [caption, setCaption] = useState('');
   const [location, setLocation] = useState('');
   const [tags, setTags] = useState('');
   const [music, setMusic] = useState(null);
   const [musicOpen, setMusicOpen] = useState(false);
-  const [activeInput, setActiveInput] = useState(null); // 'caption'|'location'|'tags'
+  const [activeInput, setActiveInput] = useState(null); // 'movie'|'caption'|'location'|'tags'
   const [error, setError] = useState('');
   const [posted, setPosted] = useState(false);
 
@@ -96,17 +106,16 @@ export default function NewPost() {
         author_name: authorName,
         author_username: authorUsername,
         author_avatar: authorAvatar,
-        caption: caption.trim(),
+        caption: [posterTitle.trim(), caption.trim()].filter(Boolean).join(movieMode ? '\n' : ' '),
         image_url: urls[0],
         image_urls: urls.length > 1 ? urls : [],
         video_url: '', video_link: '',
         location: location.trim(),
+        map_visible: Boolean(location.trim()),
+        map_city: location.trim() ? location.split(',')[0].trim() : '',
         tags: tags.trim(),
-        hashtags: [],
-        music_title: music?.title || '',
-        music_artist: music?.artist || '',
-        music_preview_url: music?.previewUrl || '',
-        music_artwork_url: music?.artwork || '',
+        hashtags: movieMode ? ['SpiceyMovie', 'CityNights'] : [],
+        ...postMusicPayload(music),
         likes_count: 0, fire_count: 0, wow_count: 0,
         comments_count: 0, shares_count: 0,
         post_type: 'feed',
@@ -121,6 +130,12 @@ export default function NewPost() {
   });
 
   const hasPhotos = photos.length > 0;
+  const applyMovieMode = () => {
+    setMovieMode(true);
+    setPosterTitle(MOVIE_MOOD.title);
+    setCaption(MOVIE_MOOD.caption);
+    setActiveInput('movie');
+  };
 
   return (
     <>
@@ -191,6 +206,52 @@ export default function NewPost() {
               <div className="absolute inset-x-0 bottom-0 pointer-events-none"
                 style={{ height: '60%', background: 'linear-gradient(to top, rgba(0,0,0,1) 0%, rgba(0,0,0,0.6) 40%, transparent 100%)' }} />
 
+              {movieMode && (posterTitle.trim() || caption.trim()) && (
+                <>
+                  <div className="absolute inset-0 pointer-events-none" style={{
+                    background: `linear-gradient(to top, rgba(0,0,0,0.74) 0%, transparent 56%), radial-gradient(circle at 20% 78%, ${MOVIE_MOOD.glow}, transparent 34%)`,
+                  }} />
+                  <div className="absolute left-5 right-14 z-10 pointer-events-none"
+                    style={{ bottom: 'calc(env(safe-area-inset-bottom, 0px) + 282px)' }}>
+                    {posterTitle.trim() && (
+                      <div style={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        fontFamily: '"Inter", "Arial Black", sans-serif',
+                        fontSize: 'clamp(28px, 8vw, 40px)',
+                        lineHeight: 0.78,
+                        fontWeight: 740,
+                        textTransform: 'uppercase',
+                        transform: 'scaleX(0.74)',
+                        transformOrigin: 'left center',
+                        background: MOVIE_MOOD.gradient,
+                        WebkitBackgroundClip: 'text',
+                        backgroundClip: 'text',
+                        color: 'transparent',
+                        WebkitTextFillColor: 'transparent',
+                      }}>
+                        {posterTitle.trim().split(/\s+/).slice(0, 3).map((word) => (
+                          <span key={`${word}-${posterTitle}`}>{word.replace(/[^\p{L}\p{N}]+/gu, '').toUpperCase()}</span>
+                        ))}
+                      </div>
+                    )}
+                    {caption.trim() && (
+                      <p style={{
+                        maxWidth: '78%',
+                        margin: posterTitle.trim() ? '9px 0 0' : 0,
+                        color: 'rgba(255,255,255,0.86)',
+                        fontSize: 9,
+                        lineHeight: 1.32,
+                        fontWeight: 260,
+                        letterSpacing: '0.075em',
+                        textTransform: 'uppercase',
+                        textShadow: '0 2px 10px rgba(0,0,0,0.72)',
+                      }}>{caption}</p>
+                    )}
+                  </div>
+                </>
+              )}
+
               {/* Top gradient */}
               <div className="absolute inset-x-0 top-0 pointer-events-none"
                 style={{ height: '25%', background: 'linear-gradient(to bottom, rgba(0,0,0,0.7) 0%, transparent 100%)' }} />
@@ -249,11 +310,11 @@ export default function NewPost() {
             )}
 
             {/* Thumbnail strip — always visible so user can add more photos */}
-            <div className="absolute z-20 flex gap-2 px-4"
-              style={{ bottom: 'calc(env(safe-area-inset-bottom, 0px) + 230px)', left: 0, right: 0, overflowX: 'auto', scrollbarWidth: 'none', WebkitOverflowScrolling: 'touch' }}>
+              <div className="absolute z-20 flex gap-2 px-3"
+              style={{ bottom: 'calc(env(safe-area-inset-bottom, 0px) + 198px)', left: 0, right: 0, overflowX: 'auto', scrollbarWidth: 'none', WebkitOverflowScrolling: 'touch' }}>
               {photos.map((ph, i) => (
                 <div key={i} onClick={() => setActiveIdx(i)}
-                  style={{ position: 'relative', flexShrink: 0, width: 56, height: 56, borderRadius: 12, overflow: 'hidden',
+                  style={{ position: 'relative', flexShrink: 0, width: 46, height: 46, borderRadius: 11, overflow: 'hidden',
                     border: i === activeIdx ? '2px solid #ff5500' : '2px solid rgba(255,255,255,0.2)',
                     boxShadow: i === activeIdx ? '0 0 12px rgba(255,85,0,0.6)' : 'none',
                     cursor: 'pointer' }}>
@@ -269,10 +330,10 @@ export default function NewPost() {
               {/* "Add more" button — always show if under 10 */}
               {photos.length < 10 && (
                 <button onClick={() => fileInputRef.current?.click()}
-                  style={{ flexShrink: 0, width: 56, height: 56, borderRadius: 12,
+                  style={{ flexShrink: 0, width: 46, height: 46, borderRadius: 11,
                     background: 'rgba(255,85,0,0.12)', border: '2px dashed rgba(255,85,0,0.6)',
                     display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 2, cursor: 'pointer' }}>
-                  <ImagePlus style={{ width: 20, height: 20, color: '#ff5500' }} />
+                  <ImagePlus style={{ width: 17, height: 17, color: '#ff5500' }} />
                   <span style={{ color: '#ff5500', fontSize: 8, fontWeight: 700 }}>ADD</span>
                 </button>
               )}
@@ -288,13 +349,24 @@ export default function NewPost() {
                   <motion.div key={activeInput}
                     initial={{ y: 30, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 30, opacity: 0 }}
                     transition={{ duration: 0.18 }}
-                    className="mx-4 mb-3 rounded-2xl flex items-center gap-3 px-4 py-3"
+                    className="mx-3 mb-2 rounded-2xl flex items-center gap-3 px-3 py-2.5"
                     style={{ background: 'rgba(10,5,20,0.95)', border: '1px solid rgba(255,255,255,0.1)', backdropFilter: 'blur(20px)' }}>
+                    {activeInput === 'movie' && <Type className="w-4 h-4 text-pink-400 flex-shrink-0" />}
                     {activeInput === 'caption' && <Type className="w-4 h-4 text-orange-400 flex-shrink-0" />}
                     {activeInput === 'location' && <MapPin className="w-4 h-4 text-cyan-400 flex-shrink-0" />}
                     {activeInput === 'tags' && <Users className="w-4 h-4 text-purple-400 flex-shrink-0" />}
 
-                    {activeInput === 'caption' ? (
+                    {activeInput === 'movie' ? (
+                      <div className="flex-1 space-y-2">
+                        <input autoFocus value={posterTitle} onChange={e => setPosterTitle(e.target.value)}
+                          placeholder="Movie title..."
+                          className="w-full bg-transparent text-sm text-white placeholder:text-white/30 outline-none uppercase font-black" />
+                        <textarea value={caption} onChange={e => setCaption(e.target.value)}
+                          placeholder="Small movie description..."
+                          rows={2}
+                          className="w-full bg-transparent text-xs text-white/80 placeholder:text-white/30 resize-none outline-none" />
+                      </div>
+                    ) : activeInput === 'caption' ? (
                       <textarea autoFocus value={caption} onChange={e => setCaption(e.target.value)}
                         placeholder="Write a caption…" rows={2}
                         className="flex-1 bg-transparent text-sm text-white placeholder:text-white/30 resize-none outline-none" />
@@ -307,7 +379,7 @@ export default function NewPost() {
                     )}
                     <button onClick={() => setActiveInput(null)}
                       className="text-xs font-bold flex-shrink-0"
-                      style={{ color: activeInput === 'caption' ? '#ff5500' : activeInput === 'location' ? '#06b6d4' : '#a855f7' }}>
+                      style={{ color: activeInput === 'movie' ? '#ff2e9d' : activeInput === 'caption' ? '#ff5500' : activeInput === 'location' ? '#06b6d4' : '#a855f7' }}>
                       Done
                     </button>
                   </motion.div>
@@ -315,8 +387,15 @@ export default function NewPost() {
               </AnimatePresence>
 
               {/* Active chips */}
-              {!activeInput && (caption || location || tags || music) && (
+              {!activeInput && (posterTitle || caption || location || tags || music) && (
                 <div className="flex flex-wrap gap-2 px-4 mb-3">
+                  {movieMode && posterTitle && (
+                    <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full"
+                      style={{ background: 'rgba(255,45,143,0.22)', border: '1px solid rgba(255,45,143,0.42)' }}>
+                      <Type className="w-3 h-3 text-pink-400" />
+                      <span className="text-white text-xs font-black">{posterTitle.slice(0, 16)}{posterTitle.length > 16 ? '…' : ''}</span>
+                    </div>
+                  )}
                   {music && (
                     <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full"
                       style={{ background: 'rgba(233,30,140,0.2)', border: '1px solid rgba(233,30,140,0.4)' }}>
@@ -352,18 +431,19 @@ export default function NewPost() {
               )}
 
               {/* 4 action buttons */}
-              <div className="flex items-center justify-center gap-5 px-4 mb-4">
+              <div className="flex items-center justify-between gap-1.5 px-3 mb-3">
                 {[
+                  { id: 'movie', icon: <Type className="w-5 h-5" />, label: 'Movie', color: '#ff2e9d', active: movieMode && !!posterTitle, onTap: applyMovieMode },
                   { id: 'music',   icon: <Music2 className="w-5 h-5" />, label: 'Music',    color: '#e91e8c', active: !!music,    onTap: () => setMusicOpen(true) },
                   { id: 'caption', icon: <Type className="w-5 h-5" />,   label: 'Text',     color: '#ff5500', active: !!caption,  onTap: () => setActiveInput('caption') },
                   { id: 'location',icon: <MapPin className="w-5 h-5" />, label: 'Location', color: '#06b6d4', active: !!location, onTap: () => setActiveInput('location') },
                   { id: 'tags',    icon: <Users className="w-5 h-5" />,  label: 'Tag',      color: '#a855f7', active: !!tags,     onTap: () => setActiveInput('tags') },
                 ].map(btn => (
                   <motion.button key={btn.id} whileTap={{ scale: 0.86 }} onClick={btn.onTap}
-                    className="flex flex-col items-center gap-1.5">
-                    <div className="w-13 h-13 rounded-2xl flex items-center justify-center"
+                    className="flex w-[58px] flex-col items-center gap-1">
+                    <div className="rounded-2xl flex items-center justify-center"
                       style={{
-                        width: 52, height: 52,
+                        width: 42, height: 42,
                         background: btn.active ? `${btn.color}22` : 'rgba(255,255,255,0.09)',
                         border: `1.5px solid ${btn.active ? btn.color + '70' : 'rgba(255,255,255,0.13)'}`,
                         backdropFilter: 'blur(12px)',
@@ -372,7 +452,7 @@ export default function NewPost() {
                       }}>
                       {btn.icon}
                     </div>
-                    <span className="text-[10px] font-semibold"
+                    <span className="text-[9px] font-semibold leading-none"
                       style={{ color: btn.active ? btn.color : 'rgba(255,255,255,0.4)' }}>
                       {btn.label}
                     </span>
@@ -385,11 +465,11 @@ export default function NewPost() {
               )}
 
               {/* Post button */}
-              <div className="px-4">
+              <div className="px-3">
                 <motion.button whileTap={{ scale: 0.97 }}
                   onClick={() => createPost.mutate()}
                   disabled={createPost.isPending}
-                  className="w-full py-4 rounded-2xl font-bold text-white text-base disabled:opacity-50 flex items-center justify-center gap-2"
+                  className="w-full py-3 rounded-2xl font-bold text-white text-sm disabled:opacity-50 flex items-center justify-center gap-2"
                   style={{ background: 'linear-gradient(135deg,#ff5500,#e91e8c)', boxShadow: '0 0 30px rgba(255,80,0,0.45)' }}>
                   {createPost.isPending ? <><Loader2 className="w-5 h-5 animate-spin" /> Posting…</> : 'Post'}
                 </motion.button>

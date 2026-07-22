@@ -162,7 +162,7 @@ export default function MapSharePrompt({ postId, cityName, postType, hasVideo, o
                     <h2 className="text-white font-extrabold text-xl mb-1">Add to {finalCity} Map?</h2>
                     <p className="text-white/55 text-sm leading-relaxed">
                       Let others discover your post when they explore{' '}
-                      <span className="text-purple-300 font-semibold">{finalCity}</span> on Spicey Map.
+                      <span className="text-purple-300 font-semibold">{finalCity}</span> on Map.
                     </p>
                   </div>
 

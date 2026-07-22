@@ -1,5 +1,5 @@
 /**
- * SpiceyCamera — Instagram/Snapchat/TikTok architecture
+ * SpiceyCamera — Spicey creator architecture
  *
  * PHASE 1 "capture":  Full-screen live camera. No chrome. Instagram-exact layout.
  *   - Top: X (close) | flash | settings
@@ -8,7 +8,7 @@
  *   - Below shutter: POST  STORY  REEL  LIVE  (swipeable tabs)
  *
  * PHASE 2 "editor":  Captured media fills 100% of screen.
- *   Tools float ON TOP as translucent overlays — exactly like Instagram Stories.
+ *   Tools float ON TOP as translucent overlays — Spicey Moment style.
  *   NO new page. NO scrollable form. NO header. Media is full-screen background.
  *   - Top right: X (discard) | "Your story" button
  *   - Left side floating: Aa | sticker | draw | music | location | tag
@@ -27,6 +27,7 @@ import {
   RotateCcw, Hash, AtSign, Send, Camera
 } from 'lucide-react';
 import EffectOverlay from './EffectOverlay';
+import { fallbackMusicResults, normalizeMusicTrack, postMusicPayload } from '@/components/create/musicUtils';
 
 const EFFECTS = [
 
@@ -334,6 +335,7 @@ export default function SpiceyCamera({ onClose }) {
   const pinchRef   = useRef(null);
   const swipeRef   = useRef(null);
   const audioRef   = useRef(null);
+  const fallbackGalleryRef = useRef(null);
 
   /* ── capture phase ── */
   const [phase,      setPhase]     = useState('capture');
@@ -347,6 +349,7 @@ export default function SpiceyCamera({ onClose }) {
   const [recSec,     setRecSec]    = useState(0);
   const [recPct,     setRecPct]    = useState(0);
   const [camErr,     setCamErr]    = useState(false);
+  const [camErrMsg,  setCamErrMsg] = useState('');
   const [lastPhoto,  setLastPhoto] = useState(null);
   const [flashEffect, setFlashEffect] = useState(false);
 
@@ -357,6 +360,7 @@ export default function SpiceyCamera({ onClose }) {
   const [muteOrig,   setMuteOrig]  = useState(false);
 
   /* ── editor phase — metadata ── */
+  const [posterTitle, setPosterTitle] = useState('');
   const [caption,    setCaption]   = useState('');
   const [hashtags,   setHashtags]  = useState('');
   const [location,   setLocation]  = useState('');
@@ -401,16 +405,34 @@ export default function SpiceyCamera({ onClose }) {
   const startCamera = useCallback(async (f) => {
     stopStream();
     try {
-      // Request highest quality camera: 1080p @ 60fps
-      const s = await navigator.mediaDevices.getUserMedia({
+      if (!navigator.mediaDevices?.getUserMedia) {
+        throw new Error('Camera API is not available in this browser');
+      }
+
+      const videoConstraints = {
         video: { 
           facingMode: { ideal: f }, 
           width: { ideal: 1920 }, 
           height: { ideal: 1080 }, 
           frameRate: { ideal: 60 } 
-        },
-        audio: { echoCancellation: true, noiseSuppression: true },
-      });
+        }
+      };
+      let s;
+      try {
+        // Open the camera first. Audio is optional so a blocked microphone cannot kill the camera.
+        s = await navigator.mediaDevices.getUserMedia(videoConstraints);
+      } catch (primaryErr) {
+        console.warn('[SpiceyCamera] HD camera failed, retrying simple video', primaryErr);
+        s = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: f } } });
+      }
+      try {
+        const audioStream = await navigator.mediaDevices.getUserMedia({
+          audio: { echoCancellation: true, noiseSuppression: true },
+        });
+        audioStream.getAudioTracks().forEach(track => s.addTrack(track));
+      } catch (audioErr) {
+        console.warn('[SpiceyCamera] Microphone unavailable, camera continues without audio', audioErr);
+      }
       const vt = s.getVideoTracks()[0];
       if (vt?.getCapabilities) {
         const caps = vt.getCapabilities();
@@ -421,8 +443,13 @@ export default function SpiceyCamera({ onClose }) {
       }
       streamRef.current = s;
       if (videoRef.current) { videoRef.current.srcObject = s; videoRef.current.play().catch(() => {}); }
+      setCamErrMsg('');
       setCamErr(false);
-    } catch { setCamErr(true); }
+    } catch (err) {
+      console.warn('[SpiceyCamera] Camera unavailable', err);
+      setCamErrMsg(err?.name || err?.message || 'Camera unavailable');
+      setCamErr(true);
+    }
   }, [stopStream]);
 
   useEffect(() => {
@@ -571,20 +598,30 @@ export default function SpiceyCamera({ onClose }) {
 
   const onShutterDown = () => {
     if (mode === 'live') { stopStream(); onClose(); navigate('/live'); return; }
+    if (camErr || !streamRef.current) {
+      startCamera(facing);
+      return;
+    }
     if (mode === 'post') { capturePhoto(); return; }
-    // STORY and REEL modes: start recording immediately on press
+    // STORY and REEL modes: tap once to start, tap again to stop.
     if (mode === 'story' || mode === 'reel') {
-      console.log('🎥 Starting video recording in', mode, 'mode');
-      startRec();
+      if (recording) stopRec();
+      else startRec();
     }
   };
   
   const onShutterUp = () => {
-    console.log('🛑 Stopping recording, recording state:', recording);
-    // Stop recording if we're recording
-    if (recording) {
-      stopRec();
+    // Recording modes are tap-to-start / tap-to-stop, so release should not stop instantly.
+  };
+
+  const handleModeSelect = (nextMode) => {
+    if (nextMode === 'live') {
+      stopStream();
+      onClose();
+      navigate('/live');
+      return;
     }
+    setMode(nextMode);
   };
 
   const onGallery = (e) => {
@@ -602,7 +639,7 @@ export default function SpiceyCamera({ onClose }) {
 
   const retake = () => {
     setPhase('capture'); setVideoUrl(null); setVideoFile(null); setPhotoUrl(null);
-    setCaption(''); setHashtags(''); setLocation(''); setMusic(null); setMuteOrig(false);
+    setPosterTitle(''); setCaption(''); setHashtags(''); setLocation(''); setMusic(null); setMuteOrig(false);
     setTags([]); setTextStickers([]); setPanel(null); setPubError('');
     startCamera(facing);
   };
@@ -613,7 +650,13 @@ export default function SpiceyCamera({ onClose }) {
   const searchMusic = async (q) => {
     if (!q.trim()) return;
     setMusicLoading(true);
-    try { const r = await base44.functions.invoke('searchMusic', { query: q }); setMusicRes(r.data?.results || []); } catch { setMusicRes([]); }
+    try {
+      const r = await base44.functions.invoke('searchMusic', { query: q });
+      const results = r.data?.results || [];
+      setMusicRes(results.length ? results : fallbackMusicResults(q));
+    } catch {
+      setMusicRes(fallbackMusicResults(q));
+    }
     setMusicLoading(false);
   };
   const togglePreview = (url) => {
@@ -626,7 +669,7 @@ export default function SpiceyCamera({ onClose }) {
   };
   const pickMusic = (t) => {
     audioRef.current?.pause(); setPlayingUrl(null);
-    setMusic({ title: t.trackName, artist: t.artistName, previewUrl: t.previewUrl, artworkUrl: t.artworkUrl60 });
+    setMusic(normalizeMusicTrack(t));
     setMuteOrig(true); setPanel(null);
   };
 
@@ -668,22 +711,39 @@ export default function SpiceyCamera({ onClose }) {
       }
       const tagStr = tags.map(u => `@${u.username}`).join(' ');
       const tagList = hashtags.split(/[,#\s]+/).map(t => t.trim()).filter(Boolean);
+      const resolvedPostType = mode === 'story' ? 'story' : mode === 'reel' ? 'reel' : 'feed';
+      const cleanLocation = location.trim();
+      const finalCaption = [posterTitle.trim(), caption.trim(), tagStr].filter(Boolean).join(' ');
       await base44.entities.Post.create({
         author_id: user.id, author_name: name, author_username: username, author_avatar: avatar,
-        caption: [caption.trim(), tagStr].filter(Boolean).join(' '),
-        post_type: finalVideoUrl ? (mode === 'story' ? 'story' : 'reel') : 'feed',
+        caption: finalCaption,
+        post_type: resolvedPostType,
         video_url: finalVideoUrl || '', image_url: finalImageUrl || '',
-        hashtags: tagList, location: location.trim(),
-        map_visible: false, map_city: '',
-        music_title: music?.title || '', music_artist: music?.artist || '',
-        music_preview_url: music?.previewUrl || '', music_artwork_url: music?.artworkUrl || '',
+        hashtags: tagList, location: cleanLocation,
+        map_visible: !!cleanLocation, map_city: cleanLocation ? cleanLocation.split(',')[0].trim() : '',
+        ...postMusicPayload(music),
         tags: tagStr,
         likes_count: 0, fire_count: 0, wow_count: 0, comments_count: 0, shares_count: 0,
       });
+      if (mode === 'story') {
+        const expiresAt = new Date();
+        expiresAt.setHours(expiresAt.getHours() + 24);
+        await base44.entities.Story.create({
+          user_id: user.id,
+          username,
+          user_avatar: avatar,
+          image_url: finalImageUrl || '',
+          video_url: finalVideoUrl || '',
+          caption: finalCaption,
+          expires_at: expiresAt.toISOString(),
+          views: [],
+        });
+      }
       qc.invalidateQueries({ queryKey: ['posts'] });
+      qc.invalidateQueries({ queryKey: ['stories'] });
       qc.invalidateQueries({ queryKey: ['spicey-reels-feed-v8'] });
       stopStream(); onClose();
-      navigate(finalVideoUrl ? '/reels' : '/');
+      navigate(mode === 'reel' ? '/reels' : '/');
     } catch (err) { setPubError(err?.message || 'Failed to post. Try again.'); }
     setPublishing(false);
   };
@@ -699,15 +759,13 @@ export default function SpiceyCamera({ onClose }) {
         onTouchStart={onPinchStart} onTouchMove={onPinchMove} onTouchEnd={onTouchEndCapture}>
 
         <canvas ref={canvasRef} className="hidden" />
+        <input ref={fallbackGalleryRef} type="file" accept="image/*,video/*" className="hidden" onChange={onGallery} />
 
         {/* ── Camera feed — hidden when beauty canvas is active ── */}
         {camErr ? (
-          <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 bg-black">
-            <p className="text-white/40 text-sm">Camera not available</p>
-            <label className="px-6 py-3 rounded-full text-white text-sm font-bold cursor-pointer" style={{ background: 'linear-gradient(135deg,#ff4400,#e91e8c)' }}>
-              Choose from Gallery
-              <input type="file" accept="image/*,video/*" className="hidden" onChange={onGallery} />
-            </label>
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-black pointer-events-none">
+            <div className="w-9 h-9 rounded-full border-2 border-white/20 border-t-white/80 animate-spin" />
+            <p className="text-white/50 text-xs">{camErrMsg ? 'Camera permission needed' : 'Opening camera...'}</p>
           </div>
         ) : null}
 
@@ -773,7 +831,7 @@ export default function SpiceyCamera({ onClose }) {
           {!recording && (
             <div className="flex items-center justify-center gap-7 mb-6">
               {MODES.map(m => (
-                <button key={m} onClick={() => setMode(m)} className="relative pb-0.5 active:scale-95 transition-transform">
+                <button key={m} onClick={() => handleModeSelect(m)} className="relative pb-0.5 active:scale-95 transition-transform">
                   <span className="text-sm font-bold tracking-widest"
                     style={{ color: mode === m ? '#fff' : 'rgba(255,255,255,0.38)', textShadow: '0 1px 8px rgba(0,0,0,0.9)' }}>
                     {MODE_CONFIG[m].label}
@@ -884,7 +942,7 @@ export default function SpiceyCamera({ onClose }) {
      RENDER — PHASE 2: EDITOR
      Media fills 100% of screen. ALL tools float on top.
      No new page. No scrollable form. No header nav bar.
-     Exactly Instagram Stories after capture.
+     Spicey Moment camera after capture.
   ═══════════════════════════════════════════════════════════════════ */
   return (
     <div className="fixed inset-0 z-[70] bg-black overflow-hidden select-none" data-prevent-light-mode="true">
@@ -938,6 +996,55 @@ export default function SpiceyCamera({ onClose }) {
         </div>
       )}
 
+      {(posterTitle.trim() || caption.trim()) && (
+        <div className="absolute left-5 right-20 z-20 pointer-events-none" style={{ bottom: 'calc(env(safe-area-inset-bottom, 0px) + 132px)' }}>
+          {posterTitle.trim() && (
+            <div
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                width: 'min(78vw, 310px)',
+                fontFamily: '"Inter", "Arial Black", sans-serif',
+                fontSize: 'clamp(34px, 10vw, 54px)',
+                lineHeight: 0.78,
+                fontWeight: 760,
+                letterSpacing: 0,
+                textTransform: 'uppercase',
+                transform: 'scaleX(0.8)',
+                transformOrigin: 'left center',
+                background: 'linear-gradient(180deg, #ff25b8 0%, #ff356c 46%, #ff8b2a 100%)',
+                WebkitBackgroundClip: 'text',
+                backgroundClip: 'text',
+                color: 'transparent',
+                WebkitTextFillColor: 'transparent',
+                filter: 'drop-shadow(0 3px 7px rgba(0,0,0,0.55))',
+              }}
+            >
+              {posterTitle.trim().split(/\s+/).slice(0, 3).map((word) => (
+                <span key={`${word}-${posterTitle}`}>{word.replace(/[^\p{L}\p{N}]+/gu, '').toUpperCase()}</span>
+              ))}
+            </div>
+          )}
+          {caption.trim() && (
+            <p
+              style={{
+                maxWidth: '74%',
+                margin: posterTitle.trim() ? '9px 0 0' : 0,
+                color: 'rgba(255,255,255,0.86)',
+                fontSize: 'clamp(8px, 2vw, 10px)',
+                lineHeight: 1.32,
+                fontWeight: 260,
+                letterSpacing: '0.075em',
+                textTransform: 'uppercase',
+                textShadow: '0 2px 10px rgba(0,0,0,0.70)',
+              }}
+            >
+              {caption}
+            </p>
+          )}
+        </div>
+      )}
+
       {/* Error */}
       {pubError && (
         <div className="absolute top-20 left-4 right-4 z-30 px-4 py-2.5 rounded-2xl text-sm text-red-200 text-center"
@@ -946,7 +1053,7 @@ export default function SpiceyCamera({ onClose }) {
         </div>
       )}
 
-      {/* ── TOP BAR: X | "Your story" button — exactly Instagram Stories ── */}
+      {/* ── TOP BAR: X | "Your story" button — Spicey Moment camera ── */}
       <div className="absolute top-0 left-0 right-0 z-30 flex items-center justify-between px-4"
         style={{ paddingTop: 'max(50px, env(safe-area-inset-top, 44px))' }}>
         <button onClick={retake}
@@ -973,7 +1080,7 @@ export default function SpiceyCamera({ onClose }) {
         </button>
       </div>
 
-      {/* ── LEFT SIDE FLOATING TOOLS — exactly Instagram Stories editor ── */}
+      {/* ── LEFT SIDE FLOATING TOOLS — Spicey Moment camera editor ── */}
       <div className="absolute right-4 z-30 flex flex-col items-center gap-6"
         style={{ top: '50%', transform: 'translateY(-50%)' }}>
 
@@ -1015,7 +1122,7 @@ export default function SpiceyCamera({ onClose }) {
         </button>
       </div>
 
-      {/* ── BOTTOM: caption pill + post button — Instagram-style ── */}
+      {/* ── BOTTOM: caption pill + post button — Spicey-style ── */}
       <div className="absolute bottom-0 left-0 right-0 z-30 px-4"
         style={{ paddingBottom: 'max(24px, calc(env(safe-area-inset-bottom, 16px) + 8px))' }}>
         {/* Caption tap-to-edit */}
@@ -1088,8 +1195,25 @@ export default function SpiceyCamera({ onClose }) {
               {/* ── CAPTION PANEL ── */}
               {panel === 'caption' && (
                 <div className="flex-1 overflow-y-auto px-5 pb-2 flex flex-col gap-3">
+                  <div className="rounded-2xl p-3"
+                    style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,45,143,0.24)' }}>
+                    <label className="block text-[10px] font-black uppercase tracking-[0.18em] mb-2"
+                      style={{ color: '#ff45d8' }}>
+                      Poster title
+                    </label>
+                    <input value={posterTitle} onChange={e => setPosterTitle(e.target.value)}
+                      placeholder="CITY NIGHTS"
+                      className="w-full bg-transparent outline-none"
+                      style={{
+                        color: '#fff',
+                        fontSize: 18,
+                        fontWeight: 900,
+                        textTransform: 'uppercase',
+                        letterSpacing: 0,
+                      }} />
+                  </div>
                   <textarea value={caption} onChange={e => setCaption(e.target.value)}
-                    placeholder="Write a caption…" rows={3} autoFocus
+                    placeholder="Description / caption in white…" rows={3} autoFocus
                     className="w-full rounded-2xl px-4 py-3 text-white text-sm outline-none resize-none placeholder:text-white/30"
                     style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', fontSize: 15 }} />
                   <div className="flex items-center gap-2 px-4 py-3 rounded-2xl"
@@ -1098,6 +1222,18 @@ export default function SpiceyCamera({ onClose }) {
                     <input value={hashtags} onChange={e => setHashtags(e.target.value)}
                       placeholder="#trending #viral" className="flex-1 bg-transparent text-white text-sm outline-none placeholder:text-white/25"
                       style={{ fontSize: 15 }} />
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button onClick={() => setPosterTitle('CITY NIGHTS')}
+                      className="py-2.5 rounded-2xl text-white text-xs font-black"
+                      style={{ background: 'linear-gradient(135deg, rgba(255,45,143,0.34), rgba(139,44,255,0.30))', border: '1px solid rgba(255,255,255,0.10)' }}>
+                      City Nights
+                    </button>
+                    <button onClick={() => setPosterTitle('GLOW UP')}
+                      className="py-2.5 rounded-2xl text-white text-xs font-black"
+                      style={{ background: 'linear-gradient(135deg, rgba(139,44,255,0.32), rgba(255,139,42,0.28))', border: '1px solid rgba(255,255,255,0.10)' }}>
+                      Glow Up
+                    </button>
                   </div>
                   <button onClick={() => setPanel(null)}
                     className="w-full py-3 rounded-2xl text-white font-bold text-sm mt-1"
@@ -1185,15 +1321,20 @@ export default function SpiceyCamera({ onClose }) {
                     try {
                       const r = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${pos.coords.latitude}&lon=${pos.coords.longitude}&format=json`);
                       const d = await r.json();
-                      setLocation([d.address?.city || d.address?.town || '', d.address?.country || ''].filter(Boolean).join(', '));
+                      setLocation([d.address?.city || d.address?.town || d.address?.village || d.address?.county || '', d.address?.country || ''].filter(Boolean).join(', '));
                       setPanel(null);
                     } catch {}
                   }, () => {})}
                     className="flex items-center gap-3 px-4 py-3 rounded-2xl"
                     style={{ background: 'rgba(6,182,212,0.1)', border: '1px solid rgba(6,182,212,0.3)' }}>
                     <MapPin className="w-4 h-4 text-cyan-400" />
-                    <span className="text-cyan-300 text-sm font-semibold">Use current location</span>
+                    <span className="text-cyan-300 text-sm font-semibold">Use current GPS location</span>
                   </button>
+                  {location && (
+                    <p className="text-[11px] leading-relaxed" style={{ color: 'rgba(255,255,255,0.52)' }}>
+                      This post will be visible on Spicey Map under {location.split(',')[0]}.
+                    </p>
+                  )}
                 </div>
               )}
 

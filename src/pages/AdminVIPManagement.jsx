@@ -3,8 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
 import { useQuery } from '@tanstack/react-query';
 import { 
-  Crown, Users, Calendar, Clock, Shield, Trash2, AlertCircle, 
-  ChevronLeft, Search, Filter, Sparkles, Zap, Flame, Diamond
+  Crown, Calendar, Clock, Shield, Trash2,
+  ChevronLeft, Search, Sparkles, Zap, Flame, Diamond
 } from 'lucide-react';
 import BottomNav from '../components/feed/BottomNav';
 import GiftVIPModal from '../components/panels/GiftVIPModal';
@@ -50,8 +50,8 @@ export default function AdminVIPManagement() {
     base44.auth.me().then(user => {
       setCurrentUser(user);
       // Admin users: info@spicey.live and valondervishi13@gmail.com
-      const adminEmails = ['info@spicey.live', 'valondervishi13@gmail.com'];
-      const isAdminUser = adminEmails.includes((user?.email || '').toLowerCase());
+      const adminEmails = ['info@spicey.live', 'valondervishi13@gmail.com', 'vlora.dervisi@gmail.com'];
+      const isAdminUser = adminEmails.includes((user?.email || '').trim().toLowerCase());
       setIsAdmin(isAdminUser);
       console.log('[AdminVIP] User:', user?.email, 'Is admin:', isAdminUser);
     });

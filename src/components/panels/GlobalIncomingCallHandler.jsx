@@ -18,6 +18,10 @@ export default function GlobalIncomingCallHandler() {
     if (!incomingCall || !user) {
       // Call ended — clean up everything
       console.log('[CALL] Call ended, cleaning up');
+      if (ringRef.current) {
+        clearInterval(ringRef.current);
+        ringRef.current = null;
+      }
       if (audioRef.current) {
         audioRef.current.pause();
         audioRef.current.currentTime = 0;

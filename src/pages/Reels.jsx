@@ -18,6 +18,30 @@ function formatCount(num) {
 }
 
 const SLIDE_DURATION = 3000; // ms per photo
+const REEL_REACTION_STORE_KEY = 'spicey_reel_reactions_v1';
+
+function getReelKey(reel) {
+  const raw = reel?.id || reel?.youtube_video_id || reel?.youtubeVideoId || reel?.video_url || reel?.image_url || reel?.caption || 'reel';
+  return String(raw).replace(/\s+/g, '-').slice(0, 180);
+}
+
+function readReelReactionStore() {
+  try {
+    return JSON.parse(localStorage.getItem(REEL_REACTION_STORE_KEY) || '{}') || {};
+  } catch {
+    return {};
+  }
+}
+
+function writeReelReactionState(reelKey, state) {
+  try {
+    const store = readReelReactionStore();
+    store[reelKey] = { ...(store[reelKey] || {}), ...state, updatedAt: Date.now() };
+    localStorage.setItem(REEL_REACTION_STORE_KEY, JSON.stringify(store));
+  } catch {
+    // Keep the visible tap feedback even when storage is unavailable.
+  }
+}
 
 /* ─── Photo reel inside horizontal feed with auto-play + Ken Burns zoom ─── */
 function PhotoReel({ urls }) {
@@ -93,7 +117,7 @@ function PhotoReel({ urls }) {
 }
 
 /* ─── Single reel card ─── */
-function ReelCard({ reel, isActive, globalMuted, onMuteToggle, onNext, onLike, liked, onComment, onShare, currentUser }) {
+function ReelCard({ reel, isActive, globalMuted, onMuteToggle, onNext, onLike, liked, likesCount, onComment, onShare, currentUser }) {
   const videoRef = useRef(null);
   const mountedRef = useRef(true);
   const [loadState, setLoadState] = useState('idle'); // idle | loading | ready | error
@@ -182,9 +206,9 @@ function ReelCard({ reel, isActive, globalMuted, onMuteToggle, onNext, onLike, l
           {isActive ? (
             <iframe
               title={reel.title || reel.caption || 'Spicey Reel'}
-              src={`https://www.youtube.com/embed/${youtubeId}?autoplay=1&mute=${globalMuted ? 1 : 0}&controls=0&playsinline=1&loop=1&playlist=${youtubeId}&rel=0&modestbranding=1`}
+              src={`https://www.youtube.com/embed/${youtubeId}?autoplay=1&mute=1&controls=0&playsinline=1&loop=1&playlist=${youtubeId}&rel=0&modestbranding=1&enablejsapi=1`}
               className="w-full h-full"
-              allow="autoplay; encrypted-media; picture-in-picture"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
               allowFullScreen
               style={{ border: 0 }}
             />
@@ -277,7 +301,7 @@ function ReelCard({ reel, isActive, globalMuted, onMuteToggle, onNext, onLike, l
           <div className={`w-12 h-12 rounded-full flex items-center justify-center transition-all ${liked ? 'bg-gradient-to-br from-rose-400 to-pink-600' : 'bg-black/40 backdrop-blur-sm'}`}>
             <Heart className={`w-6 h-6 ${liked ? 'fill-white text-white' : 'text-white'}`} />
           </div>
-          <span className="text-xs font-bold text-white/70 drop-shadow">{formatCount(reel.likes_count || 0)}</span>
+          <span className="text-xs font-bold text-white/70 drop-shadow">{formatCount(likesCount || 0)}</span>
         </button>
 
         {/* Comment */}
@@ -316,6 +340,7 @@ export default function Reels() {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [globalMuted, setGlobalMuted] = useState(true);
   const [likedReels, setLikedReels] = useState({});
+  const [reelLikeCounts, setReelLikeCounts] = useState({});
   const [showComments, setShowComments] = useState(false);
   const [showShare, setShowShare] = useState(false);
   const [currentUser, setCurrentUser] = useState(null);
@@ -331,6 +356,42 @@ export default function Reels() {
     staleTime: 120000,
     retry: 2,
   });
+
+  useEffect(() => {
+    if (!reels.length) return;
+    const saved = readReelReactionStore();
+    const nextLiked = {};
+    const nextCounts = {};
+
+    reels.forEach((reel) => {
+      const reelKey = getReelKey(reel);
+      const savedState = saved[reelKey];
+      nextLiked[reelKey] = !!savedState?.liked;
+      nextCounts[reelKey] = Number.isFinite(savedState?.likesCount)
+        ? savedState.likesCount
+        : Number(reel.likes_count || 0);
+    });
+
+    setLikedReels(nextLiked);
+    setReelLikeCounts(nextCounts);
+  }, [reels]);
+
+  const handleLikeReel = useCallback((reel) => {
+    const reelKey = getReelKey(reel);
+    const wasLiked = !!likedReels[reelKey];
+    const currentCount = Number(reelLikeCounts[reelKey] ?? reel.likes_count ?? 0);
+    const nextLiked = !wasLiked;
+    const nextCount = nextLiked ? currentCount + 1 : Math.max(0, currentCount - 1);
+
+    setLikedReels(prev => ({ ...prev, [reelKey]: nextLiked }));
+    setReelLikeCounts(prev => ({ ...prev, [reelKey]: nextCount }));
+    writeReelReactionState(reelKey, { liked: nextLiked, likesCount: nextCount });
+
+    const reelId = reel.id || reel.youtube_video_id || reel.youtubeVideoId;
+    if (reelId && currentUser) {
+      base44.functions.invoke('toggleReaction', { post_id: reelId, type: 'like' }).catch(() => {});
+    }
+  }, [currentUser, likedReels, reelLikeCounts]);
 
   // Sync scroll position → currentIndex
   useEffect(() => {
@@ -367,13 +428,13 @@ export default function Reels() {
   if (isLoading) return (
     <div className="fixed inset-0 bg-black flex flex-col items-center justify-center gap-4">
       <Loader2 className="w-10 h-10 text-pink-500 animate-spin" />
-      <p className="text-white/60 text-sm">Loading Reels…</p>
+      <p className="text-white/60 text-sm">Loading Spicey Clips…</p>
     </div>
   );
 
   if (error || reels.length === 0) return (
     <div className="fixed inset-0 bg-black flex flex-col items-center justify-center gap-4">
-      <p className="text-white/60 text-lg">{error ? 'Failed to load' : 'No reels yet'}</p>
+      <p className="text-white/60 text-lg">{error ? 'Failed to load' : 'No Reels yet'}</p>
       <button onClick={() => navigate('/')} className="px-6 py-3 rounded-full bg-gradient-to-r from-orange-500 to-pink-500 text-white font-bold">
         Go to Feed
       </button>
@@ -391,7 +452,7 @@ export default function Reels() {
           <Home className="w-5 h-5 text-white" />
         </button>
         <div className="flex flex-col items-center">
-          <h1 className="text-white font-bold text-base">REELS</h1>
+          <h1 className="text-white font-bold text-base">SPICEY CLIPS</h1>
           <p className="text-white/40 text-[10px]">Swipe left for next →</p>
         </div>
         <div className="w-9" />
@@ -411,8 +472,9 @@ export default function Reels() {
             globalMuted={globalMuted}
             onMuteToggle={() => setGlobalMuted(m => !m)}
             onNext={goNext}
-            liked={!!likedReels[reel.id]}
-            onLike={() => setLikedReels(prev => ({ ...prev, [reel.id]: !prev[reel.id] }))}
+            liked={!!likedReels[getReelKey(reel)]}
+            likesCount={reelLikeCounts[getReelKey(reel)] ?? reel.likes_count ?? 0}
+            onLike={() => handleLikeReel(reel)}
             onComment={() => setShowComments(true)}
             onShare={() => setShowShare(true)}
             currentUser={currentUser}

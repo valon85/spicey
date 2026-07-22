@@ -22,16 +22,16 @@ function computeBg() {
   const html = document.documentElement;
   const isLight = html.classList.contains('light-mode');
   const vipTheme = html.getAttribute('data-vip-theme');
+  const globalThemeBackground = html.style.getPropertyValue('--spicey-page-bg').trim();
 
-  if (isLight) {
-    return 'linear-gradient(160deg, #FFF5F5 0%, #FFE8EF 40%, #F8F0FF 100%)';
-  }
+  if (globalThemeBackground && (isLight || vipTheme)) return globalThemeBackground;
+  if (isLight) return 'linear-gradient(145deg, #ffffff 0%, #fff0f6 70%, #fff3e8 100%)';
   if (vipTheme && VIP_SOLID_COLORS[vipTheme]) {
     const top = VIP_TOP_COLORS[vipTheme];
     const solid = VIP_SOLID_COLORS[vipTheme];
     return `linear-gradient(180deg, ${top} 0%, ${solid} 40%, ${solid} 100%)`;
   }
-  return 'rgb(6,3,10)';
+  return '#000000';
 }
 
 /**
@@ -49,7 +49,7 @@ export function usePageBackground() {
     const obs = new MutationObserver(update);
     obs.observe(document.documentElement, {
       attributes: true,
-      attributeFilter: ['class', 'data-vip-theme'],
+      attributeFilter: ['class', 'data-vip-theme', 'data-spicey-theme', 'style'],
     });
     return () => obs.disconnect();
   }, []);
@@ -70,7 +70,7 @@ export function useIsLightMode() {
       setIsLight(prev => (prev === next ? prev : next));
     };
     const obs = new MutationObserver(update);
-    obs.observe(document.documentElement, { attributes: true, attributeFilter: ['class', 'data-vip-theme'] });
+    obs.observe(document.documentElement, { attributes: true, attributeFilter: ['class', 'data-vip-theme', 'data-spicey-theme', 'style'] });
     return () => obs.disconnect();
   }, []);
   return isLight;

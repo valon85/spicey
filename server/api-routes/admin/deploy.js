@@ -3,7 +3,7 @@ import { getSupabaseUser, supabaseTable } from '../_lib/supabaseRest.js';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
-const ADMIN_EMAILS = new Set(['info@spicey.live', 'valondervishi13@gmail.com']);
+const ADMIN_EMAILS = new Set(['info@spicey.live', 'valondervishi13@gmail.com', 'vlora.dervisi@gmail.com']);
 const RELEASE_SETTINGS_KEY = 'release_links';
 
 function getEnvValue(name) {

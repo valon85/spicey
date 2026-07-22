@@ -2,11 +2,13 @@ import { handleOptions, readJson, sendJson, setCors } from '../../_lib/http.js';
 import { getSupabaseUser, supabaseTable } from '../../_lib/supabaseRest.js';
 
 const ALLOWED_PLANS = new Set(['vip', 'creator', 'business']);
+const ADMIN_EMAILS = new Set(['info@spicey.live', 'valondervishi13@gmail.com', 'vlora.dervisi@gmail.com']);
 
-function addMonths(months) {
-  if (Number(months) === 999) return new Date('2099-12-31T23:59:59.000Z').toISOString();
+function subscriptionEnd({ days, months }) {
+  if (Number(days) >= 9999 || Number(months) === 999) return new Date('2099-12-31T23:59:59.000Z').toISOString();
   const date = new Date();
-  date.setMonth(date.getMonth() + Number(months || 1));
+  if (Number.isFinite(Number(days)) && Number(days) > 0) date.setDate(date.getDate() + Number(days));
+  else date.setMonth(date.getMonth() + Number(months || 1));
   return date.toISOString();
 }
 
@@ -46,13 +48,14 @@ export default async function handler(req, res) {
 
   try {
     const { token, user } = await getSupabaseUser(req);
-    if (user.email !== 'info@spicey.live') {
+    if (!ADMIN_EMAILS.has(String(user.email || '').toLowerCase())) {
       return sendJson(res, 403, { error: 'Admin access required' });
     }
 
     const body = await readJson(req);
     const plan = String(body.planType || body.plan_type || '').trim();
     const months = Number(body.durationMonths || body.duration_months || 1);
+    const days = Number(body.durationDays || body.duration_days || 0);
     if (!ALLOWED_PLANS.has(plan)) return sendJson(res, 400, { error: 'Invalid plan type' });
 
     const recipient = await findRecipient(token, {
@@ -73,7 +76,7 @@ export default async function handler(req, res) {
         granted_by_admin_email: user.email,
         grant_reason: body.reason || body.grant_reason || null,
         current_period_start: new Date().toISOString(),
-        current_period_end: addMonths(months),
+        current_period_end: subscriptionEnd({ days, months }),
       },
     });
 

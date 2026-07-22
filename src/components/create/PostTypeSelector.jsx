@@ -89,7 +89,7 @@ export default function PostTypeSelector({ onClose }) {
               background: 'linear-gradient(135deg, #e91e8c, #a733ff)',
               boxShadow: '0 0 24px rgba(233,30,140,0.4)',
             }}>
-            🎬 Create Reel
+            🎬 Create Spicey Clip
           </motion.button>
           <motion.button
             whileTap={{ scale: 0.97 }}

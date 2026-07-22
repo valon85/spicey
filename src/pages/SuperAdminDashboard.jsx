@@ -23,7 +23,7 @@ import {
   AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid
 } from 'recharts';
 
-const SUPER_ADMIN_EMAILS = ['info@spicey.live', 'valondervishi13@gmail.com'];
+const SUPER_ADMIN_EMAILS = ['info@spicey.live', 'valondervishi13@gmail.com', 'vlora.dervisi@gmail.com'];
 
 function StatCard({ icon: Icon, label, value, sub, color = '#ff5500' }) {
   return (

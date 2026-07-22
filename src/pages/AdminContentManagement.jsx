@@ -24,7 +24,7 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 
-const SUPER_ADMIN_EMAILS = ['info@spicey.live', 'valondervishi13@gmail.com'];
+const SUPER_ADMIN_EMAILS = ['info@spicey.live', 'valondervishi13@gmail.com', 'vlora.dervisi@gmail.com'];
 
 export default function AdminContentManagement() {
   const navigate = useNavigate();

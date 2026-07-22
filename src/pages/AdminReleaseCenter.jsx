@@ -17,7 +17,7 @@ import {
   Smartphone,
 } from 'lucide-react';
 
-const ADMIN_EMAILS = ['info@spicey.live', 'valondervishi13@gmail.com'];
+const ADMIN_EMAILS = ['info@spicey.live', 'valondervishi13@gmail.com', 'vlora.dervisi@gmail.com'];
 const PROJECT_PATH = '/Users/spicey/Documents/Codex/2026-06-29/github-plugin-github-openai-curated-remote-2/work/spicey-10-supabase-20260703';
 
 const RELEASE_ACTIONS = [

@@ -3,10 +3,11 @@ import { base44 } from '@/api/base44Client';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
-  ArrowLeft, Settings, Palette, Bell, Shield, Zap, Star,
-  TrendingUp, Users, DollarSign, Video, Image, MessageCircle,
+  ArrowLeft, Palette, Bell, Shield, Zap, Star,
+  TrendingUp, Users,
   Crown, Flame, Diamond, Check, Lock, Globe, Eye, Sparkles
 } from 'lucide-react';
+import { isAdminEmail } from '@/lib/adminAccess';
 
 export default function VIPSettings() {
   const navigate = useNavigate();
@@ -45,7 +46,7 @@ export default function VIPSettings() {
         status: 'active' 
       });
       
-      if (user.email === 'info@spicey.live') {
+      if (isAdminEmail(user)) {
         setPlanType('business');
       } else if (subscriptions.length > 0) {
         setPlanType(subscriptions[0].plan_type);

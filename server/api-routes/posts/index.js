@@ -63,6 +63,8 @@ export default async function handler(req, res) {
           music_artist: body.music_artist || null,
           music_preview_url: body.music_preview_url || null,
           music_artwork_url: body.music_artwork_url || null,
+          map_visible: Boolean(body.map_visible),
+          map_city: body.map_city || null,
         },
       });
       return sendJson(res, 200, { post: created[0] });

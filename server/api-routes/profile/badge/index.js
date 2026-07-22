@@ -2,6 +2,7 @@ import { handleOptions, readJson, sendJson, setCors } from '../../_lib/http.js';
 import { getSupabaseUser, supabaseTable } from '../../_lib/supabaseRest.js';
 
 const ALLOWED_BADGES = new Set(['vip', 'creator', 'business']);
+const ADMIN_EMAILS = new Set(['info@spicey.live', 'valondervishi13@gmail.com', 'vlora.dervisi@gmail.com']);
 
 async function ensureProfile(token, user) {
   const rows = await supabaseTable('profiles', {
@@ -25,7 +26,7 @@ async function ensureProfile(token, user) {
 }
 
 async function hasActiveSubscription(token, user) {
-  if (user.email === 'info@spicey.live') return true;
+  if (ADMIN_EMAILS.has(String(user.email || '').toLowerCase())) return true;
   const rows = await supabaseTable('subscriptions', {
     token,
     query: `?user_id=eq.${encodeURIComponent(user.id)}&status=eq.active&limit=1`,

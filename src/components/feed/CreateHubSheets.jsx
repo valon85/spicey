@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Loader2, MapPin, Navigation, Music2, Search, Check, Play, Pause } from 'lucide-react';
 
-// ── Compact Half-Sheet (Instagram/TikTok style) ──────────────────────────────
+// ── Compact Half-Sheet (Spicey-style) ──────────────────────────────
 function HalfSheet({ open, onClose, title, accentColor = '#ff5500', children }) {
   if (!open) return null;
   return (

@@ -10,47 +10,76 @@
  * - Compliant with YouTube API Services Terms of Service:
  *   https://developers.google.com/youtube/terms/api-services-tos
  */
-import React, { useState, useCallback, useEffect, useId, useRef } from 'react';
-import { ExternalLink, Youtube, ArrowLeft, Volume2, VolumeX } from 'lucide-react';
+import React, { useState, useCallback, useEffect } from 'react';
+import { ExternalLink, Youtube, ArrowLeft, Play } from 'lucide-react';
 
-export default function YouTubeReelItem({ video, onBack, onVideoEnd, onVideoUnavailable }) {
+export default function YouTubeReelItem({ video, onBack, onVideoEnd }) {
   const [embedError, setEmbedError] = useState(false);
   const [playerReady, setPlayerReady] = useState(false);
-  const [soundEnabled, setSoundEnabled] = useState(() => localStorage.getItem('spicey-youtube-sound') === 'on');
-  const playerContainerRef = useRef(null);
-  const playerRef = useRef(null);
-  const unavailableTimerRef = useRef(null);
-  const soundEnabledRef = useRef(soundEnabled);
-  const playerId = `youtube-player-${useId().replace(/:/g, '')}`;
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [apiReady, setApiReady] = useState(false);
+  const iframeRef = React.useRef(null);
+  const playerRef = React.useRef(null);
+  const onVideoEndRef = React.useRef(onVideoEnd);
+  const skipTimerRef = React.useRef(null);
+  const playbackNudgeRef = React.useRef(null);
+
+  useEffect(() => {
+    onVideoEndRef.current = onVideoEnd;
+  }, [onVideoEnd]);
 
   const watchOnYouTube = useCallback(() => {
     window.open(video.watchUrl, '_blank', 'noopener,noreferrer');
   }, [video.watchUrl]);
 
-  const toggleSound = useCallback(() => {
-    const nextEnabled = !soundEnabledRef.current;
-    soundEnabledRef.current = nextEnabled;
-    setSoundEnabled(nextEnabled);
-    localStorage.setItem('spicey-youtube-sound', nextEnabled ? 'on' : 'off');
-    const player = playerRef.current;
-    if (!player) return;
-    if (nextEnabled) {
-      player.unMute?.();
-      player.setVolume?.(100);
-      player.playVideo?.();
-    } else {
-      player.mute?.();
+  // WKWebView uses a capacitor:// origin, which YouTube does not accept as the
+  // iframe API origin. Include origin only on normal http(s) web pages.
+  const embedParams = new URLSearchParams({
+    autoplay: '1',
+    mute: '1',
+    controls: '1',
+    rel: '0',
+    playsinline: '1',
+    enablejsapi: '1',
+    loop: '1',
+    playlist: video.youtubeVideoId,
+  });
+  if (typeof window !== 'undefined' && /^https?:\/\//.test(window.location.origin)) {
+    embedParams.set('origin', window.location.origin);
+  }
+  const embedSrc = `https://www.youtube-nocookie.com/embed/${video.youtubeVideoId}?${embedParams.toString()}`;
+
+  const requestPlayback = useCallback(() => {
+    try {
+      if (playerRef.current?.playVideo) {
+        playerRef.current.mute?.();
+        playerRef.current.setVolume?.(0);
+        playerRef.current.playVideo();
+      } else {
+        iframeRef.current?.contentWindow?.postMessage(JSON.stringify({ event: 'command', func: 'mute', args: [] }), '*');
+        iframeRef.current?.contentWindow?.postMessage(JSON.stringify({ event: 'command', func: 'setVolume', args: [0] }), '*');
+        iframeRef.current?.contentWindow?.postMessage(JSON.stringify({ event: 'command', func: 'playVideo', args: [] }), '*');
+      }
+    } catch {
+      // The visible YouTube controls remain available if the API is still loading.
     }
   }, []);
 
   // Load YouTube IFrame Player API and initialize player
   useEffect(() => {
-    let cancelled = false;
     console.log('[YouTubeReel] Setting up player for video:', video.youtubeVideoId);
+    setEmbedError(false);
+    setPlayerReady(false);
+    setIsPlaying(false);
+    setApiReady(false);
+    window.clearTimeout(skipTimerRef.current);
+    window.clearInterval(playbackNudgeRef.current);
     
-    // Load YouTube IFrame API if not already loaded
-    if (!window.YT) {
+    // Load YouTube IFrame API once. Polling avoids losing the global ready
+    // callback when another player or script initialized it first.
+    if (!window.YT && !document.getElementById('youtube-iframe-api')) {
       const tag = document.createElement('script');
+      tag.id = 'youtube-iframe-api';
       tag.src = 'https://www.youtube.com/iframe_api';
       const firstScriptTag = document.getElementsByTagName('script')[0];
       firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
@@ -58,52 +87,47 @@ export default function YouTubeReelItem({ video, onBack, onVideoEnd, onVideoUnav
 
     // Initialize player when API is ready
     const initPlayer = () => {
-      if (cancelled || !playerContainerRef.current || !window.YT?.Player) return;
+      if (!iframeRef.current) return;
       
       console.log('[YouTubeReel] Initializing YouTube player');
       
-      const player = new window.YT.Player(playerId, {
-        host: 'https://www.youtube-nocookie.com',
-        videoId: video.youtubeVideoId,
-        playerVars: {
-          autoplay: 1,
-          mute: 1,
-          controls: 1,
-          playsinline: 1,
-          rel: 0,
-          modestbranding: 1,
-          origin: 'https://spicey.live',
-        },
+      const player = new window.YT.Player(iframeRef.current, {
         events: {
           onReady: (event) => {
             console.log('[YouTubeReel] Player ready, attempting autoplay');
             setPlayerReady(true);
-            // Try to play - muted for autoplay policy
+            // Muted autoplay is the only reliable autoplay mode in iOS WKWebView.
+            event.target.mute();
+            event.target.setVolume?.(0);
             event.target.playVideo();
-            event.target.setVolume(100);
-            if (soundEnabledRef.current) event.target.unMute();
+            window.setTimeout(() => {
+              event.target.mute();
+              event.target.playVideo();
+            }, 350);
+            window.setTimeout(() => {
+              event.target.mute();
+              event.target.playVideo();
+            }, 1100);
           },
           onStateChange: (event) => {
             // PlayerState.ENDED = 0
             if (event.data === window.YT.PlayerState.ENDED) {
               console.log('[YouTubeReel] Video ended, advancing to next');
-              onVideoEnd?.();
+              setIsPlaying(false);
+              onVideoEndRef.current?.();
             }
             // PlayerState.PLAYING = 1
             if (event.data === window.YT.PlayerState.PLAYING) {
               console.log('[YouTubeReel] Video is playing');
-              if (soundEnabledRef.current) {
-                player.unMute?.();
-                player.setVolume?.(100);
-              }
+              setIsPlaying(true);
+            }
+            if (event.data === window.YT.PlayerState.PAUSED || event.data === window.YT.PlayerState.CUED) {
+              setIsPlaying(false);
             }
           },
           onError: (event) => {
             console.error('[YouTubeReel] Player error:', event.data);
             setEmbedError(true);
-            unavailableTimerRef.current = setTimeout(() => {
-              onVideoUnavailable?.(video.youtubeVideoId, event.data);
-            }, 1200);
           }
         }
       });
@@ -111,31 +135,51 @@ export default function YouTubeReelItem({ video, onBack, onVideoEnd, onVideoUnav
       playerRef.current = player;
     };
 
-    // Wait for YT API to be ready
-    if (window.YT && window.YT.Player) {
-      initPlayer();
-    } else {
-      window.onYouTubeIframeAPIReady = () => {
-        console.log('[YouTubeReel] YouTube API ready');
+    let attempts = 0;
+    const readyTimer = window.setInterval(() => {
+      attempts += 1;
+      if (window.YT?.Player) {
+        window.clearInterval(readyTimer);
+        setApiReady(true);
         initPlayer();
-      };
-    }
+      } else if (attempts >= 100) {
+        window.clearInterval(readyTimer);
+      }
+    }, 100);
+
+    // iOS/WKWebView sometimes ignores the first iframe command until the frame
+    // fully wakes up. A short muted retry makes YouTube Shorts start reliably.
+    let nudgeAttempts = 0;
+    playbackNudgeRef.current = window.setInterval(() => {
+      nudgeAttempts += 1;
+      requestPlayback();
+      if (nudgeAttempts >= 8) {
+        window.clearInterval(playbackNudgeRef.current);
+      }
+    }, 650);
 
     // Cleanup on unmount
     return () => {
-      cancelled = true;
-      clearTimeout(unavailableTimerRef.current);
       console.log('[YouTubeReel] Cleaning up player');
+      window.clearInterval(readyTimer);
+      window.clearInterval(playbackNudgeRef.current);
       if (playerRef.current) {
         playerRef.current.destroy();
         playerRef.current = null;
       }
+      window.clearTimeout(skipTimerRef.current);
     };
-  }, [video.youtubeVideoId, onVideoEnd, onVideoUnavailable, playerId]);
+  }, [video.youtubeVideoId]);
+
+  useEffect(() => {
+    if (!embedError) return;
+    skipTimerRef.current = window.setTimeout(() => onVideoEndRef.current?.(), 1800);
+    return () => window.clearTimeout(skipTimerRef.current);
+  }, [embedError, video.youtubeVideoId]);
 
   // Auto-advance fallback timer based on video duration
   React.useEffect(() => {
-    if (!onVideoEnd || !playerReady) return;
+    if (!playerReady || !isPlaying) return;
     
     const duration = video.durationSeconds || 60;
     const bufferSeconds = 2;
@@ -144,13 +188,13 @@ export default function YouTubeReelItem({ video, onBack, onVideoEnd, onVideoUnav
     
     const timer = setTimeout(() => {
       console.log('[YouTubeReel] Fallback timer fired, advancing to next reel');
-      onVideoEnd();
+      onVideoEndRef.current?.();
     }, (duration + bufferSeconds) * 1000);
     
     return () => {
       clearTimeout(timer);
     };
-  }, [onVideoEnd, video.durationSeconds, video.youtubeVideoId, playerReady]);
+  }, [video.durationSeconds, video.youtubeVideoId, playerReady, isPlaying]);
 
   return (
     <div className="relative bg-black w-full h-full flex flex-col" data-prevent-light-mode="true">
@@ -168,7 +212,18 @@ export default function YouTubeReelItem({ video, onBack, onVideoEnd, onVideoUnav
       {/* ── Official YouTube Iframe Player ── */}
       <div className="absolute inset-0">
         {!embedError ? (
-          <div ref={playerContainerRef} id={playerId} className="w-full h-full" />
+          <iframe
+            ref={iframeRef}
+            src={embedSrc}
+            title={video.title}
+            className="w-full h-full"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+            allowFullScreen
+            referrerPolicy="strict-origin-when-cross-origin"
+            onError={() => setEmbedError(true)}
+            style={{ border: 'none', background: '#000' }}
+            id={`youtube-player-${video.youtubeVideoId}`}
+          />
         ) : (
           /* Embed blocked / unavailable fallback */
           <div className="w-full h-full flex flex-col items-center justify-center gap-4 px-8 text-center"
@@ -189,23 +244,30 @@ export default function YouTubeReelItem({ video, onBack, onVideoEnd, onVideoUnav
         )}
       </div>
 
-      {/* iOS requires a real user gesture before autoplay audio can be enabled. */}
-      {!embedError && (
+      {!embedError && !isPlaying && (
         <button
           type="button"
-          onClick={toggleSound}
-          className="absolute z-50 right-4 flex items-center gap-2 rounded-full px-3 py-2 text-white font-semibold active:scale-95 transition-transform"
+          onClick={requestPlayback}
+          className="absolute z-30 left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-20 h-20 rounded-full flex items-center justify-center active:scale-90 transition-transform"
           style={{
-            top: 'max(66px, calc(env(safe-area-inset-top) + 54px))',
-            background: soundEnabled ? 'rgba(236,72,153,0.9)' : 'rgba(0,0,0,0.72)',
-            border: '1px solid rgba(255,255,255,0.25)',
-            backdropFilter: 'blur(10px)',
+            color: '#fff',
+            background: 'linear-gradient(145deg, #ff6a00 0%, #ff2d8f 54%, #8b2cff 100%)',
+            border: '2px solid rgba(255,255,255,0.72)',
+            boxShadow: '0 18px 44px rgba(255,45,143,0.46), inset 0 2px 0 rgba(255,255,255,0.28)',
           }}
-          aria-label={soundEnabled ? 'Mute YouTube video' : 'Turn on YouTube sound'}
+          aria-label="Play YouTube clip"
         >
-          {soundEnabled ? <Volume2 className="w-5 h-5" /> : <VolumeX className="w-5 h-5" />}
-          <span className="text-xs">{soundEnabled ? 'Sound on' : 'Tap for sound'}</span>
+          <Play className="w-8 h-8 fill-white translate-x-0.5" />
         </button>
+      )}
+
+      {!embedError && !apiReady && (
+        <div
+          className="absolute left-1/2 top-[58%] z-30 -translate-x-1/2 rounded-full px-3 py-1.5 text-[11px] font-bold text-white/70"
+          style={{ background: 'rgba(0,0,0,0.45)', border: '1px solid rgba(255,255,255,0.12)', backdropFilter: 'blur(10px)' }}
+        >
+          Tap play if the clip does not start
+        </div>
       )}
 
 

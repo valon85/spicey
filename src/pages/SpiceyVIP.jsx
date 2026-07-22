@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Star, Flame, Diamond, Check, X, Sparkles, Crown, Zap, TrendingUp, Users, Shield, Palette, Rocket, Target, Award, Eye, BarChart2, Megaphone, Lock } from 'lucide-react';
+import { Star, Flame, Diamond, Check, X, Crown, Zap, TrendingUp, Users, Shield, Palette, Rocket, Target, Award, Eye, BarChart2, Megaphone, Lock } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { useNavigate } from 'react-router-dom';
 import ProfileThemePicker from '@/components/profile/ProfileThemePicker';
 import { useTheme } from '@/lib/ThemeContext';
+import { isAdminEmail } from '@/lib/adminAccess';
 
 const PLANS = [
   {
@@ -18,13 +19,13 @@ const PLANS = [
     bgColor: 'rgba(155, 48, 255, 0.12)',
     borderColor: 'rgba(155, 48, 255, 0.4)',
     features: [
-      { icon: Crown, label: 'Purple Crown VIP Badge', action: null },
-      { icon: Eye, label: 'Verified Profile Status', action: null },
+      { icon: Crown, label: 'Purple Crown VIP Badge', action: 'profile' },
+      { icon: Eye, label: 'Verified Profile Status', action: 'profile' },
       { icon: Rocket, label: 'Priority feed & search visibility', action: 'explore' },
       { icon: Palette, label: 'VIP Color Themes (8 exclusive)', action: 'themes' },
-      { icon: Zap, label: 'Longer videos & live streams', action: null },
+      { icon: Zap, label: 'Longer videos & live streams', action: 'create' },
       { icon: BarChart2, label: 'Advanced profile insights', action: 'analytics' },
-      { icon: Star, label: 'Early access to new features', action: null },
+      { icon: Star, label: 'Early access to new features', action: 'dashboard' },
     ],
   },
   {
@@ -39,12 +40,12 @@ const PLANS = [
     borderColor: 'rgba(249, 115, 22, 0.3)',
     popular: true,
     features: [
-      { icon: Crown, label: 'All VIP features included', action: null },
-      { icon: Award, label: 'Creator Flame Badge', action: null },
+      { icon: Crown, label: 'All VIP features included', action: 'dashboard' },
+      { icon: Award, label: 'Creator Flame Badge', action: 'profile' },
       { icon: BarChart2, label: 'Full content analytics', action: 'analytics' },
       { icon: Megaphone, label: 'Post boosting & promotion', action: 'boost' },
-      { icon: Target, label: 'Monetization features', action: null },
-      { icon: Users, label: 'Priority creator support', action: null },
+      { icon: Target, label: 'Monetization features', action: 'dashboard' },
+      { icon: Users, label: 'Priority creator support', action: 'support' },
       { icon: TrendingUp, label: 'Advanced audience insights', action: 'analytics' },
     ],
   },
@@ -59,13 +60,13 @@ const PLANS = [
     bgColor: 'rgba(255, 215, 0, 0.08)',
     borderColor: 'rgba(255, 215, 0, 0.35)',
     features: [
-      { icon: Flame, label: 'All Creator features included', action: null },
-      { icon: Shield, label: 'Gold Business Badge', action: null },
+      { icon: Flame, label: 'All Creator features included', action: 'dashboard' },
+      { icon: Shield, label: 'Gold Business Badge', action: 'profile' },
       { icon: Target, label: 'Business profile & branding', action: 'settings' },
       { icon: BarChart2, label: 'Business analytics dashboard', action: 'analytics' },
       { icon: Megaphone, label: 'Ad campaigns & promotions', action: 'ads' },
-      { icon: Zap, label: 'Priority 24/7 support', action: null },
-      { icon: Users, label: 'Team management tools', action: null },
+      { icon: Zap, label: 'Priority 24/7 support', action: 'support' },
+      { icon: Users, label: 'Team management tools', action: 'dashboard' },
     ],
   },
 ];
@@ -103,7 +104,7 @@ export default function SpiceyVIP() {
       setUser(currentUser);
 
       // Check if admin account
-      if (currentUser.email === 'info@spicey.live') {
+      if (isAdminEmail(currentUser)) {
         setCurrentSubscription({
           plan_type: 'business',
           status: 'active',
@@ -113,13 +114,15 @@ export default function SpiceyVIP() {
         return;
       }
 
-      const subs = await base44.entities.Subscription.filter({ 
-        user_id: currentUser.id, 
-        status: 'active' 
-      }, '-created_date', 1);
+      const statusResult = await base44.functions.invoke('getUserSubscription');
+      const statusData = statusResult?.data || statusResult || {};
+      const activeSubscription = statusData.subscription || null;
 
-      if (subs.length > 0) {
-        setCurrentSubscription(subs[0]);
+      if (statusData.hasSubscription || statusData.is_vip) {
+        setCurrentSubscription({
+          ...activeSubscription,
+          plan_type: statusData.planType || activeSubscription?.plan_type || activeSubscription?.plan || 'vip',
+        });
       }
 
       // Load current profile theme + trial status
@@ -147,7 +150,10 @@ export default function SpiceyVIP() {
         return;
       }
 
-      const response = await base44.functions.invoke('stripeCheckout', { planType });
+      const response = await base44.functions.invoke('stripeCheckout', {
+        planType,
+        returnUrl: `${window.location.origin}/vip`,
+      });
       const data = response.data || response;
       
       // Admin account - already has all features
@@ -176,7 +182,7 @@ export default function SpiceyVIP() {
 
   const handleAccessFeature = (featureType) => {
     if (!featureType) return;
-    const hasAccess = currentSubscription?.status === 'active' || user?.email === 'info@spicey.live';
+    const hasAccess = ['active', 'trialing'].includes(currentSubscription?.status) || isAdminEmail(user);
     if (!hasAccess) {
       setError('Subscribe to unlock this feature!');
       return;
@@ -186,6 +192,10 @@ export default function SpiceyVIP() {
       case 'settings': navigate('/vip-dashboard'); break;
       case 'themes': navigate('/vip-dashboard'); break;
       case 'explore': navigate('/explore'); break;
+      case 'profile': navigate('/profile'); break;
+      case 'create': navigate('/create'); break;
+      case 'support': window.location.href = 'mailto:info@spicey.live?subject=Spicey%20VIP%20Support'; break;
+      case 'dashboard': navigate('/vip-dashboard'); break;
       case 'ads': navigate('/vip-dashboard'); break;
       case 'boost': navigate('/vip-dashboard'); break;
       case 'vip':
@@ -444,7 +454,9 @@ export default function SpiceyVIP() {
               <div className="space-y-2 mb-5">
                 {plan.features.map((feature, i) => {
                   const FIcon = feature.icon || Check;
-                  const isClickable = !!feature.action && (currentSubscription?.status === 'active' || user?.email === 'info@spicey.live');
+                  const isClickable = !!feature.action && (
+                    ['active', 'trialing'].includes(currentSubscription?.status) || isAdminEmail(user)
+                  );
                   return (
                     <div key={i}
                       onClick={feature.action ? () => handleAccessFeature(feature.action) : undefined}

@@ -10,8 +10,8 @@ import { parseVoiceCommand } from './voiceCommandParser';
 const CHAT_STARTERS = [
   { icon: '✍️', text: 'Write a post caption for me' },
   { icon: '🔥', text: 'Best hashtags right now' },
-  { icon: '🎬', text: 'Give me a Reel idea' },
-  { icon: '📖', text: 'Write a Story caption' },
+  { icon: '🎬', text: 'Give me a Spicey Clip idea' },
+  { icon: '📖', text: 'Write a Moment caption' },
   { icon: '📞', text: 'Call a friend on Spicey' },
   { icon: '💬', text: 'Message a friend' },
 ];
@@ -28,16 +28,16 @@ function detectContentActions(text) {
 
   if (looksLikeContent) {
     if (isStory) {
-      actions.push({ label: 'Post to Story', icon: '📖', type: 'story' });
+      actions.push({ label: 'Post to Moment', icon: '📖', type: 'story' });
     } else if (isReel) {
-      actions.push({ label: 'Create Reel', icon: '🎬', type: 'reel' });
+      actions.push({ label: 'Create Spicey Clip', icon: '🎬', type: 'reel' });
     } else {
       actions.push({ label: 'Post to Feed', icon: '📸', type: 'feed' });
-      actions.push({ label: 'Post to Story', icon: '📖', type: 'story' });
+      actions.push({ label: 'Post to Moment', icon: '📖', type: 'story' });
     }
   }
   if (isReel && !actions.find(a => a.type === 'reel')) {
-    actions.push({ label: 'Create Reel', icon: '🎬', type: 'reel' });
+    actions.push({ label: 'Create Spicey Clip', icon: '🎬', type: 'reel' });
   }
   return actions;
 }

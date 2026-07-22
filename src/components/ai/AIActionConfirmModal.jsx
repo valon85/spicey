@@ -4,8 +4,8 @@ import { X, Check, Phone, MessageCircle, User, Bell, Compass, FileText } from 'l
 
 const INTENT_CONFIG = {
   post_feed:          { icon: '📸', label: 'Post to Feed',        color: '#ff5500', glow: 'rgba(255,85,0,0.4)' },
-  post_story:         { icon: '📖', label: 'Post to Story',       color: '#0ea5e9', glow: 'rgba(14,165,233,0.4)' },
-  create_reel:        { icon: '🎬', label: 'Create Reel',         color: '#7c3aed', glow: 'rgba(124,58,237,0.4)' },
+  post_story:         { icon: '📖', label: 'Post to Moment',       color: '#0ea5e9', glow: 'rgba(14,165,233,0.4)' },
+  create_reel:        { icon: '🎬', label: 'Create Spicey Clip',         color: '#7c3aed', glow: 'rgba(124,58,237,0.4)' },
   call_user:          { icon: '📞', label: 'Start Call',          color: '#22c55e', glow: 'rgba(34,197,94,0.4)' },
   message_user:       { icon: '💬', label: 'Open Chat',           color: '#8b5cf6', glow: 'rgba(139,92,246,0.4)' },
   send_caption:       { icon: '✉️', label: 'Send Caption',        color: '#e91e8c', glow: 'rgba(233,30,140,0.4)' },
@@ -28,7 +28,7 @@ export default function AIActionConfirmModal({ intent, params, previewData, isLi
     switch (intent) {
       case 'post_feed':    return 'Post this content to your Feed?';
       case 'post_story':   return 'Post this content to your Story?';
-      case 'create_reel':  return 'Open the Reel creator with this content?';
+      case 'create_reel':  return 'Open the Spicey Clip creator with this content?';
       case 'call_user':    return `Start a Spicey call with ${previewData?.displayName || params?.name}?`;
       case 'message_user': return `Open a chat with ${previewData?.displayName || params?.name}?`;
       case 'send_caption': return `Send this caption to ${previewData?.displayName || params?.name}?`;

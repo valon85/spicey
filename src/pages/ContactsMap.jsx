@@ -13,7 +13,20 @@ const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN || '';
 mapboxgl.accessToken = MAPBOX_TOKEN;
 
 const SPICEY_DARK_MAP_STYLE = 'mapbox://styles/mapbox/navigation-night-v1';
-const SPICEY_LIGHT_MAP_STYLE = 'mapbox://styles/mapbox/light-v11';
+const SPICEY_WORLD_CENTER = [12, 48];
+
+const applySpiceyWorldAtmosphere = (map) => {
+  try { map.setProjection('globe'); } catch {}
+  try {
+    map.setFog({
+      color: '#05030c',
+      'high-color': '#11162b',
+      'horizon-blend': 0.16,
+      'space-color': '#000007',
+      'star-intensity': 0.72,
+    });
+  } catch {}
+};
 
 const MAP_PREVIEW_PINS = [
   { name: '@sarah.vibes', place: 'Riverside Park', live: true, left: '16%', top: '40%', lat: 40.8007, lng: -73.9702, image: 'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=180&h=180&fit=crop&crop=faces' },
@@ -1308,18 +1321,23 @@ export default function ContactsMap() {
   }, [myProfile?.share_location]);
 
   const getIsLightMapTheme = () => {
-    return false;
+    const requestedTheme = new URLSearchParams(window.location.search).get('previewTheme');
+    if (requestedTheme === 'light') return true;
+    if (requestedTheme === 'dark') return false;
+    return document.documentElement.classList.contains('light-mode')
+      || document.body?.classList.contains('light-mode')
+      || document.documentElement.dataset.theme === 'light';
   };
 
-  // Match app theme: light mode keeps Spicey neon UI, but map base becomes white/blue.
+  // Keep the night globe identical in both app themes; only the surrounding UI follows the app theme.
   useEffect(() => {
     const check = () => {
       const nextIsLight = getIsLightMapTheme();
       setIsLight(nextIsLight);
       if (mapRef.current && mapReady) {
         if (mapViewMode !== 'satellite') {
-          const desiredStyle = nextIsLight ? SPICEY_LIGHT_MAP_STYLE : SPICEY_DARK_MAP_STYLE;
-          const desiredMode = nextIsLight ? 'light' : 'dark';
+          const desiredStyle = SPICEY_DARK_MAP_STYLE;
+          const desiredMode = 'dark';
           if (mapStyleModeRef.current !== desiredMode) {
             mapStyleModeRef.current = desiredMode;
             mapRef.current.setStyle(desiredStyle);
@@ -1586,6 +1604,7 @@ export default function ContactsMap() {
       const m = mapRef.current;
       if (!m) return;
       try { addCustomLayers(m); } catch {}
+      applySpiceyWorldAtmosphere(m);
       try { addSpiceyLandmarkTower(m, getIsLightMapTheme()); } catch {}
       try {
         m.resize();
@@ -1606,11 +1625,12 @@ export default function ContactsMap() {
     try {
       m = new mapboxgl.Map({
         container: mapContainer.current,
-        style: startLight ? SPICEY_LIGHT_MAP_STYLE : SPICEY_DARK_MAP_STYLE,
-        center: defaultCenter,
-        zoom: 15.15,
-        pitch: 68,
-        bearing: -31,
+        style: SPICEY_DARK_MAP_STYLE,
+        center: SPICEY_WORLD_CENTER,
+        zoom: 2.2,
+        pitch: 0,
+        bearing: 0,
+        projection: 'globe',
         antialias: true,
         interactive: true,
         dragPan: true,
@@ -1625,7 +1645,7 @@ export default function ContactsMap() {
     }
 
     mapRef.current = m;
-    mapStyleModeRef.current = startLight ? 'light' : 'dark';
+    mapStyleModeRef.current = 'dark';
     if (typeof window !== 'undefined') window.__spiceyMap = m;
     try {
       m.dragPan.enable();
@@ -1817,7 +1837,8 @@ export default function ContactsMap() {
       setTimeout(() => {
         try {
           m.resize();
-          m.easeTo({ center: defaultCenter, zoom: 15.4, pitch: 68, bearing: -31, duration: 0 });
+          applySpiceyWorldAtmosphere(m);
+          m.easeTo({ center: SPICEY_WORLD_CENTER, zoom: 2.2, pitch: 0, bearing: 0, duration: 0 });
         } catch {}
       }, 250);
       setMapReady(true);
@@ -2157,10 +2178,8 @@ export default function ContactsMap() {
     if (!mapRef.current) return;
     const next = mapViewMode === 'neon' ? 'satellite' : 'neon';
     setMapViewMode(next);
-    const neonIsLight = getIsLightMapTheme();
-    const neonStyle = neonIsLight ? SPICEY_LIGHT_MAP_STYLE : SPICEY_DARK_MAP_STYLE;
-    mapStyleModeRef.current = next === 'satellite' ? 'satellite' : (neonIsLight ? 'light' : 'dark');
-    mapRef.current.setStyle(next === 'satellite' ? 'mapbox://styles/mapbox/satellite-streets-v12' : neonStyle);
+    mapStyleModeRef.current = next === 'satellite' ? 'satellite' : 'dark';
+    mapRef.current.setStyle(next === 'satellite' ? 'mapbox://styles/mapbox/satellite-streets-v12' : SPICEY_DARK_MAP_STYLE);
     mapRef.current.once('style.load', () => restoreSpiceyMapVisuals(250));
   };
 
@@ -2173,13 +2192,13 @@ export default function ContactsMap() {
     mapStyleModeRef.current = 'dark';
     map.setStyle(SPICEY_DARK_MAP_STYLE);
     map.once('style.load', () => {
-      try { map.setFog(null); } catch {}
       try { addCustomLayers(map); } catch {}
+      applySpiceyWorldAtmosphere(map);
       map.flyTo({
-        center: [-74.08, 40.73],
-        zoom: 7.35,
-        pitch: 34,
-        bearing: -18,
+        center: SPICEY_WORLD_CENTER,
+        zoom: 2.2,
+        pitch: 0,
+        bearing: 0,
         speed: 0.72,
         curve: 1.2,
       });
@@ -2345,7 +2364,8 @@ export default function ContactsMap() {
             inset: 0,
             zIndex: 2,
             overflow: 'hidden',
-            background: '#02030a url("/spicey-assets/neon-manhattan-map-v2.png") center center / cover no-repeat',
+            background: 'radial-gradient(circle at 50% 42%, rgba(255,45,157,.14), transparent 34%), radial-gradient(circle at 28% 68%, rgba(255,106,0,.10), transparent 28%), linear-gradient(rgba(255,45,157,.08) 1px, transparent 1px), linear-gradient(90deg, rgba(139,44,255,.08) 1px, transparent 1px), #02030a',
+            backgroundSize: 'auto, auto, 28px 28px, 28px 28px, auto',
           }}>
             <div style={{
               position: 'absolute',

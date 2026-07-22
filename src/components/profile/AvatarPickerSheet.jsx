@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Camera, Check } from 'lucide-react';
+import { X, Camera, Check, ImagePlus, Sparkles, Smile, Eye, Glasses, Shirt, Gem, Wand2, Play } from 'lucide-react';
 
 const isCapacitor = typeof window !== 'undefined' && window.Capacitor?.isNativePlatform?.();
 
@@ -82,7 +82,16 @@ const TABS = [
   { key: 'unisex', label: 'Unisex ✨' },
 ];
 
-function VideoCard({ video, isSelected, onSelect, priority = false }) {
+const CUSTOMIZE_ROWS = [
+  { key: 'hair', label: 'Hair', icon: Smile, offset: 0 },
+  { key: 'beard', label: 'Beard', icon: Smile, offset: 3 },
+  { key: 'eyes', label: 'Eyes', icon: Eye, offset: 6 },
+  { key: 'glasses', label: 'Glasses', icon: Glasses, offset: 9 },
+  { key: 'outfit', label: 'Outfit', icon: Shirt, offset: 12 },
+  { key: 'accessories', label: 'Accessories', icon: Gem, offset: 15 },
+];
+
+function VideoCard({ video, isSelected, onSelect, priority = false, compact = false }) {
   const cardRef = useRef(null);
   const [shouldLoad, setShouldLoad] = useState(priority);
   const [loaded, setLoaded] = useState(false);
@@ -121,7 +130,8 @@ function VideoCard({ video, isSelected, onSelect, priority = false }) {
         border: isSelected ? '2.5px solid #FF6A00' : '1.5px solid rgba(255,255,255,0.08)',
         background: 'linear-gradient(135deg, rgba(255,106,0,0.24), rgba(193,0,255,0.18), rgba(10,0,8,0.95))',
         padding: 0, cursor: 'pointer',
-        boxShadow: isSelected ? '0 0 0 3px rgba(255,106,0,0.3)' : 'none',
+        boxShadow: isSelected ? '0 0 0 2px rgba(255,45,143,0.45), 0 0 18px rgba(255,106,0,0.35)' : 'none',
+        minHeight: compact ? 54 : undefined,
       }}>
       <div style={{
         position: 'absolute',
@@ -149,14 +159,29 @@ function VideoCard({ video, isSelected, onSelect, priority = false }) {
           <Check style={{ width: 10, height: 10, color: '#fff' }} />
         </div>
       )}
-      <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '12px 4px 3px', background: 'linear-gradient(to top, rgba(0,0,0,0.75) 0%, transparent 100%)' }}>
-        <div style={{ color: '#fff', fontSize: 8, fontWeight: 700, textAlign: 'center', overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>{video.label}</div>
-      </div>
+      {!compact && (
+        <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '12px 4px 3px', background: 'linear-gradient(to top, rgba(0,0,0,0.75) 0%, transparent 100%)' }}>
+          <div style={{ color: '#fff', fontSize: 8, fontWeight: 700, textAlign: 'center', overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>{video.label}</div>
+        </div>
+      )}
     </motion.button>
   );
 }
 
-export default function AvatarPickerSheet({ open, onClose, onFileSelect, hasAvatar, onRemove }) {
+function AvatarMedia({ src, label, large = false }) {
+  if (!src) return null;
+  const isVideo = /\.(mp4|webm|mov|m4v)(\?|#|$)/i.test(String(src));
+  const style = large
+    ? { width: '100%', height: '100%', objectFit: 'cover', display: 'block' }
+    : { width: '100%', height: '100%', objectFit: 'cover', display: 'block', borderRadius: 14 };
+  return isVideo ? (
+    <video src={`${src}#t=0.1`} muted playsInline loop autoPlay preload="auto" aria-label={label} style={style} />
+  ) : (
+    <img src={src} alt={label || 'avatar'} style={style} />
+  );
+}
+
+export default function AvatarPickerSheet({ open, onClose, onFileSelect, hasAvatar, currentAvatar, onRemove }) {
   const galleryInputRef = useRef(null);
   const cameraInputRef = useRef(null);
   const [loading, setLoading] = useState(false);
@@ -237,11 +262,18 @@ export default function AvatarPickerSheet({ open, onClose, onFileSelect, hasAvat
 
   const handleVideoSelect = (video) => {
     setSelectedVideo(video);
-    onFileSelect(video.url);
-    handleClose();
   };
 
   const filteredVideos = filter === 'all' ? VIDEO_AVATARS : VIDEO_AVATARS.filter(v => v.gender === filter);
+  const heroVideo = selectedVideo || filteredVideos[0] || VIDEO_AVATARS[0];
+  const heroUrl = selectedVideo?.url || currentAvatar || heroVideo?.url;
+  const vibeVideos = filteredVideos.slice(0, 6);
+  const liveAnimations = [heroVideo, ...filteredVideos.filter((v) => v.id !== heroVideo?.id)].slice(0, 6);
+
+  useEffect(() => {
+    if (!open) return;
+    setSelectedVideo(filteredVideos[0] || VIDEO_AVATARS[0] || null);
+  }, [open, filter]);
 
   return (
     <AnimatePresence>
@@ -250,21 +282,24 @@ export default function AvatarPickerSheet({ open, onClose, onFileSelect, hasAvat
           <motion.div
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
             onClick={handleClose}
-            style={{ position: 'fixed', inset: 0, zIndex: 299, background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(8px)' }}
+            style={{ position: 'fixed', inset: 0, zIndex: 299, background: 'rgba(0,0,0,0.9)', backdropFilter: 'blur(10px)' }}
           />
 
           <motion.div
             initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
             transition={{ type: 'spring', damping: 30, stiffness: 280 }}
+            onClick={(e) => e.stopPropagation()}
             style={{
               position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 300,
-              background: '#0a0008',
-              borderTopLeftRadius: 28, borderTopRightRadius: 28,
-              maxHeight: '92vh',
+              background: 'radial-gradient(circle at 50% 20%, rgba(160,26,255,0.22), transparent 32%), radial-gradient(circle at 72% 28%, rgba(255,87,34,0.18), transparent 28%), #050208',
+              borderTopLeftRadius: 18, borderTopRightRadius: 18,
+              height: '96dvh',
+              maxHeight: '96dvh',
               display: 'flex', flexDirection: 'column',
-              paddingBottom: 'max(96px, calc(env(safe-area-inset-bottom, 0px) + 86px))',
-              border: '1px solid rgba(193,0,255,0.15)',
-              boxShadow: '0 -20px 60px rgba(193,0,255,0.2)',
+              paddingBottom: 0,
+              border: '1px solid rgba(255,45,143,0.20)',
+              boxShadow: '0 -20px 70px rgba(193,0,255,0.28)',
+              overflow: 'hidden',
             }}>
 
             {/* Handle */}
@@ -273,10 +308,20 @@ export default function AvatarPickerSheet({ open, onClose, onFileSelect, hasAvat
             </div>
 
             {/* Header */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 20px 8px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 16px 4px', flexShrink: 0 }}>
               <div>
-                <div style={{ color: '#fff', fontWeight: 800, fontSize: 18 }}>Choose Avatar</div>
-                <div style={{ color: 'rgba(255,255,255,0.35)', fontSize: 12, marginTop: 2 }}>{VIDEO_AVATARS.length} avatars available</div>
+                <div style={{
+                  fontFamily: '"Brush Script MT", "Snell Roundhand", cursive',
+                  fontSize: 29,
+                  lineHeight: 0.9,
+                  background: 'linear-gradient(110deg, #ff2bd6, #ff6a00 72%)',
+                  WebkitBackgroundClip: 'text',
+                  color: 'transparent',
+                  filter: 'drop-shadow(0 0 10px rgba(255,45,180,0.72))',
+                }}>Spicey</div>
+                <div style={{ color: 'rgba(255,255,255,0.62)', fontSize: 10, marginTop: 7, letterSpacing: '0.18em', textTransform: 'uppercase' }}>
+                  Be you. Be <span style={{ color: '#ff6335', fontWeight: 900 }}>Spicey.</span>
+                </div>
               </div>
               <motion.button whileTap={{ scale: 0.88 }} onClick={handleClose}
                 style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '50%', width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
@@ -284,90 +329,161 @@ export default function AvatarPickerSheet({ open, onClose, onFileSelect, hasAvat
               </motion.button>
             </div>
 
-            {/* Upload from gallery + Camera buttons */}
-            <div style={{ display: 'flex', gap: 8, padding: '0 16px 10px' }}>
-              <motion.button
-                whileTap={{ scale: 0.96 }}
-                onClick={() => isCapacitor ? openNativeCamera() : cameraInputRef.current?.click()}
-                style={{
-                  flex: 1, padding: '11px 12px', borderRadius: 14, border: '1.5px solid rgba(255,255,255,0.12)',
-                  background: 'rgba(255,255,255,0.06)', color: '#fff', fontWeight: 700, fontSize: 13,
-                  cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,
+            <div style={{ flex: 1, overflowY: 'auto', padding: '0 14px 178px', WebkitOverflowScrolling: 'touch' }}>
+              {/* Hero preview */}
+              <div style={{ position: 'relative', minHeight: 178, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 8 }}>
+                <div style={{
+                  position: 'absolute',
+                  width: 160,
+                  height: 160,
+                  borderRadius: '50%',
+                  border: '3px solid rgba(255,45,143,0.55)',
+                  boxShadow: '0 0 34px rgba(255,45,143,0.55), inset 0 0 26px rgba(168,85,247,0.38)',
+                  background: 'conic-gradient(from 190deg, rgba(168,85,247,0.15), rgba(255,106,0,0.24), rgba(255,45,143,0.28), rgba(168,85,247,0.15))',
+                }} />
+                <div style={{
+                  position: 'relative',
+                  width: 136,
+                  height: 168,
+                  borderRadius: 22,
+                  overflow: 'hidden',
+                  border: '1px solid rgba(255,255,255,0.10)',
+                  boxShadow: '0 20px 56px rgba(0,0,0,0.55)',
+                  background: 'linear-gradient(160deg, rgba(255,45,143,0.20), rgba(0,0,0,0.8))',
                 }}>
-                <Camera style={{ width: 17, height: 17 }} />
-                Camera
-              </motion.button>
-              <motion.button
-                whileTap={{ scale: 0.96 }}
-                onClick={() => isCapacitor ? openNativeGallery() : galleryInputRef.current?.click()}
-                style={{
-                  flex: 1, padding: '11px 12px', borderRadius: 14, border: '1.5px solid rgba(255,255,255,0.12)',
-                  background: 'rgba(255,255,255,0.06)', color: '#fff', fontWeight: 700, fontSize: 13,
-                  cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,
-                }}>
-                📷 Upload Photo
-              </motion.button>
-              {hasAvatar && onRemove && (
-                <motion.button
-                  whileTap={{ scale: 0.96 }}
-                  onClick={() => { onRemove(); handleClose(); }}
-                  style={{
-                    padding: '11px 14px', borderRadius: 14, border: '1.5px solid rgba(255,60,60,0.3)',
-                    background: 'rgba(255,60,60,0.1)', color: '#ff5555', fontWeight: 700, fontSize: 13,
-                    cursor: 'pointer',
-                  }}>
-                  Remove
+                  <AvatarMedia src={heroUrl} label={heroVideo?.label} large />
+                  <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(4,1,8,0.72), transparent 48%)' }} />
+                  <div style={{ position: 'absolute', left: 8, right: 8, bottom: 8, textAlign: 'center' }}>
+                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 10px', borderRadius: 999, background: 'rgba(0,0,0,0.44)', border: '1px solid rgba(255,255,255,0.12)', color: '#fff', fontSize: 11, fontWeight: 800 }}>
+                      <span style={{ width: 8, height: 8, borderRadius: 99, background: '#72e06a', boxShadow: '0 0 10px #72e06a' }} />
+                      Live Avatar
+                    </div>
+                    <div style={{ color: 'rgba(255,255,255,0.76)', fontSize: 10, marginTop: 5, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      {heroVideo?.label || 'Realistic. Unique. Animated.'}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Upload from gallery + Camera buttons */}
+              <div style={{ display: 'grid', gridTemplateColumns: hasAvatar && onRemove ? '1fr 1fr 0.8fr' : '1fr 1fr', gap: 8, marginBottom: 12 }}>
+                <motion.button whileTap={{ scale: 0.96 }} onClick={() => isCapacitor ? openNativeCamera() : cameraInputRef.current?.click()}
+                  style={{ padding: '10px 8px', borderRadius: 14, border: '1px solid rgba(255,255,255,0.12)', background: 'rgba(255,255,255,0.055)', color: '#fff', fontWeight: 800, fontSize: 12, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+                  <Camera style={{ width: 15, height: 15 }} /> Camera
                 </motion.button>
-              )}
-            </div>
+                <motion.button whileTap={{ scale: 0.96 }} onClick={() => isCapacitor ? openNativeGallery() : galleryInputRef.current?.click()}
+                  style={{ padding: '10px 8px', borderRadius: 14, border: '1px solid rgba(255,255,255,0.12)', background: 'rgba(255,255,255,0.055)', color: '#fff', fontWeight: 800, fontSize: 12, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+                  <ImagePlus style={{ width: 15, height: 15 }} /> Upload
+                </motion.button>
+                {hasAvatar && onRemove && (
+                  <motion.button whileTap={{ scale: 0.96 }} onClick={() => { onRemove(); handleClose(); }}
+                    style={{ padding: '10px 8px', borderRadius: 14, border: '1px solid rgba(255,60,80,0.32)', background: 'rgba(255,60,80,0.10)', color: '#ff6b7a', fontWeight: 800, fontSize: 12, cursor: 'pointer' }}>
+                    Remove
+                  </motion.button>
+                )}
+              </div>
 
-            {/* Tabs */}
-            <div style={{ display: 'flex', borderBottom: '1px solid rgba(255,255,255,0.08)', marginBottom: 2 }}>
-              {TABS.map(t => (
-                <button key={t.key} onClick={() => { setFilter(t.key); setSelectedVideo(null); }}
-                  style={{
-                    flex: 1, padding: '9px 4px', fontSize: 12, fontWeight: 700, cursor: 'pointer', border: 'none',
-                    background: 'transparent', color: filter === t.key ? '#FF6A00' : 'rgba(255,255,255,0.4)',
-                    borderBottom: filter === t.key ? '2px solid #FF6A00' : '2px solid transparent',
-                    transition: 'all 0.18s',
-                  }}>
-                  {t.label}
-                </button>
-              ))}
-            </div>
-
-            {/* Avatar Grid */}
-            <div style={{ flex: 1, overflowY: 'auto', padding: '8px 14px', WebkitOverflowScrolling: 'touch' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 5 }}>
-                {filteredVideos.map((video, index) => (
-                  <VideoCard
-                    key={video.id}
-                    video={video}
-                    isSelected={selectedVideo?.id === video.id}
-                    onSelect={handleVideoSelect}
-                    priority={true}
-                  />
+              <div style={{ display: 'flex', gap: 7, overflowX: 'auto', paddingBottom: 8, marginBottom: 8 }}>
+                {TABS.map(t => (
+                  <button key={t.key} onClick={() => { setFilter(t.key); setSelectedVideo(null); }}
+                    style={{
+                      flex: '0 0 auto',
+                      padding: '8px 12px',
+                      borderRadius: 999,
+                      fontSize: 11,
+                      fontWeight: 900,
+                      cursor: 'pointer',
+                      border: filter === t.key ? '1px solid rgba(255,106,0,0.72)' : '1px solid rgba(255,255,255,0.10)',
+                      background: filter === t.key ? 'linear-gradient(135deg, rgba(255,106,0,0.32), rgba(255,45,143,0.26))' : 'rgba(255,255,255,0.055)',
+                      color: filter === t.key ? '#fff' : 'rgba(255,255,255,0.52)',
+                    }}>
+                    {t.label}
+                  </button>
                 ))}
               </div>
-              <div style={{ height: 24 }} />
+
+              <div style={{ border: '1px solid rgba(255,255,255,0.08)', background: 'rgba(12,5,20,0.62)', borderRadius: 22, padding: 12, marginBottom: 12 }}>
+                <div style={{ color: '#fff', fontWeight: 900, fontSize: 12, letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 10 }}>Choose your vibe</div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
+                  {vibeVideos.map((video) => (
+                    <VideoCard key={video.id} video={video} isSelected={selectedVideo?.id === video.id} onSelect={handleVideoSelect} priority compact />
+                  ))}
+                </div>
+              </div>
+
+              <div style={{ border: '1px solid rgba(255,255,255,0.08)', background: 'rgba(12,5,20,0.62)', borderRadius: 22, padding: '10px 12px', marginBottom: 12 }}>
+                <div style={{ color: '#fff', fontWeight: 900, fontSize: 13, letterSpacing: '0.11em', textTransform: 'uppercase', textAlign: 'center', margin: '3px 0 8px' }}>Customize</div>
+                {CUSTOMIZE_ROWS.map(({ key, label, icon: Icon, offset }) => {
+                  const options = filteredVideos.slice(offset, offset + 3);
+                  return (
+                    <div key={key} style={{ display: 'grid', gridTemplateColumns: '86px 1fr', alignItems: 'center', gap: 8, padding: '9px 0', borderTop: '1px solid rgba(255,255,255,0.07)' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 9, color: 'rgba(255,255,255,0.84)', fontSize: 11, fontWeight: 900, letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+                        <Icon style={{ width: 17, height: 17, color: 'rgba(255,255,255,0.78)' }} />
+                        {label}
+                      </div>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(42px, 1fr))', gap: 7 }}>
+                        {(options.length ? options : VIDEO_AVATARS.slice(0, 3)).map((video) => (
+                          <button key={`${key}-${video.id}`} type="button" onClick={() => handleVideoSelect(video)}
+                            style={{ height: 44, borderRadius: 12, overflow: 'hidden', padding: 0, border: selectedVideo?.id === video.id ? '1.5px solid #ff4bb8' : '1px solid rgba(255,255,255,0.10)', background: 'rgba(255,255,255,0.04)' }}>
+                            <AvatarMedia src={video.url} label={video.label} />
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              <div style={{ border: '1px solid rgba(255,255,255,0.08)', background: 'rgba(12,5,20,0.62)', borderRadius: 22, padding: 12, marginBottom: 4 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#fff', fontWeight: 900, fontSize: 12, letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 10 }}>
+                  <Sparkles style={{ width: 15, height: 15, color: '#ff4bb8' }} /> Live animations
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
+                  {liveAnimations.map((video, index) => (
+                    <button key={`anim-${video.id}-${index}`} type="button" onClick={() => handleVideoSelect(video)}
+                      style={{ position: 'relative', height: 74, borderRadius: 16, overflow: 'hidden', padding: 0, border: selectedVideo?.id === video.id ? '1.5px solid #ff6a00' : '1px solid rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.04)' }}>
+                      <AvatarMedia src={video.url} label={video.label} />
+                      <span style={{ position: 'absolute', left: 6, bottom: 5, display: 'inline-flex', alignItems: 'center', gap: 4, color: '#fff', fontSize: 8, fontWeight: 900, textTransform: 'uppercase', textShadow: '0 2px 8px #000' }}>
+                        <Play style={{ width: 9, height: 9 }} />
+                        {['Idle', 'Look Left', 'Look Right', 'Smile', 'Blink', 'Tilt'][index] || 'Move'}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </div>
             </div>
 
             {/* Confirm button */}
-            <div style={{ padding: '8px 16px 0', display: 'none' }}>
+            <div style={{
+              position: 'absolute',
+              left: 0,
+              right: 0,
+              bottom: 'max(76px, calc(env(safe-area-inset-bottom, 0px) + 64px))',
+              padding: '10px 14px 12px',
+              display: 'flex',
+              gap: 9,
+              background: 'linear-gradient(to top, rgba(5,2,8,0.98) 0%, rgba(5,2,8,0.92) 72%, transparent 100%)',
+              borderTop: '1px solid rgba(255,255,255,0.08)',
+              zIndex: 4,
+            }}>
               <motion.button
                 whileTap={{ scale: 0.97 }}
                 onClick={handleConfirmVideo}
                 disabled={!selectedVideo}
                 style={{
-                  width: '100%', padding: '15px', borderRadius: 18, border: 'none',
+                  flex: 1, padding: '13px', borderRadius: 16, border: 'none',
                   cursor: selectedVideo ? 'pointer' : 'not-allowed',
-                  background: selectedVideo ? 'linear-gradient(135deg, #FF6B35, #C100FF)' : 'rgba(255,255,255,0.08)',
+                  background: selectedVideo ? 'linear-gradient(135deg, #b721ff, #ff2d8f 48%, #ff6a00)' : 'rgba(255,255,255,0.08)',
                   color: '#fff', fontWeight: 800, fontSize: 15,
                   boxShadow: selectedVideo ? '0 6px 24px rgba(193,0,255,0.5)' : 'none',
                   opacity: selectedVideo ? 1 : 0.4,
                   transition: 'all 0.2s',
                 }}>
-                ✓ Set as Profile
+                Save Avatar
+              </motion.button>
+              <motion.button whileTap={{ scale: 0.96 }} onClick={() => setSelectedVideo(heroVideo)}
+                style={{ width: 48, borderRadius: 16, border: '1px solid rgba(255,255,255,0.12)', background: 'rgba(255,255,255,0.07)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Wand2 style={{ width: 18, height: 18 }} />
               </motion.button>
             </div>
 

@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Crown, Palette, BarChart2, Shield, ChevronLeft, Check, Star, Flame, Diamond, Users, Heart, Eye, TrendingUp, Megaphone, Zap, Award } from 'lucide-react';
+import { Crown, Palette, BarChart2, Shield, ChevronLeft, Check, Star, Flame, Diamond, Users, Heart, TrendingUp, Megaphone, Zap } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { useTheme, VIP_THEMES } from '@/lib/ThemeContext';
 import ProfileThemePicker from '@/components/profile/ProfileThemePicker';
 import VerifiedBadge from '@/components/shared/VerifiedBadge';
+import { isAdminEmail } from '@/lib/adminAccess';
 
 const BADGE_OPTIONS = [
   { type: 'vip', label: 'VIP Crown', desc: 'Purple gradient star', plans: ['vip', 'creator', 'business'] },
@@ -54,7 +55,7 @@ export default function VIPDashboard() {
         setSelectedBadge(p?.verification_badge || null);
 
         // Admin gets full access
-        if (u.email === 'info@spicey.live') {
+        if (isAdminEmail(u)) {
           setSubscription({ plan_type: 'business', status: 'active', isAdmin: true });
         } else if (subs.length > 0) {
           setSubscription(subs[0]);

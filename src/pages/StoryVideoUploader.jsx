@@ -100,7 +100,7 @@ export default function StoryVideoUploader() {
 
       setDone(true);
       
-      // Show city reels prompt if city detected
+      // Show City Reels prompt if city detected
       if (detectedCity && storyResult?.id) {
         setCityPrompt({ postId: storyResult.id, cityName: detectedCity });
       } else {
@@ -125,7 +125,7 @@ export default function StoryVideoUploader() {
                 style={{ background: 'linear-gradient(135deg,#ff5500,#e91e8c)' }}>
                 <Check className="w-10 h-10 text-white" />
               </div>
-              <p className="text-white text-xl font-bold">Story Posted!</p>
+              <p className="text-white text-xl font-bold">Moment Posted!</p>
             </motion.div>
           </motion.div>
         )}
@@ -141,7 +141,7 @@ export default function StoryVideoUploader() {
             style={{ background: 'rgba(0,0,0,0.5)', border: '1px solid rgba(255,255,255,0.12)' }}>
             <ChevronLeft className="w-5 h-5 text-white" />
           </button>
-          <span className="text-white font-bold text-base tracking-wide">Video Story</span>
+          <span className="text-white font-bold text-base tracking-wide">Video Moment</span>
           <motion.button whileTap={{ scale: 0.93 }} onClick={publish} disabled={posting}
             className="px-5 py-2.5 rounded-full text-white font-bold text-sm disabled:opacity-50 flex items-center gap-2"
             style={{ background: 'linear-gradient(135deg,#ff5500,#e91e8c)', boxShadow: '0 0 18px rgba(255,85,0,0.5)' }}>

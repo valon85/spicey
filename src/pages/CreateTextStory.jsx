@@ -253,7 +253,7 @@ export default function CreateTextStory() {
               ref={textareaRef}
               value={text}
               onChange={(e) => setText(e.target.value)}
-              placeholder="Write your story..."
+              placeholder="Write your moment..."
               className="w-full bg-transparent text-white text-lg resize-none outline-none placeholder:text-white/30"
               style={{
                 minHeight: '80px',

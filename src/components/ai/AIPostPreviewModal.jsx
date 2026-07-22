@@ -4,8 +4,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 
 const TYPE_CONFIG = {
   feed:  { label: 'Post to Feed',   icon: '📸', gradient: 'linear-gradient(135deg, #ff5500, #e91e8c)', glow: 'rgba(255,85,0,0.4)' },
-  story: { label: 'Post to Story',  icon: '📖', gradient: 'linear-gradient(135deg, #0ea5e9, #8b5cf6)', glow: 'rgba(139,92,246,0.4)' },
-  reel:  { label: 'Create Reel',    icon: '🎬', gradient: 'linear-gradient(135deg, #7c3aed, #e91e8c)', glow: 'rgba(124,58,237,0.4)' },
+  story: { label: 'Post to Moment',  icon: '📖', gradient: 'linear-gradient(135deg, #0ea5e9, #8b5cf6)', glow: 'rgba(139,92,246,0.4)' },
+  reel:  { label: 'Create Spicey Clip',    icon: '🎬', gradient: 'linear-gradient(135deg, #7c3aed, #e91e8c)', glow: 'rgba(124,58,237,0.4)' },
 };
 
 export default function AIPostPreviewModal({ type, content, mediaUrl, mediaType, isLight, onClose, onPublish }) {

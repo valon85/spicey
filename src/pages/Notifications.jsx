@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ChevronLeft, Bell } from 'lucide-react';
+import { ChevronLeft, Bell, X } from 'lucide-react';
 import { usePageBackground } from '@/hooks/usePageBackground';
 import { base44 } from '@/api/base44Client';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -87,7 +87,9 @@ export default function Notifications() {
           <Bell className="w-5 h-5 text-orange-500" />
           <h1 className="font-extrabold text-base" style={{ color: isLight ? 'hsl(270,20%,12%)' : 'white' }}>Notifications</h1>
         </div>
-        <div className="w-8" />
+        <button onClick={() => navigate('/')} className="w-8 h-8 flex items-center justify-center transition" aria-label="Close notifications" style={{ color: isLight ? 'hsl(270,20%,30%)' : 'rgba(255,255,255,0.72)' }}>
+          <X className="w-5 h-5" />
+        </button>
       </div>
 
       {/* Accent line */}
@@ -106,13 +108,15 @@ export default function Notifications() {
           </div>
         ) : (
           notifications.map((notif) => {
-            const emojis = { like: '❤️', fire: '🔥', comment: '💬', follow: '👤', follow_request: '🔒', message: '💌', share: '↗️', story: '📱' };
+            const emojis = { like: '❤️', fire: '🔥', comment: '💬', follow: '👤', follow_request: '🔒', message: '💌', share: '↗️', story: '📱', engagement: '🍿', announcement: '✨', promotion: '🎬' };
             const emoji = emojis[notif.type] || '✨';
             return (
               <button key={notif.id}
                 onClick={() => {
                   markAsRead(notif.id);
                   if (notif.type === 'follow' || notif.type === 'follow_request') navigate(`/profile/${notif.actor_id}`);
+                  else if (notif.type === 'engagement' && notif.post_id) navigate(`/?postId=${encodeURIComponent(notif.post_id)}`);
+                  else if (['engagement', 'announcement', 'promotion'].includes(notif.type)) navigate('/');
                 }}
                 className="w-full px-4 py-4 text-left flex items-center gap-3 transition active:scale-[0.98]"
                 style={{ borderBottom: isLight ? '1px solid rgba(160,80,255,0.07)' : '1px solid rgba(255,255,255,0.04)', background: notif.read ? 'transparent' : (isLight ? 'rgba(255,100,0,0.03)' : 'rgba(255,80,0,0.04)') }}>

@@ -30,23 +30,23 @@ export default async function handler(req, res) {
         .map((chat) => (chat.participant_ids || []).find((id) => id !== user.id))
         .filter(Boolean);
       const profilesByUserId = await loadProfilesByUserIds(otherIds);
-      const chatIds = chats.map((chat) => chat.id).filter(Boolean);
-      const chatMessages = chatIds.length
-        ? await supabaseTable('messages', {
-            serviceRole: true,
-            query: `?select=chat_id,sender_id,read_by&chat_id=in.(${chatIds.map((id) => `"${id}"`).join(',')})&limit=5000`,
-          }).catch(() => [])
-        : [];
-      const unreadByChat = chatMessages.reduce((counts, message) => {
-        if (message.sender_id !== user.id && !(message.read_by || []).includes(user.id)) {
-          counts[message.chat_id] = (counts[message.chat_id] || 0) + 1;
-        }
-        return counts;
-      }, {});
+      const unreadByChatId = {};
+      if (chats.length) {
+        const chatIds = chats.map((chat) => `"${chat.id}"`).join(',');
+        const unreadMessages = await supabaseTable('messages', {
+          serviceRole: true,
+          query: `?select=chat_id,sender_id,read_by&chat_id=in.(${chatIds})&sender_id=neq.${encodeURIComponent(user.id)}&limit=1000`,
+        }).catch(() => []);
+        unreadMessages.forEach((message) => {
+          if (!(message.read_by || []).includes(user.id)) {
+            unreadByChatId[message.chat_id] = (unreadByChatId[message.chat_id] || 0) + 1;
+          }
+        });
+      }
       return sendJson(res, 200, {
         chats: chats.map((chat) => ({
           ...chat,
-          unread_count: unreadByChat[chat.id] || 0,
+          unread_count: unreadByChatId[chat.id] || 0,
           other_profile: profilesByUserId[(chat.participant_ids || []).find((id) => id !== user.id)] || null,
         })),
       });

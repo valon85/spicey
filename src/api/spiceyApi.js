@@ -1,3 +1,6 @@
+import { Preferences } from '@capacitor/preferences';
+import { isAdminEmail } from '@/lib/adminAccess';
+
 const CONFIGURED_API_BASE_URL = import.meta.env.VITE_SPICEY_API_URL || '';
 const NATIVE_API_BASE_URL = import.meta.env.VITE_SPICEY_NATIVE_API_URL || 'https://spicey.live';
 const API_BASE_URL = (
@@ -9,6 +12,7 @@ const SUPABASE_URL = (import.meta.env.VITE_SUPABASE_URL || '').replace(/\/$/, ''
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
 const SESSION_KEY = 'spicey_session';
 const NATIVE_PASSWORD_RESET_REDIRECT = 'spicey://localhost/auth/reset-password';
+let nativeSessionHydrated = false;
 
 export const spiceySession = {
   get() {
@@ -20,7 +24,8 @@ export const spiceySession = {
   },
   set(session) {
     if (!session) return;
-    localStorage.setItem(SESSION_KEY, JSON.stringify(session));
+    const current = this.get() || {};
+    localStorage.setItem(SESSION_KEY, JSON.stringify({ ...current, ...session }));
   },
   clear() {
     localStorage.removeItem(SESSION_KEY);
@@ -34,9 +39,27 @@ function isNativeApp() {
   return typeof window !== 'undefined' && ['capacitor:', 'spicey:'].includes(window.location.protocol);
 }
 
+async function hydrateNativeSession() {
+  if (typeof window === 'undefined' || nativeSessionHydrated) return;
+  nativeSessionHydrated = true;
+  if (!isNativeApp() || localStorage.getItem(SESSION_KEY)) return;
+
+  try {
+    const { value } = await Preferences.get({ key: SESSION_KEY });
+    if (value) localStorage.setItem(SESSION_KEY, value);
+  } catch (_) {
+    // Web preview can run without Capacitor Preferences available.
+  }
+}
+
 function passwordResetRedirect() {
   if (typeof window === 'undefined' || isNativeApp()) return NATIVE_PASSWORD_RESET_REDIRECT;
   return `${window.location.origin}/auth/reset-password`;
+}
+
+function socialAuthRedirect() {
+  if (typeof window === 'undefined' || isNativeApp()) return 'spicey://localhost/auth/callback';
+  return `${window.location.origin}/auth/callback`;
 }
 
 function isLocalPreview() {
@@ -57,11 +80,43 @@ function toSession(data = {}) {
   };
 }
 
+function sessionExpiry(session = {}) {
+  if (Number(session.expires_at)) return Number(session.expires_at);
+  const token = session.access_token;
+  if (!token || !token.includes('.')) return 0;
+  try {
+    const rawPayload = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
+    const payload = rawPayload.padEnd(Math.ceil(rawPayload.length / 4) * 4, '=');
+    const decoded = JSON.parse(globalThis.atob(payload));
+    return Number(decoded.exp) || 0;
+  } catch (_) {
+    return 0;
+  }
+}
+
+async function persistRefreshedSession(session) {
+  if (!session?.access_token) return;
+  spiceySession.set(session);
+  try {
+    await Preferences.set({ key: SESSION_KEY, value: JSON.stringify(spiceySession.get()) });
+  } catch (_) {
+    // localStorage remains the web fallback.
+  }
+}
+
+async function clearPersistedSession() {
+  spiceySession.clear();
+  try {
+    await Preferences.remove({ key: SESSION_KEY });
+  } catch (_) {}
+}
+
 async function supabaseAuthRequest(path, options = {}) {
   if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
     throw new Error('Missing VITE_SUPABASE_URL or VITE_SUPABASE_ANON_KEY for iOS login.');
   }
 
+  await hydrateNativeSession();
   const token = options.token || spiceySession.token();
   const response = await fetch(`${SUPABASE_URL}/auth/v1${path}`, {
     method: options.method || 'GET',
@@ -89,22 +144,59 @@ async function supabaseAuthRequest(path, options = {}) {
   return data;
 }
 
-async function refreshSupabaseSession() {
-  const refreshToken = spiceySession.get()?.refresh_token;
-  if (!refreshToken) throw new Error('Session expired. Please log in again.');
+let refreshSessionPromise = null;
 
-  const data = await supabaseAuthRequest('/token?grant_type=refresh_token', {
-    method: 'POST',
-    token: SUPABASE_ANON_KEY,
-    body: { refresh_token: refreshToken },
-  });
-  const session = toSession(data);
-  if (session.access_token) spiceySession.set(session);
-  return { session, user: data.user };
+async function refreshSupabaseSession() {
+  if (refreshSessionPromise) return refreshSessionPromise;
+  refreshSessionPromise = (async () => {
+    const refreshToken = spiceySession.get()?.refresh_token;
+    if (!refreshToken) throw new Error('Session expired. Please log in again.');
+
+    const data = await supabaseAuthRequest('/token?grant_type=refresh_token', {
+      method: 'POST',
+      token: SUPABASE_ANON_KEY,
+      body: { refresh_token: refreshToken },
+    });
+    const session = toSession(data);
+    if (session.access_token) await persistRefreshedSession(session);
+    return { session, user: data.user };
+  })();
+
+  try {
+    return await refreshSessionPromise;
+  } catch (error) {
+    if (/refresh token|invalid grant|expired.*session/i.test(error?.message || '')) {
+      await clearPersistedSession();
+    }
+    throw error;
+  } finally {
+    refreshSessionPromise = null;
+  }
+}
+
+export async function ensureFreshSpiceySession({ force = false } = {}) {
+  await hydrateNativeSession();
+  const session = spiceySession.get();
+  if (!session?.access_token) return null;
+
+  const expiresAt = sessionExpiry(session);
+  const expiresSoon = expiresAt > 0 && expiresAt <= Math.floor(Date.now() / 1000) + 60;
+  if (!force && !expiresSoon) return session;
+  if (!session.refresh_token) {
+    if (expiresSoon || force) await clearPersistedSession();
+    throw new Error('Session expired. Please log in again.');
+  }
+
+  const refreshed = await refreshSupabaseSession();
+  return refreshed.session;
 }
 
 function useDirectSupabase() {
-  return !API_BASE_URL;
+  // The native fallback API keeps server-only features available, but data
+  // resources must stay on direct Supabase unless a backend URL was explicitly
+  // configured. This keeps chats/messages working when the Vercel API is not
+  // configured and preserves RLS isolation for every signed-in user.
+  return !CONFIGURED_API_BASE_URL;
 }
 
 function useDirectSupabaseAuth() {
@@ -131,11 +223,13 @@ function findSupabaseCodeVerifier() {
   return '';
 }
 
-async function supabaseRest(table, { method = 'GET', query = '', body, token, single = false } = {}) {
+async function supabaseRest(table, { method = 'GET', query = '', body, token, single = false, retryAuth = true } = {}) {
   if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
     throw new Error('Missing Supabase URL or publishable key.');
   }
 
+  if (!token) await ensureFreshSpiceySession();
+  else await hydrateNativeSession();
   const accessToken = token || spiceySession.token();
   const response = await fetch(`${SUPABASE_URL}/rest/v1/${table}${query}`, {
     method,
@@ -157,6 +251,11 @@ async function supabaseRest(table, { method = 'GET', query = '', body, token, si
     throw new Error(`Supabase returned a non-JSON response (${response.status}) from ${table}.`);
   }
 
+  if (!response.ok && retryAuth && !token && (response.status === 401 || response.status === 403)) {
+    await ensureFreshSpiceySession({ force: true });
+    return supabaseRest(table, { method, query, body, single, retryAuth: false });
+  }
+
   if (!response.ok) {
     throw new Error(data?.message || data?.error_description || data?.error || `Supabase request failed (${response.status})`);
   }
@@ -174,8 +273,13 @@ function queryString(params = {}) {
 }
 
 async function currentSupabaseUser() {
-  const user = await supabaseAuthRequest('/user');
-  return user;
+  try {
+    return await supabaseAuthRequest('/user');
+  } catch (error) {
+    if (!/expired|invalid jwt/i.test(error.message || '')) throw error;
+    const refreshed = await refreshSupabaseSession();
+    return refreshed.user || supabaseAuthRequest('/user');
+  }
 }
 
 function profileFromUser(user = {}) {
@@ -241,10 +345,8 @@ async function profilesByUserIds(userIds = []) {
 }
 
 async function apiRequest(path, options = {}, retryAuth = true) {
+  await ensureFreshSpiceySession();
   const token = spiceySession.token();
-  if (!token) {
-    throw new Error('No authenticated session token is available. Please log in again.');
-  }
   const response = await fetch(`${API_BASE_URL}${path}`, {
     ...options,
     headers: {
@@ -266,7 +368,7 @@ async function apiRequest(path, options = {}, retryAuth = true) {
   }
 
   if (!response.ok && retryAuth && (response.status === 401 || response.status === 403) && spiceySession.get()?.refresh_token) {
-    await refreshSupabaseSession();
+    await ensureFreshSpiceySession({ force: true });
     return apiRequest(path, options, false);
   }
 
@@ -277,9 +379,7 @@ async function apiRequest(path, options = {}, retryAuth = true) {
   return data;
 }
 
-// Authentication bootstrap endpoints must be callable before a session exists.
-// Keep this separate from apiRequest so no future refactor can accidentally
-// require a Bearer token in order to obtain the first Bearer token.
+// Authentication bootstrap endpoints must work before a session exists.
 async function publicApiRequest(path, options = {}) {
   const response = await fetch(`${API_BASE_URL}${path}`, {
     ...options,
@@ -306,6 +406,27 @@ async function publicApiRequest(path, options = {}) {
 
 export const spiceyApi = {
   auth: {
+    oauthUrl(provider) {
+      if (!['apple', 'facebook'].includes(provider)) throw new Error('Unsupported login provider.');
+      if (!SUPABASE_URL) throw new Error('Supabase Auth is not configured.');
+      const params = new URLSearchParams({
+        provider,
+        redirect_to: socialAuthRedirect(),
+      });
+      return `${SUPABASE_URL}/auth/v1/authorize?${params.toString()}`;
+    },
+    async completeOAuth({ accessToken, refreshToken, expiresIn, tokenType } = {}) {
+      if (!accessToken || !refreshToken) throw new Error('Social login did not return a complete session.');
+      const user = await supabaseAuthRequest('/user', { token: accessToken });
+      const session = {
+        access_token: accessToken,
+        refresh_token: refreshToken,
+        token_type: tokenType || 'bearer',
+        expires_at: expiresIn ? Math.floor(Date.now() / 1000) + Number(expiresIn) : undefined,
+      };
+      await persistRefreshedSession(session);
+      return { user, session };
+    },
     async me() {
       if (useDirectSupabaseAuth()) {
         let user;
@@ -342,8 +463,7 @@ export const spiceyApi = {
       if (data.session) spiceySession.set(data.session);
       return data;
     },
-    async signup({ email, password, fullName, username, legalAccepted, legalVersion }) {
-      if (legalAccepted !== true) throw new Error('You must accept the legal policies to create an account.');
+    async signup({ email, password, fullName, username }) {
       if (useDirectSupabaseAuth()) {
         try {
           const cleanEmail = email.trim().toLowerCase();
@@ -355,8 +475,6 @@ export const spiceyApi = {
               data: {
                 full_name: fullName || '',
                 username: username || cleanEmail.split('@')[0],
-                legal_accepted_at: new Date().toISOString(),
-                legal_version: legalVersion || '3.0',
               },
             },
           });
@@ -370,7 +488,7 @@ export const spiceyApi = {
       }
       const data = await publicApiRequest('/api/auth/signup', {
         method: 'POST',
-        body: JSON.stringify({ email, password, fullName, username, legalAccepted, legalVersion }),
+        body: JSON.stringify({ email, password, fullName, username }),
       });
       if (data.session) spiceySession.set(data.session);
       return data;
@@ -477,11 +595,22 @@ export const spiceyApi = {
         body: JSON.stringify({ image_url, prompt }),
       });
     },
-    generateImage({ prompt } = {}) {
+    generateImage({ prompt, size, quality } = {}) {
       return apiRequest('/api/openai/image', {
         method: 'POST',
-        body: JSON.stringify({ prompt }),
+        body: JSON.stringify({ prompt, size, quality }),
       });
+    },
+    generateVideo({ prompt, size = '720x1280', seconds = 8 } = {}) {
+      return apiRequest('/api/openai/video', {
+        method: 'POST',
+        body: JSON.stringify({ prompt, size, seconds }),
+      });
+    },
+    async getVideo(id) {
+      const result = await apiRequest(`/api/openai/video?id=${encodeURIComponent(id)}`);
+      if (result?.url?.startsWith('/')) result.url = `${API_BASE_URL}${result.url}`;
+      return result;
     },
   },
   posts: {
@@ -525,6 +654,8 @@ export const spiceyApi = {
             music_artist: payload.music_artist || null,
             music_preview_url: payload.music_preview_url || null,
             music_artwork_url: payload.music_artwork_url || null,
+            map_visible: Boolean(payload.map_visible),
+            map_city: payload.map_city || null,
           },
         });
         return { post: created?.[0] };
@@ -647,10 +778,51 @@ export const spiceyApi = {
     },
   },
   follows: {
-    status(targetUserId) {
+    async status(targetUserId) {
+      if (useDirectSupabase()) {
+        const user = await currentSupabaseUser();
+        const follows = await supabaseRest('follows', {
+          query: queryString({ follower_id: `eq.${user.id}`, following_id: `eq.${targetUserId}`, limit: 1 }),
+        });
+        return { following: !!follows?.[0], requested: false };
+      }
       return apiRequest(`/api/follows?targetUserId=${encodeURIComponent(targetUserId)}`);
     },
-    toggle(targetUserId) {
+    async toggle(targetUserId) {
+      if (useDirectSupabase()) {
+        const user = await currentSupabaseUser();
+        if (!targetUserId || targetUserId === user.id) throw new Error('Invalid profile');
+
+        const [existingFollows, targetRows, myProfile] = await Promise.all([
+          supabaseRest('follows', {
+            query: queryString({ follower_id: `eq.${user.id}`, following_id: `eq.${targetUserId}`, limit: 1 }),
+          }),
+          supabaseRest('profiles', { query: queryString({ user_id: `eq.${targetUserId}`, limit: 1 }) }),
+          getOrCreateProfile(user),
+        ]);
+
+        if (existingFollows?.[0]) {
+          await supabaseRest('follows', {
+            method: 'DELETE',
+            query: queryString({ id: `eq.${existingFollows[0].id}` }),
+          });
+          return { following: false, requested: false };
+        }
+
+        const target = targetRows?.[0];
+        if (!target) throw new Error('Profile not found');
+
+        await supabaseRest('follows', {
+          method: 'POST',
+          body: {
+            follower_id: user.id,
+            following_id: targetUserId,
+            follower_username: myProfile.username || user.email?.split('@')[0] || 'user',
+            following_username: target.username || '',
+          },
+        });
+        return { following: true, requested: false };
+      }
       return apiRequest('/api/follows', {
         method: 'POST',
         body: JSON.stringify({ target_user_id: targetUserId }),
@@ -712,7 +884,7 @@ export const spiceyApi = {
   },
   youtube: {
     reels({ query = 'funny short videos', limit = 12 } = {}) {
-      const params = new URLSearchParams({ query, limit: String(limit), fresh: String(Date.now()) });
+      const params = new URLSearchParams({ query, limit: String(limit) });
       return apiRequest(`/api/youtube/reels?${params}`);
     },
   },
@@ -738,9 +910,15 @@ export const spiceyApi = {
     },
     async get(userId) {
       if (useDirectSupabase()) {
-        const rows = await supabaseRest('profiles', {
+        let rows = await supabaseRest('profiles', {
           query: queryString({ user_id: `eq.${userId}`, limit: 1 }),
         });
+        // Some older links contain the profile row id instead of auth user id.
+        if (!rows?.[0]) {
+          rows = await supabaseRest('profiles', {
+            query: queryString({ id: `eq.${userId}`, limit: 1 }),
+          });
+        }
         return { profile: rows?.[0] || null };
       }
       return apiRequest(`/api/profile/${encodeURIComponent(userId)}`);
@@ -904,22 +1082,40 @@ export const spiceyApi = {
     async status() {
       if (useDirectSupabase()) {
         const user = await currentSupabaseUser();
+        if (isAdminEmail(user)) {
+          const subscription = {
+            plan: 'business',
+            plan_type: 'business',
+            status: 'active',
+            current_period_end: '2099-12-31T23:59:59.000Z',
+            isAdmin: true,
+          };
+          return { is_vip: true, hasSubscription: true, planType: 'business', subscription };
+        }
         const rows = await supabaseRest('subscriptions', {
           query: queryString({
             user_id: `eq.${user.id}`,
-            status: 'eq.active',
+            status: 'in.(active,trialing)',
+            order: 'created_at.desc',
             limit: 1,
           }),
         }).catch(() => []);
         const subscription = rows?.[0] || null;
         const planType = subscription?.plan_type || subscription?.plan || null;
         return {
+          is_vip: !!subscription,
           hasSubscription: !!subscription,
           planType,
           subscription: subscription ? { ...subscription, plan_type: planType } : null,
         };
       }
       return apiRequest('/api/subscriptions/status');
+    },
+    checkout(payload) {
+      return apiRequest('/api/subscriptions/checkout', {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      });
     },
     adminList() {
       return apiRequest('/api/subscriptions/admin');
@@ -1054,7 +1250,19 @@ export const spiceyApi = {
       return apiRequest(`/api/call-sessions/${encodeURIComponent(id)}`);
     },
     async create(payload) {
+      // Native tries the server first for PushKit, then creates the same real
+      // Supabase session so two open phones never depend on APNs alone.
       if (useDirectSupabase()) {
+        if (isNativeApp()) {
+          try {
+            return await apiRequest('/api/call-sessions', {
+              method: 'POST',
+              body: JSON.stringify(payload),
+            });
+          } catch (error) {
+            console.warn('[Spicey Calls] Push API unavailable; using Supabase:', error.message);
+          }
+        }
         const user = await currentSupabaseUser();
         const profile = await getOrCreateProfile(user);
         const created = await supabaseRest('call_sessions', {
@@ -1080,6 +1288,20 @@ export const spiceyApi = {
     },
     async update(id, payload) {
       if (useDirectSupabase()) {
+        // Only terminal call states need the server route: it sends the
+        // matching PushKit cancellation to the other device. Signalling
+        // updates (SDP/ICE/connected) stay direct and fast through Supabase.
+        const terminalStatus = ['ended', 'declined', 'missed', 'cancelled'].includes(payload?.status);
+        if (isNativeApp() && terminalStatus) {
+          try {
+            return await apiRequest(`/api/call-sessions/${encodeURIComponent(id)}`, {
+              method: 'PATCH',
+              body: JSON.stringify(payload),
+            });
+          } catch (error) {
+            console.warn('[Spicey Calls] End-call API unavailable; using Supabase:', error.message);
+          }
+        }
         const updated = await supabaseRest('call_sessions', {
           method: 'PATCH',
           query: queryString({ id: `eq.${id}` }),
@@ -1151,20 +1373,22 @@ export const spiceyApi = {
         });
         const otherIds = chats.map((chat) => (chat.participant_ids || []).find((id) => id !== user.id)).filter(Boolean);
         const profileMap = await profilesByUserIds(otherIds);
-        const chatIds = chats.map((chat) => chat.id).filter(Boolean);
-        const chatMessages = chatIds.length ? await supabaseRest('messages', {
-          query: `?select=chat_id,sender_id,read_by&chat_id=in.(${chatIds.map((id) => `"${id}"`).join(',')})&limit=5000`,
-        }).catch(() => []) : [];
-        const unreadByChat = chatMessages.reduce((counts, message) => {
-          if (message.sender_id !== user.id && !(message.read_by || []).includes(user.id)) {
-            counts[message.chat_id] = (counts[message.chat_id] || 0) + 1;
-          }
-          return counts;
-        }, {});
+        const unreadByChatId = {};
+        if (chats.length) {
+          const ids = chats.map((chat) => `"${chat.id}"`).join(',');
+          const unreadMessages = await supabaseRest('messages', {
+            query: `?select=chat_id,sender_id,read_by&chat_id=in.(${ids})&sender_id=neq.${encodeURIComponent(user.id)}&limit=1000`,
+          }).catch(() => []);
+          unreadMessages.forEach((message) => {
+            if (!(message.read_by || []).includes(user.id)) {
+              unreadByChatId[message.chat_id] = (unreadByChatId[message.chat_id] || 0) + 1;
+            }
+          });
+        }
         return {
           chats: chats.map((chat) => ({
             ...chat,
-            unread_count: unreadByChat[chat.id] || 0,
+            unread_count: unreadByChatId[chat.id] || 0,
             other_profile: profileMap[(chat.participant_ids || []).find((id) => id !== user.id)] || null,
           })),
         };
@@ -1218,7 +1442,19 @@ export const spiceyApi = {
       return apiRequest(`/api/chats/${encodeURIComponent(chatId)}/messages`);
     },
     async create(chatId, payload) {
+      // Native sends through the Spicey API so the server can dispatch APNs.
+      // Direct Supabase inserts cannot send a background notification.
       if (useDirectSupabase()) {
+        if (isNativeApp()) {
+          try {
+            return await apiRequest(`/api/chats/${encodeURIComponent(chatId)}/messages`, {
+              method: 'POST',
+              body: JSON.stringify(payload),
+            });
+          } catch (error) {
+            console.warn('[Spicey Messages] Push API unavailable; using Supabase:', error.message);
+          }
+        }
         const user = await currentSupabaseUser();
         const profile = await getOrCreateProfile(user);
         const created = await supabaseRest('messages', {
@@ -1250,6 +1486,22 @@ export const spiceyApi = {
         body: JSON.stringify(payload),
       });
     },
+    async markRead(chatId) {
+      if (useDirectSupabase()) {
+        const user = await currentSupabaseUser();
+        const rows = await supabaseRest('messages', {
+          query: queryString({ chat_id: `eq.${chatId}`, sender_id: `neq.${user.id}`, select: 'id,read_by', limit: 200 }),
+        });
+        const pending = rows.filter((message) => !(message.read_by || []).includes(user.id));
+        await Promise.all(pending.map((message) => supabaseRest('messages', {
+          method: 'PATCH',
+          query: queryString({ id: `eq.${message.id}` }),
+          body: { read_by: [...new Set([...(message.read_by || []), user.id])] },
+        })));
+        return { marked_read: pending.length };
+      }
+      return apiRequest(`/api/chats/${encodeURIComponent(chatId)}/messages`, { method: 'PATCH' });
+    },
     async delete(id) {
       if (useDirectSupabase()) {
         await supabaseRest('messages', { method: 'DELETE', query: queryString({ id: `eq.${id}` }) });
@@ -1259,9 +1511,11 @@ export const spiceyApi = {
     },
   },
   media: {
-    async upload(file, options = {}) {
+    async upload(file, options = {}, retryAuth = true) {
+      if (!file) throw new Error('No file selected.');
+      await ensureFreshSpiceySession();
+
       if (useDirectSupabase()) {
-        if (!file) throw new Error('No file selected.');
         const user = await currentSupabaseUser();
         const token = spiceySession.token();
         const folder = String(options.folder || 'uploads').replace(/^\/+|\/+$/g, '').replace(/[^a-zA-Z0-9/_-]/g, '-');
@@ -1280,6 +1534,10 @@ export const spiceyApi = {
         const text = await uploadResponse.text();
         let data = {};
         try { data = text ? JSON.parse(text) : {}; } catch (_) {}
+        if (!uploadResponse.ok && retryAuth && (uploadResponse.status === 401 || uploadResponse.status === 403) && spiceySession.get()?.refresh_token) {
+          await ensureFreshSpiceySession({ force: true });
+          return spiceyApi.media.upload(file, options, false);
+        }
         if (!uploadResponse.ok) {
           throw new Error(data.message || data.error || `Upload failed (${uploadResponse.status})`);
         }
@@ -1287,6 +1545,7 @@ export const spiceyApi = {
         return { file_url, file_uri: objectPath, path: objectPath, bucket: 'spicey-media' };
       }
       const token = spiceySession.token();
+      if (!token) throw new Error('Session expired. Please log in again.');
       const form = new FormData();
       form.append('file', file);
       Object.entries(options).forEach(([key, value]) => form.append(key, value));
@@ -1296,7 +1555,11 @@ export const spiceyApi = {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
         body: form,
       });
-      const data = await response.json();
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok && retryAuth && (response.status === 401 || response.status === 403) && spiceySession.get()?.refresh_token) {
+        await ensureFreshSpiceySession({ force: true });
+        return spiceyApi.media.upload(file, options, false);
+      }
       if (!response.ok) throw new Error(data.error || 'Upload failed');
       return data;
     },

@@ -86,7 +86,7 @@ export default function AdminCuratedReels() {
           <button onClick={() => navigate('/admin/dashboard')} className="w-8 h-8 flex items-center justify-center text-white/60 hover:text-white">
             <ChevronLeft className="w-6 h-6" />
           </button>
-          <h1 className="text-lg font-bold text-white">Curated Reels</h1>
+          <h1 className="text-lg font-bold text-white">Curated Spicey Clips</h1>
         </div>
         <motion.button
           whileTap={{ scale: 0.95 }}
@@ -253,7 +253,7 @@ export default function AdminCuratedReels() {
             <div className="w-20 h-20 rounded-full bg-white/5 flex items-center justify-center mx-auto mb-4">
               <ExternalLink className="w-10 h-10 text-white/30" />
             </div>
-            <p className="text-white/50 text-sm">No curated reels yet</p>
+            <p className="text-white/50 text-sm">No curated Reels yet</p>
             <p className="text-white/30 text-xs mt-1">Add your first high-quality reel above</p>
           </div>
         ) : (

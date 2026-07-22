@@ -2,7 +2,7 @@ import { handleOptions, readJson, sendJson, setCors } from '../_lib/http.js';
 import { getSupabaseUser } from '../_lib/supabaseRest.js';
 
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY || '';
-const IMAGE_MODEL = process.env.OPENAI_IMAGE_MODEL || 'gpt-image-1';
+const IMAGE_MODEL = process.env.OPENAI_IMAGE_MODEL || 'gpt-image-2';
 const REQUIRE_AI_AUTH = process.env.SPICEY_REQUIRE_AI_AUTH === 'true';
 
 export default async function handler(req, res) {
@@ -28,6 +28,7 @@ export default async function handler(req, res) {
         model: body.model || IMAGE_MODEL,
         prompt,
         size: body.size || '1024x1024',
+        quality: body.quality || 'medium',
       }),
     });
 

@@ -6,6 +6,18 @@ function localApiPlugin() {
   return {
     name: 'spicey-local-api',
     configureServer(server) {
+      server.middlewares.use('/api/subscriptions/admin/', async (req, res) => {
+        try {
+          req.url = req.originalUrl || req.url;
+          const mod = await import('./server/api-routes/subscriptions/admin/[subscriptionId].js');
+          await mod.default(req, res);
+        } catch (error) {
+          res.statusCode = 500;
+          res.setHeader('Content-Type', 'application/json');
+          res.end(JSON.stringify({ error: error.message || 'Local subscription update failed' }));
+        }
+      });
+
       const routes = {
         '/api/auth/login': () => import('./server/api-routes/auth/login.js'),
         '/api/auth/signup': () => import('./server/api-routes/auth/signup.js'),
@@ -17,6 +29,11 @@ function localApiPlugin() {
         '/api/openai/text': () => import('./server/api-routes/openai/text.js'),
         '/api/openai/image-edit': () => import('./server/api-routes/openai/image-edit.js'),
         '/api/openai/image': () => import('./server/api-routes/openai/image.js'),
+        '/api/openai/video': () => import('./server/api-routes/openai/video.js'),
+        '/api/youtube/reels': () => import('./server/api-routes/youtube/reels.js'),
+        '/api/subscriptions/status': () => import('./server/api-routes/subscriptions/status.js'),
+        '/api/subscriptions/gift': () => import('./server/api-routes/subscriptions/gift/index.js'),
+        '/api/subscriptions/admin': () => import('./server/api-routes/subscriptions/admin/index.js'),
         '/api/admin/deploy': () => import('./server/api-routes/admin/deploy.js'),
         '/api/admin/mobile-artifacts/download': () => import('./server/api-routes/admin/mobile-artifacts/download.js'),
         '/api/admin/mobile-artifacts': () => import('./server/api-routes/admin/mobile-artifacts.js'),

@@ -340,21 +340,22 @@ export default function PhotoViewer({ post, open, onClose }) {
               )}
             </AnimatePresence>
 
-            {/* Close button — safe-area aware, large tap target */}
+            {/* Close button */}
             <button
               onClick={onClose}
-              className="absolute left-4 flex items-center gap-2 px-4 py-3 rounded-full z-50"
+              className="absolute right-4 grid place-items-center rounded-full z-50 active:scale-95 transition-transform"
               style={{
-                top: 'max(3.5rem, calc(env(safe-area-inset-top) + 1rem))',
-                background: 'rgba(0,0,0,0.72)',
-                backdropFilter: 'blur(12px)',
-                border: '1px solid rgba(255,255,255,0.2)',
-                minWidth: 80,
-                minHeight: 44,
+                top: 'max(1rem, calc(env(safe-area-inset-top) + 0.7rem))',
+                width: 38,
+                height: 38,
+                background: 'linear-gradient(135deg, rgba(255,255,255,0.16), rgba(255,255,255,0.06))',
+                backdropFilter: 'blur(16px)',
+                border: '1px solid rgba(255,255,255,0.18)',
+                boxShadow: '0 12px 28px rgba(0,0,0,0.32)',
               }}
+              aria-label="Close"
             >
-              <X className="w-5 h-5 text-white" />
-              <span className="text-white text-sm font-semibold">Close</span>
+              <X className="w-4 h-4 text-white" />
             </button>
           </motion.div>
         </>

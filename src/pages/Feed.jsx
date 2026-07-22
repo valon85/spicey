@@ -14,7 +14,6 @@ import VerifiedBadge from '../components/shared/VerifiedBadge.jsx';
 import {
   Bell,
   ChevronRight,
-  Crown,
   Flame,
   Heart,
   Hash,
@@ -24,7 +23,6 @@ import {
   Navigation,
   Search,
   Send,
-  SmilePlus,
   SlidersHorizontal,
   Sparkles,
   TrendingUp,
@@ -35,13 +33,21 @@ import AIOrb from '../components/ai/AIOrb';
 import AITalkMode from '../components/ai/AITalkMode';
 import { AIProvider, useAI } from '@/lib/AIContext';
 import ActiveLiveBar from '../components/feed/ActiveLiveBar.jsx';
-import { AnimatePresence } from 'framer-motion';
+import { AnimatePresence, motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 
 // Utility to ensure array safety
 const asArray = (v) => Array.isArray(v) ? v : [];
 
 const TRENDING_TAGS = ['#SpiceyNight', '#UrbanVibes', '#GlowUp', '#NoFilter', '#AfterDark'];
+
+const PREMIUM_MOOD_REACTIONS = [
+  { key: 'smile', emoji: '😊', label: 'Smile' },
+  { key: 'cry', emoji: '😭', label: 'Cry' },
+  { key: 'sad', emoji: '😔', label: 'Sad' },
+  { key: 'happy', emoji: '😄', label: 'Happy' },
+  { key: 'wow', emoji: '😮', label: 'Wow' },
+];
 
 const FASHION_FEED_IMAGES = [
   'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?w=900&h=1250&fit=crop&q=92',
@@ -250,6 +256,73 @@ function PremiumPosterText({ caption }) {
   );
 }
 
+function PremiumFeedLikeEffect({ burst }) {
+  return (
+    <AnimatePresence>
+      {burst > 0 && (
+        <motion.div
+          key={burst}
+          className="spicey-photo-like-premium"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.16 }}
+        >
+          <motion.div
+            className="spicey-photo-like-premium__shine"
+            initial={{ x: '-120%', opacity: 0 }}
+            animate={{ x: '120%', opacity: [0, 1, 0] }}
+            transition={{ duration: 0.78, ease: 'easeOut' }}
+          />
+          <motion.div
+            className="spicey-photo-like-premium__heart"
+            initial={{ scale: 0.5, opacity: 0, y: 8 }}
+            animate={{ scale: [0.5, 1.08, 0.96], opacity: [0, 1, 0], y: [8, -8, -18] }}
+            transition={{ duration: 0.82, ease: 'easeOut' }}
+          >
+            <Heart className="w-16 h-16" />
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+}
+
+function PremiumFeedFireEffect({ burst, active }) {
+  return (
+    <>
+      <AnimatePresence>
+        {burst > 0 && (
+          <motion.div
+            key={burst}
+            className="spicey-photo-fire-burst"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.16 }}
+          >
+            <motion.div
+              className="spicey-photo-fire-burst__wave"
+              initial={{ y: '18%', scale: 0.92, opacity: 0 }}
+              animate={{ y: ['18%', '-8%'], scale: [0.92, 1.02, 1.04], opacity: [0, 0.72, 0] }}
+              transition={{ duration: 0.82, ease: 'easeOut' }}
+            />
+            <motion.div
+              className="spicey-photo-fire-burst__icon"
+              initial={{ scale: 0.48, opacity: 0, y: 10 }}
+              animate={{ scale: [0.48, 1, 0.92], opacity: [0, 0.82, 0], y: [10, -8, -18] }}
+              transition={{ duration: 0.74, ease: 'easeOut' }}
+            >
+              <Flame className="w-12 h-12" />
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+      {active && <div className="spicey-photo-fire-active" />}
+    </>
+  );
+}
+
 function PremiumPostCard({ post, index = 0, onCommentClick, currentUser }) {
   const rawImages = asArray(post?.image_urls);
   const images = rawImages.length ? rawImages : [post?.image_url || FASHION_FEED_IMAGES[index % FASHION_FEED_IMAGES.length]];
@@ -266,6 +339,15 @@ function PremiumPostCard({ post, index = 0, onCommentClick, currentUser }) {
   });
   const [shareOpen, setShareOpen] = React.useState(false);
   const [reactionsOpen, setReactionsOpen] = React.useState(false);
+  const [activityTab, setActivityTab] = React.useState('all');
+  const [likeBurst, setLikeBurst] = React.useState(0);
+  const [fireBurst, setFireBurst] = React.useState(0);
+  const [moodPickerOpen, setMoodPickerOpen] = React.useState(false);
+  const likeBurstTimerRef = React.useRef(null);
+  const fireBurstTimerRef = React.useRef(null);
+  const moodPressTimerRef = React.useRef(null);
+  const moodLongPressRef = React.useRef(false);
+  const moodControlRef = React.useRef(null);
   const heroImage = images[photoIndex] || images[0];
   const authorAvatar = post?.author_avatar || PREMIUM_STORIES[(index % (PREMIUM_STORIES.length - 1)) + 1]?.image || PREMIUM_STORIES[0].image;
   const authorName = post?.author_name || ['Vlora Dervishi', 'Valon Dervishi', 'Ardian Dervishi'][index % 3];
@@ -274,19 +356,78 @@ function PremiumPostCard({ post, index = 0, onCommentClick, currentUser }) {
   const likeCount = (post?.likes_count || 1200) + (reactions.like ? 1 : 0);
   const fireCount = (post?.fire_count || 87) + (reactions.fire ? 1 : 0);
   const wowCount = (post?.wow_count || 34) + (reactions.wow ? 1 : 0);
+  const commentsCount = post?.comments_count || 32;
   const shareCount = (post?.shares_count || 12) + (reactions.share ? 1 : 0);
-  const toggleReaction = (key) => setReactions(prev => {
-    const next = { ...prev, [key]: !prev[key] };
+  const selectedMood = PREMIUM_MOOD_REACTIONS.find(item => item.key === reactions.mood) || PREMIUM_MOOD_REACTIONS[0];
+  React.useEffect(() => () => {
+    window.clearTimeout(likeBurstTimerRef.current);
+    window.clearTimeout(fireBurstTimerRef.current);
+    window.clearTimeout(moodPressTimerRef.current);
+  }, []);
+  React.useEffect(() => {
+    if (!moodPickerOpen) return undefined;
+    const closePicker = (event) => {
+      if (!moodControlRef.current?.contains(event.target)) setMoodPickerOpen(false);
+    };
+    document.addEventListener('pointerdown', closePicker);
+    return () => document.removeEventListener('pointerdown', closePicker);
+  }, [moodPickerOpen]);
+  const toggleReaction = (key) => {
+    const nextActive = !reactions[key];
+    const next = { ...reactions, [key]: nextActive };
+    setReactions(next);
     try {
       const store = JSON.parse(localStorage.getItem('spicey_premium_reactions_v2') || '{}') || {};
       store[postKey] = next;
       localStorage.setItem('spicey_premium_reactions_v2', JSON.stringify(store));
     } catch {}
-    return next;
-  });
+    if (nextActive && key === 'like') {
+      window.clearTimeout(likeBurstTimerRef.current);
+      setLikeBurst(prev => prev + 1);
+      likeBurstTimerRef.current = window.setTimeout(() => setLikeBurst(0), 900);
+    }
+    if (nextActive && key === 'fire') {
+      window.clearTimeout(fireBurstTimerRef.current);
+      setFireBurst(prev => prev + 1);
+      fireBurstTimerRef.current = window.setTimeout(() => setFireBurst(0), 900);
+    }
+  };
   const handleShare = async () => {
     toggleReaction('share');
     setShareOpen(true);
+  };
+  const startMoodLongPress = () => {
+    moodLongPressRef.current = false;
+    window.clearTimeout(moodPressTimerRef.current);
+    moodPressTimerRef.current = window.setTimeout(() => {
+      moodLongPressRef.current = true;
+      setMoodPickerOpen(true);
+    }, 360);
+  };
+  const cancelMoodLongPress = () => {
+    window.clearTimeout(moodPressTimerRef.current);
+  };
+  const handleMoodClick = (event) => {
+    if (moodLongPressRef.current) {
+      moodLongPressRef.current = false;
+      event.preventDefault();
+      return;
+    }
+    toggleReaction('wow');
+  };
+  const selectMoodReaction = (mood) => {
+    const next = { ...reactions, wow: true, mood: mood.key };
+    setReactions(next);
+    try {
+      const store = JSON.parse(localStorage.getItem('spicey_premium_reactions_v2') || '{}') || {};
+      store[postKey] = next;
+      localStorage.setItem('spicey_premium_reactions_v2', JSON.stringify(store));
+    } catch {}
+    setMoodPickerOpen(false);
+  };
+  const openActivity = (tab) => {
+    setActivityTab(tab);
+    setReactionsOpen(true);
   };
   const nextPhoto = () => setPhotoIndex(prev => (prev + 1) % count);
   const prevPhoto = () => setPhotoIndex(prev => (prev - 1 + count) % count);
@@ -325,6 +466,8 @@ function PremiumPostCard({ post, index = 0, onCommentClick, currentUser }) {
         onMouseUp={handleSwipeEnd}
       >
         <img src={heroImage} alt="" />
+        <PremiumFeedLikeEffect burst={likeBurst} />
+        <PremiumFeedFireEffect burst={fireBurst} active={reactions.fire} />
         <PremiumPosterText caption={caption} />
         {count > 1 && (
           <>
@@ -336,6 +479,20 @@ function PremiumPostCard({ post, index = 0, onCommentClick, currentUser }) {
           </>
         )}
       </div>
+      <div className="post-under-photo-activity" aria-label="Post activity">
+        <button type="button" className="post-under-photo-summary" onClick={() => openActivity('all')} aria-label="View everyone who interacted">
+          <span className="post-under-photo-users" aria-hidden="true">
+            <img src={PREMIUM_STORIES[1].image} alt="" />
+            <img src={PREMIUM_STORIES[2].image} alt="" />
+            <img src={PREMIUM_STORIES[4].image} alt="" />
+          </span>
+          <span className="post-under-photo-copy">Liked by <b>jessica.l</b></span>
+          <span className="post-under-photo-counts" aria-label={`${likeCount} likes and ${fireCount} fire reactions`}>
+            <span className="likes"><Heart size={12} />{likeCount > 999 ? `${(likeCount / 1000).toFixed(1)}K` : likeCount}</span>
+            <span className="fires"><Flame size={12} />{fireCount}</span>
+          </span>
+        </button>
+      </div>
       <div className="post-actions">
         <button type="button" className={reactions.like ? 'active like' : 'like'} aria-label="Like" onClick={() => toggleReaction('like')}>
           <Heart size={28} />
@@ -345,48 +502,63 @@ function PremiumPostCard({ post, index = 0, onCommentClick, currentUser }) {
           <Flame size={27} />
           <small>{fireCount}</small>
         </button>
-        <button type="button" className={reactions.wow ? 'active wow' : 'wow'} aria-label="Wow" onClick={() => toggleReaction('wow')}>
-          <SmilePlus size={27} />
-          <small>{wowCount}</small>
-        </button>
+        <div className="spicey-mood-control" ref={moodControlRef}>
+          <button
+            type="button"
+            className={reactions.wow ? 'active wow' : 'wow'}
+            aria-label={`Mood reaction: ${selectedMood.label}. Long press for more`}
+            aria-expanded={moodPickerOpen}
+            onPointerDown={startMoodLongPress}
+            onPointerUp={cancelMoodLongPress}
+            onPointerCancel={cancelMoodLongPress}
+            onContextMenu={(event) => { event.preventDefault(); setMoodPickerOpen(true); }}
+            onClick={handleMoodClick}
+          >
+            <span className="spicey-mood-button-emoji" aria-hidden="true">{selectedMood.emoji}</span>
+            <small>{wowCount}</small>
+          </button>
+          <AnimatePresence>
+            {moodPickerOpen && (
+              <motion.div
+                className="spicey-mood-picker"
+                role="menu"
+                aria-label="Choose mood reaction"
+                initial={{ opacity: 0, scale: 0.82, x: 8 }}
+                animate={{ opacity: 1, scale: 1, x: 0 }}
+                exit={{ opacity: 0, scale: 0.9, x: 6 }}
+                transition={{ duration: 0.16, ease: 'easeOut' }}
+              >
+                {PREMIUM_MOOD_REACTIONS.map(mood => (
+                  <button
+                    type="button"
+                    role="menuitem"
+                    key={mood.key}
+                    className={selectedMood.key === mood.key && reactions.wow ? 'selected' : ''}
+                    aria-label={mood.label}
+                    onClick={() => selectMoodReaction(mood)}
+                  >
+                    <span aria-hidden="true">{mood.emoji}</span>
+                  </button>
+                ))}
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
         <button type="button" aria-label="Comment" onClick={() => onCommentClick(post)}><MessageCircle size={29} /></button>
         <button type="button" className={reactions.share ? 'active share' : 'share'} aria-label="Share" onClick={handleShare}>
           <Send size={28} />
           <small>{shareCount}</small>
         </button>
       </div>
-      <div className="post-activity" aria-label="Post activity">
-        <button type="button" onClick={() => setReactionsOpen(true)} aria-label="View likes">
-          <span className="activity-avatars">
-            <img src={PREMIUM_STORIES[1].image} alt="" />
-            <img src={PREMIUM_STORIES[2].image} alt="" />
-            <img src={PREMIUM_STORIES[3].image} alt="" />
-          </span>
-          <span><b>John, Vlora</b> +{index === 0 ? '1.2K' : `${Math.max(2, index + 4)}.${index + 1}K`} liked</span>
-        </button>
-        <button type="button" onClick={() => onCommentClick(post)} aria-label="View comments">
-          <span className="activity-avatars">
-            <img src={PREMIUM_STORIES[2].image} alt="" />
-            <img src={PREMIUM_STORIES[4].image} alt="" />
-          </span>
-          <span><b>Ardian, Mia</b> commented</span>
-        </button>
-        <button type="button" onClick={handleShare} aria-label="View shares">
-          <span className="activity-avatars">
-            <img src={PREMIUM_STORIES[3].image} alt="" />
-            <img src={PREMIUM_STORIES[1].image} alt="" />
-          </span>
-          <span><b>Valon, John</b> shared</span>
-        </button>
-      </div>
     </article>
     <ReactionsSheet
       open={reactionsOpen}
       onClose={() => setReactionsOpen(false)}
-      post={{ ...post, likes_count: likeCount, fire_count: fireCount }}
+      post={{ ...post, likes_count: likeCount, fire_count: fireCount, comments_count: commentsCount, shares_count: shareCount }}
       currentUser={currentUser}
       liked={reactions.like}
       fireReacted={reactions.fire}
+      initialTab={activityTab}
     />
     <ShareSheet
       open={shareOpen}
@@ -420,9 +592,68 @@ function PremiumMapPreview({ onOpen }) {
   );
 }
 
-function PremiumLightFeed({ posts, isDark = false, currentUser, onVoiceOpen, onCommentClick, onTagClick, onMapOpen, onSearchOpen, onSettingsOpen, onVipOpen, onNotificationsOpen, onStoryOpen, onCreateOpen }) {
+function PremiumLightFeed({ posts, isDark = false, currentUser, onVoiceOpen, onCommentClick, onTagClick, onMapOpen, onRenderOpen, onSearchOpen, onSettingsOpen, onNotificationsOpen, onStoryOpen, onCreateOpen }) {
   const feedPosts = asArray(posts).length ? asArray(posts) : [{ id: 'premium-demo' }];
   const [activeTab, setActiveTab] = React.useState('For You');
+  const { data: activeStoryCreators = [] } = useQuery({
+    queryKey: ['premium-feed-story-creators'],
+    queryFn: async () => {
+      const now = new Date().toISOString();
+      const stories = asArray(await base44.entities.Story.list('-created_date', 40))
+        .filter((story) => story?.user_id && (!story.expires_at || story.expires_at > now));
+      const latestByUser = new Map();
+      stories.forEach((story) => {
+        if (!latestByUser.has(story.user_id)) latestByUser.set(story.user_id, story);
+      });
+
+      return Promise.all(Array.from(latestByUser.values()).slice(0, 8).map(async (story) => {
+        const profiles = await base44.entities.UserProfile
+          .filter({ user_id: story.user_id }, '-created_date', 1)
+          .catch(() => []);
+        const profile = asArray(profiles)[0];
+        const name = profile?.full_name || profile?.username || story.username || 'Spicey User';
+        return {
+          name,
+          image: profile?.avatar_url || story.user_avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=6d28d9&color=fff&size=180`,
+          creatorId: story.user_id,
+        };
+      }));
+    },
+    staleTime: 60 * 1000,
+    refetchOnWindowFocus: true,
+  });
+  const clipCreators = React.useMemo(() => {
+    const seen = new Set();
+    return asArray(posts)
+      .filter((post) => post?.post_type === 'reel' || post?.type === 'reel' || post?.media_type === 'reel')
+      .filter((post) => {
+        const creatorId = post.author_id || post.user_id || post.author_username;
+        if (!creatorId || seen.has(creatorId)) return false;
+        seen.add(creatorId);
+        return true;
+      })
+      .map((post) => ({
+        name: post.author_name || post.author_username || 'Creator',
+        image: post.author_avatar || PREMIUM_STORIES[1].image,
+        creatorId: post.author_id || post.user_id || '',
+      }));
+  }, [posts]);
+  const storyAvatars = React.useMemo(() => {
+    const currentUserId = currentUser?.user_id || currentUser?.id;
+    const seen = new Set();
+    return [...asArray(activeStoryCreators), ...clipCreators]
+      .filter((story) => story.creatorId && story.creatorId !== currentUserId)
+      .filter((story) => {
+        if (seen.has(story.creatorId)) return false;
+        seen.add(story.creatorId);
+        return true;
+      })
+      .slice(0, 6);
+  }, [activeStoryCreators, clipCreators, currentUser]);
+
+  const currentUserName = currentUser?.full_name || currentUser?.username || currentUser?.email?.split('@')[0] || 'You';
+  const currentUserAvatar = currentUser?.avatar_url
+    || `https://ui-avatars.com/api/?name=${encodeURIComponent(currentUserName)}&background=ff5500&color=fff&size=180`;
 
   return (
     <div className="spicey-premium-feed-shell">
@@ -434,20 +665,12 @@ function PremiumLightFeed({ posts, isDark = false, currentUser, onVoiceOpen, onC
           <span>Spicey</span>
         </div>
         <div className="spicey-premium-actions">
-          {isDark ? (
-            <>
-              <button type="button" aria-label="Search" onClick={onSearchOpen}>
-                <Search size={22} />
-              </button>
-              <button type="button" aria-label="Settings" onClick={onSettingsOpen}>
-                <SlidersHorizontal size={22} />
-              </button>
-            </>
-          ) : (
-            <button type="button" aria-label="Pro" onClick={onVipOpen}>
-              <Crown size={22} />
-            </button>
-          )}
+          <button type="button" aria-label="Search" onClick={onSearchOpen}>
+            <Search size={22} />
+          </button>
+          <button type="button" aria-label="Settings" onClick={onSettingsOpen}>
+            <SlidersHorizontal size={22} />
+          </button>
           <button type="button" aria-label="Notifications" onClick={onNotificationsOpen}>
             <Bell size={22} />
             <b>8</b>
@@ -455,27 +678,24 @@ function PremiumLightFeed({ posts, isDark = false, currentUser, onVoiceOpen, onC
         </div>
       </header>
 
-      {!isDark && (
-        <div className="spicey-premium-search" role="button" tabIndex={0} onClick={onSearchOpen} onKeyDown={(event) => { if (event.key === 'Enter') onSearchOpen(); }}>
-          <Search size={22} />
-          <span>Search people, posts, hashtags...</span>
-          <button type="button" aria-label="Filters" onClick={(event) => { event.stopPropagation(); onSettingsOpen(); }}>
-            <SlidersHorizontal size={22} />
-          </button>
-        </div>
-      )}
-
       <section className="spicey-premium-stories" aria-label="Stories">
-        {PREMIUM_STORIES.map((story) => (
-          <button type="button" key={story.name} className="spicey-premium-story" onClick={story.self ? onCreateOpen : onStoryOpen}>
+        <button type="button" className="spicey-premium-story" onClick={onCreateOpen}>
+          <span className="ring">
+            <img src={currentUserAvatar} alt="Your Story" />
+            <i>+</i>
+          </span>
+          <small>Your Story</small>
+        </button>
+        {storyAvatars.map((story) => (
+          <button type="button" key={story.creatorId || story.name} className="spicey-premium-story" onClick={() => onStoryOpen(story.creatorId)}>
             <span className="ring">
               <img src={story.image} alt={story.name} />
-              {story.self ? <i>+</i> : <b />}
+              <b />
             </span>
             <small>{story.name}</small>
           </button>
         ))}
-        <button type="button" className="spicey-premium-story more" onClick={onSearchOpen}>
+        <button type="button" className="spicey-premium-story more" onClick={() => onStoryOpen()}>
           <span className="ring">
             <UserRoundPlus size={27} />
             <b />
@@ -484,19 +704,19 @@ function PremiumLightFeed({ posts, isDark = false, currentUser, onVoiceOpen, onC
         </button>
       </section>
 
+      <section className="spicey-premium-ai-card">
+        <div className="ai-orb">
+          <img src="https://media.base44.com/images/public/69fe90d3bbe7ad47925e4a0a/a645abc1a_6ab1672f-73ff-4c98-a1ef-817016549a2f.png" alt="" />
+        </div>
+        <div>
+          <h2>AI Talk Mode <span>Live</span></h2>
+          <p>Talk with Spicey AI for captions, ideas and anything social.</p>
+        </div>
+        <button type="button" onClick={onVoiceOpen}>Talk <Sparkles size={17} /></button>
+      </section>
+
       {!isDark && (
         <>
-          <section className="spicey-premium-ai-card">
-            <div className="ai-orb">
-              <img src="https://media.base44.com/images/public/69fe90d3bbe7ad47925e4a0a/a645abc1a_6ab1672f-73ff-4c98-a1ef-817016549a2f.png" alt="" />
-            </div>
-            <div>
-              <h2>Spicey AI Voice <span>Live</span></h2>
-              <p>Talk with Spicey AI for captions, ideas and anything social.</p>
-            </div>
-            <button type="button" onClick={onVoiceOpen}>Talk <Sparkles size={17} /></button>
-          </section>
-
           <nav className="spicey-premium-tabs" aria-label="Feed tabs">
             {['For You', 'Following', 'Trending'].map((tab) => (
               <button type="button" key={tab} className={activeTab === tab ? 'active' : ''} onClick={() => setActiveTab(tab)}>{tab}</button>
@@ -515,15 +735,15 @@ function PremiumLightFeed({ posts, isDark = false, currentUser, onVoiceOpen, onC
               </div>
               <div className="trend-row">
                 <button type="button" className="spicey-trend-nav-card spicey-trend-map-card" onClick={onMapOpen}>
-                  <img src="https://images.unsplash.com/photo-1519501025264-65ba15a82390?w=360&h=520&fit=crop&q=90" alt="" />
-                  <span><MapPin size={23} /> Map</span>
+                  <img src="/spicey-assets/map-europe-earth-night-v1.png" alt="Spicey Map over Europe at night" />
+                  <span><MapPin size={23} /> Spicey Map</span>
                   <small>Live places</small>
                   <i />
                 </button>
-                <button type="button" className="spicey-trend-nav-card spicey-trend-explore-card" onClick={onSearchOpen}>
+                <button type="button" className="spicey-trend-nav-card spicey-trend-render-card" onClick={onSearchOpen}>
                   <img src="https://images.unsplash.com/photo-1485178575877-1a13bf489dfe?w=360&h=520&fit=crop&q=90" alt="" />
-                  <span><Search size={23} /> Explore</span>
-                  <small>Search now</small>
+                  <span><Sparkles size={23} /> Spicey Discovery</span>
+                  <small>Explore now</small>
                   <i />
                 </button>
                 {PREMIUM_TRENDING.map((topic, trendIndex) => (
@@ -566,17 +786,20 @@ export default function Feed() {
       const root = document.documentElement;
       const body = document.body;
       const previewTheme = new URLSearchParams(window.location.search).get('previewTheme');
-      if (previewTheme === 'light') root.classList.add('light-mode');
-      if (previewTheme === 'dark') root.classList.remove('light-mode');
+      if (previewTheme === 'light' && !root.classList.contains('light-mode')) {
+        root.classList.add('light-mode');
+      }
+      if (previewTheme === 'dark' && root.classList.contains('light-mode')) {
+        root.classList.remove('light-mode');
+      }
       const storedTheme = localStorage.getItem('theme') || localStorage.getItem('spicey-theme') || localStorage.getItem('spicey_theme');
-      setIsLight(
-        previewTheme === 'light' ||
+      const runtimeIsLight =
         root.classList.contains('light-mode') ||
         body.classList.contains('light-mode') ||
         root.dataset.theme === 'light' ||
         body.dataset.theme === 'light' ||
-        storedTheme === 'light'
-      );
+        storedTheme === 'light';
+      setIsLight(previewTheme === 'light' || (previewTheme !== 'dark' && runtimeIsLight));
     };
     check();
     const obs = new MutationObserver(check);
@@ -605,9 +828,26 @@ export default function Feed() {
   useEffect(() => {
     if (!currentUser && !USER_CACHE.fetched) {
       USER_CACHE.fetched = true;
-      base44.auth.me().then(user => {
-        USER_CACHE.user = user;
-        setCurrentUser(user);
+      base44.auth.me().then(async user => {
+        let mergedUser = user;
+        try {
+          const profiles = await base44.entities.UserProfile.filter({ user_id: user.id }, '-created_date', 1);
+          if (profiles?.[0]) {
+            mergedUser = {
+              ...user,
+              ...profiles[0],
+              id: user.id,
+              user_id: user.id,
+              profile_id: profiles[0].id,
+              email: user.email || profiles[0].email,
+              avatar_url: profiles[0].avatar_url || user.avatar_url || '',
+              full_name: profiles[0].full_name || user.full_name || user.email?.split('@')[0] || 'User',
+              username: profiles[0].username || user.username || user.email?.split('@')[0] || 'user',
+            };
+          }
+        } catch (_) {}
+        USER_CACHE.user = mergedUser;
+        setCurrentUser(mergedUser);
       }).catch(() => {
         USER_CACHE.fetched = false;
       });
@@ -985,11 +1225,15 @@ export default function Feed() {
           onCommentClick={handleCommentClick}
           onTagClick={handleTrendingTagClick}
           onMapOpen={() => navigate(`/map${themeQuery}`)}
-          onSearchOpen={() => navigate(`/explore${themeQuery}`)}
+          onRenderOpen={() => navigate(`/ai?mode=media&previewTheme=${isLight ? 'light' : 'dark'}`)}
+          onSearchOpen={() => navigate(`/explore?search=1&previewTheme=${isLight ? 'light' : 'dark'}`)}
           onSettingsOpen={() => navigate(`/settings${themeQuery}`)}
-          onVipOpen={() => navigate(`/vip${themeQuery}`)}
           onNotificationsOpen={() => navigate(`/notifications${themeQuery}`)}
-          onStoryOpen={() => navigate(`/profile${themeQuery}`)}
+          onStoryOpen={(creatorId) => {
+            const params = new URLSearchParams({ previewTheme: isLight ? 'light' : 'dark' });
+            if (creatorId) params.set('creator', creatorId);
+            navigate(`/reels?${params.toString()}`);
+          }}
           onCreateOpen={() => navigate(`/create${themeQuery}`)}
         />
         <AnimatePresence>

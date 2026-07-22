@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
-import { X, Image as ImageIcon, Plus, Trash2, MapPin, Music, Users, Wand2, Search, Play, Download } from 'lucide-react';
+import { X, Image as ImageIcon, Trash2, MapPin, Music, Users, Wand2, Download, Type } from 'lucide-react';
 import MusicPicker from '@/components/create/MusicPicker';
 import { Filesystem, Directory } from '@capacitor/filesystem';
 import { Share } from '@capacitor/share';
+import { fallbackMusicResults, normalizeMusicTrack, postMusicPayload } from '@/components/create/musicUtils';
 
 const FILTERS = [
   { id: 'none', name: 'Normal' },
@@ -36,26 +37,66 @@ const EFFECTS = [
   { id: 'portrait', name: 'Portrait' },
 ];
 
+const MOVIE_MOODS = [
+  {
+    id: 'city',
+    name: 'City Nights',
+    title: 'CITY NIGHTS',
+    caption: 'A moment. A story. A movie.',
+    gradient: 'linear-gradient(180deg, #ff25b8 0%, #ff356c 46%, #ff8b2a 100%)',
+    glow: 'rgba(255,45,143,0.34)',
+  },
+  {
+    id: 'glow',
+    name: 'Glow Up',
+    title: 'GLOW UP',
+    caption: 'Main character energy, made for Spicey.',
+    gradient: 'linear-gradient(180deg, #ff9a1f 0%, #ff2e9d 52%, #9b35ff 100%)',
+    glow: 'rgba(155,53,255,0.34)',
+  },
+  {
+    id: 'afterdark',
+    name: 'After Dark',
+    title: 'AFTER DARK',
+    caption: 'Night colors, soft lights, unforgettable mood.',
+    gradient: 'linear-gradient(180deg, #d956ff 0%, #ff2d55 44%, #ff6b35 100%)',
+    glow: 'rgba(217,86,255,0.34)',
+  },
+];
+
 export default function CreatePhotoPost() {
   const navigate = useNavigate();
   const routeLocation = useLocation();
   const [images, setImages] = useState([]);
   const [selectedFilter, setSelectedFilter] = useState('none');
   const [selectedEffect, setSelectedEffect] = useState('none');
+  const [posterTitle, setPosterTitle] = useState('');
   const [caption, setCaption] = useState('');
+  const [movieMode, setMovieMode] = useState(true);
+  const [movieMood, setMovieMood] = useState(MOVIE_MOODS[0]);
   const [location, setLocation] = useState('');
   const [tags, setTags] = useState('');
   const [music, setMusic] = useState(null);
   const [postType, setPostType] = useState('feed');
   const [uploading, setUploading] = useState(false);
   const [user, setUser] = useState(null);
-  const [activeTab, setActiveTab] = useState('filters');
+  const [activeTab, setActiveTab] = useState('movie');
   const [musicSearch, setMusicSearch] = useState('');
   const [musicResults, setMusicResults] = useState([]);
   const [searchingMusic, setSearchingMusic] = useState(false);
+  const [publishError, setPublishError] = useState('');
 
   useEffect(() => {
-    base44.auth.me().then(setUser);
+    let active = true;
+    base44.auth.me()
+      .then((currentUser) => {
+        if (active) setUser(currentUser);
+      })
+      .catch((error) => {
+        console.warn('[CreatePhotoPost] Session check failed:', error?.message || error);
+        if (active) setPublishError(error?.message || 'Could not verify your session.');
+      });
+    return () => { active = false; };
   }, []);
 
   // Load preset avatar URL passed from PresetAvatarPicker
@@ -84,6 +125,22 @@ export default function CreatePhotoPost() {
     setImages(prev => [...prev, ...newImages].slice(0, 10));
   };
 
+  const applyMovieMood = (mood, forceText = false) => {
+    setMovieMode(true);
+    setMovieMood(mood);
+    if (forceText || !posterTitle.trim()) setPosterTitle(mood.title);
+    if (forceText || !caption.trim()) setCaption(mood.caption);
+    setSelectedEffect('glow');
+    setSelectedFilter('xpro2');
+  };
+
+  const movieCaption = () => {
+    const title = posterTitle.trim();
+    const body = caption.trim();
+    if (!movieMode) return [title, body].filter(Boolean).join(' ');
+    return [title, body].filter(Boolean).join('\n');
+  };
+
   const removeImage = (index) => {
     setImages(prev => prev.filter((_, i) => i !== index));
   };
@@ -93,18 +150,11 @@ export default function CreatePhotoPost() {
     setSearchingMusic(true);
     try {
       const res = await base44.functions.invoke('searchMusic', { query });
-      if (res.data?.results) {
-        // Map Deezer format to our format
-        const mapped = res.data.results.map(track => ({
-          title: track.trackName,
-          artist: track.artistName,
-          preview_url: track.previewUrl,
-          artwork_url: track.artworkUrl100 || track.artworkUrl60,
-        }));
-        setMusicResults(mapped);
-      }
+      const results = res.data?.results || [];
+      setMusicResults((results.length ? results : fallbackMusicResults(query)).map(normalizeMusicTrack));
     } catch (err) {
       console.error('Music search error:', err);
+      setMusicResults(fallbackMusicResults(query).map(normalizeMusicTrack));
     } finally {
       setSearchingMusic(false);
     }
@@ -113,6 +163,7 @@ export default function CreatePhotoPost() {
   const handlePost = async () => {
     if (images.length === 0 || !user) return;
     
+    setPublishError('');
     setUploading(true);
     try {
       const uploadResults = await Promise.all(images.map(img => {
@@ -145,7 +196,7 @@ export default function CreatePhotoPost() {
         author_name: user.full_name || user.email?.split('@')[0] || 'User',
         author_username: user.email?.split('@')[0] || 'user',
         author_avatar: isPresetAvatar ? imageUrls[0] : (user.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.full_name || 'U')}&background=ff5500&color=fff&size=100`),
-        caption: caption || (isPresetAvatar ? '✨ New avatar! 🔥' : ''),
+        caption: movieCaption() || (isPresetAvatar ? '✨ New avatar! 🔥' : ''),
         post_type: isPresetVideo ? 'reel' : postType,
         image_urls: isPresetVideo ? [] : imageUrls,
         image_url: isPresetVideo ? '' : imageUrls[0],
@@ -153,10 +204,8 @@ export default function CreatePhotoPost() {
         visibility: 'public',
         location: location || '',
         tags: tags || '',
-        music_title: music?.title || '',
-        music_artist: music?.artist || '',
-        music_preview_url: music?.preview_url || '',
-        music_artwork_url: music?.artwork_url || '',
+        hashtags: movieMode ? ['SpiceyMovie', movieMood.name.replace(/\s+/g, '')] : [],
+        ...postMusicPayload(music),
         map_visible: !!location,
         map_city: location ? location.split(',')[0].trim() : '',
       });
@@ -164,6 +213,7 @@ export default function CreatePhotoPost() {
       navigate((isPresetVideo || postType === 'reel') ? '/reels' : '/');
     } catch (err) {
       console.error('Failed to create post:', err);
+      setPublishError(err?.message || 'Failed to publish photo.');
     } finally {
       setUploading(false);
     }
@@ -197,7 +247,7 @@ export default function CreatePhotoPost() {
           // Fallback: use Share API
           await Share.share({
             url: images[0].url,
-            title: 'Spicey Photo',
+            title: 'AI Photo',
           });
         }
       };
@@ -237,7 +287,7 @@ export default function CreatePhotoPost() {
       background: isLight 
         ? 'linear-gradient(135deg, #FFFFFF 0%, #F8F9FA 100%)' 
         : 'linear-gradient(135deg, #0a0214 0%, #1a0520 40%, #2d0f3a 100%)',
-      paddingTop: 'max(1rem, env(safe-area-inset-top))',
+      paddingTop: 'max(0.45rem, env(safe-area-inset-top))',
       paddingBottom: 'env(safe-area-inset-bottom)',
     }}>
       {/* Decorative Background Elements - only in dark mode */}
@@ -255,25 +305,25 @@ export default function CreatePhotoPost() {
       )}
 
       {/* Header */}
-      <div className="relative flex items-center justify-between px-4 pb-3 z-10">
-        <button onClick={() => navigate('/')} className="p-2 rounded-full hover:bg-white/10 transition-colors">
-          <X className="w-6 h-6" style={{ color: isLight ? '#000' : '#fff' }} />
+      <div className="relative flex items-center justify-between px-3 pb-2 z-10">
+        <button onClick={() => navigate('/')} className="w-9 h-9 rounded-full flex items-center justify-center hover:bg-white/10 transition-colors">
+          <X className="w-5 h-5" style={{ color: isLight ? '#000' : '#fff' }} />
         </button>
         <div className="flex items-center gap-2">
           {images.length > 0 && (
             <button 
               onClick={saveToPhone}
-              className="p-2.5 rounded-full transition-all transform active:scale-95"
+              className="w-9 h-9 rounded-full flex items-center justify-center transition-all transform active:scale-95"
               style={{
                 background: isLight ? 'rgba(0,0,0,0.06)' : 'rgba(255,255,255,0.1)',
                 border: `1px solid ${isLight ? 'rgba(0,0,0,0.1)' : 'rgba(255,255,255,0.15)'}`,
               }}
               title="Save to phone"
             >
-              <Download className="w-5 h-5" style={{ color: isLight ? '#000' : '#fff' }} />
+              <Download className="w-4 h-4" style={{ color: isLight ? '#000' : '#fff' }} />
             </button>
           )}
-          <h1 className="text-lg font-bold" style={{ color: isLight ? '#000' : '#fff' }}>
+          <h1 className="text-sm font-black" style={{ color: isLight ? '#000' : '#fff' }}>
             {images[0]?.isPreset && /\.(mp4|webm|mov)(\?|$)/i.test(images[0]?.url || '')
               ? 'Avatar Video'
               : images.length > 0 ? `${images.length} Photo${images.length > 1 ? 's' : ''}` : 'Create Post'}
@@ -282,7 +332,7 @@ export default function CreatePhotoPost() {
         <button 
           onClick={handlePost}
           disabled={images.length === 0 || uploading}
-          className="px-5 py-2.5 rounded-full font-bold text-sm transition-all transform active:scale-95"
+          className="px-3.5 py-2 rounded-full font-black text-xs transition-all transform active:scale-95"
           style={{
             background: (images.length === 0 || uploading) 
               ? 'rgba(255,255,255,0.1)' 
@@ -298,6 +348,15 @@ export default function CreatePhotoPost() {
 
       {/* Content */}
       <div className="relative flex-1 overflow-y-auto z-10">
+        {publishError && (
+          <div role="alert" className="mx-4 mt-3 rounded-2xl px-4 py-3 text-sm font-semibold" style={{
+            color: isLight ? '#8a1237' : '#ffd7e7',
+            background: isLight ? 'rgba(255,45,85,0.10)' : 'rgba(255,45,85,0.16)',
+            border: '1px solid rgba(255,45,85,0.34)',
+          }}>
+            {publishError}
+          </div>
+        )}
         {images.length === 0 ? (
           <div className="flex flex-col items-center justify-center min-h-[70vh] px-6">
             {/* Beautiful Upload Card */}
@@ -352,29 +411,82 @@ export default function CreatePhotoPost() {
             </div>
           </div>
         ) : (
-          <div className="px-4 pb-6 space-y-4">
+          <div className="px-3 pb-3 space-y-3">
             {/* Main Preview */}
-            <div className="relative rounded-3xl overflow-hidden shadow-2xl" style={{ aspectRatio: '1' }}>
+            <div className="relative overflow-hidden shadow-2xl" style={{
+              height: 'min(53dvh, 420px)',
+              minHeight: 300,
+              borderRadius: 24,
+            }}>
               <img 
                 src={images[0].url} 
                 alt="Preview" 
                 className="w-full h-full object-cover"
                 style={{ filter: getFilterStyle(selectedFilter) }}
               />
+              {movieMode && (
+                <div className="absolute inset-0 pointer-events-none" style={{
+                  background: `linear-gradient(to top, rgba(0,0,0,0.72) 0%, transparent 52%), radial-gradient(circle at 22% 80%, ${movieMood.glow}, transparent 36%)`,
+                  zIndex: 1,
+                }} />
+              )}
               {selectedEffect !== 'none' && (
                 <div className="absolute inset-0 pointer-events-none" style={{
-                  background: selectedEffect === 'glow' ? 'radial-gradient(circle, rgba(255,255,255,0.2) 0%, transparent 70%)' :
+                  background: selectedEffect === 'glow' ? 'radial-gradient(circle at 28% 78%, rgba(255,45,143,0.18) 0%, transparent 48%)' :
                            selectedEffect === 'vintage' ? 'radial-gradient(circle, rgba(139,69,19,0.2) 0%, transparent 70%)' :
                            selectedEffect === 'dramatic' ? 'radial-gradient(circle, rgba(0,0,0,0.3) 50%, transparent 100%)' :
                            'none',
+                  zIndex: 1,
                 }} />
+              )}
+              {(posterTitle.trim() || caption.trim()) && (
+                <div className="absolute left-4 right-4 bottom-4 pointer-events-none" style={{ zIndex: 2 }}>
+                  {posterTitle.trim() && (
+                    <div style={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      fontFamily: '"Inter", "Arial Black", sans-serif',
+                      fontSize: 'clamp(28px, 8vw, 40px)',
+                      lineHeight: 0.78,
+                      fontWeight: 740,
+                      textTransform: 'uppercase',
+                      transform: 'scaleX(0.74)',
+                      transformOrigin: 'left center',
+                      background: movieMood.gradient,
+                      WebkitBackgroundClip: 'text',
+                      backgroundClip: 'text',
+                      color: 'transparent',
+                      WebkitTextFillColor: 'transparent',
+                      filter: movieMode ? 'none' : 'drop-shadow(0 3px 7px rgba(0,0,0,0.55))',
+                    }}>
+                      {posterTitle.trim().split(/\s+/).slice(0, 3).map((word) => (
+                        <span key={`${word}-${posterTitle}`}>{word.replace(/[^\p{L}\p{N}]+/gu, '').toUpperCase()}</span>
+                      ))}
+                    </div>
+                  )}
+                  {caption.trim() && (
+                    <p style={{
+                      maxWidth: '76%',
+                      margin: posterTitle.trim() ? '7px 0 0' : 0,
+                      color: 'rgba(255,255,255,0.86)',
+                      fontSize: 'clamp(7.5px, 1.8vw, 9.5px)',
+                      lineHeight: 1.32,
+                      fontWeight: 260,
+                      letterSpacing: '0.075em',
+                      textTransform: 'uppercase',
+                      textShadow: '0 2px 10px rgba(0,0,0,0.72)',
+                    }}>{caption}</p>
+                  )}
+                </div>
               )}
             </div>
 
             {/* Action Tabs */}
-            <div className="flex gap-2 overflow-x-auto pb-2 -mx-4 px-4">
+            <div className="flex gap-1.5 overflow-x-auto pb-1 -mx-3 px-3">
               {[
+                { id: 'movie', icon: Wand2, label: 'Movie' },
                 { id: 'effects', icon: Wand2, label: 'Effects' },
+                { id: 'poster', icon: Type, label: 'Text' },
                 { id: 'music', icon: Music, label: 'Music' },
                 { id: 'location', icon: MapPin, label: 'Location' },
                 { id: 'tags', icon: Users, label: 'Tags' },
@@ -382,7 +494,7 @@ export default function CreatePhotoPost() {
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(activeTab === tab.id ? null : tab.id)}
-                  className="flex items-center gap-2 px-4 py-2.5 rounded-full whitespace-nowrap transition-all"
+                  className="flex-shrink-0 w-[58px] h-[46px] rounded-2xl whitespace-nowrap transition-all flex flex-col items-center justify-center gap-1"
                   style={{
                     background: activeTab === tab.id 
                       ? 'linear-gradient(135deg, #FF6A00 0%, #FF2D55 100%)' 
@@ -392,13 +504,90 @@ export default function CreatePhotoPost() {
                   }}
                 >
                   <tab.icon className="w-4 h-4" />
-                  <span className="text-sm font-medium">{tab.label}</span>
+                  <span className="text-[10px] font-bold">{tab.label}</span>
                 </button>
               ))}
             </div>
 
             {/* Tab Content */}
             <div className="space-y-4">
+              {/* Movie Mode Tab */}
+              {activeTab === 'movie' && (
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <h3 className="text-sm font-black" style={{ color: isLight ? '#000' : '#fff' }}>Spicey Movie Mode</h3>
+                      <p className="text-[11px] mt-0.5" style={{ color: isLight ? 'rgba(0,0,0,0.50)' : 'rgba(255,255,255,0.50)' }}>Cinematic poster look for your photo.</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setMovieMode(v => !v)}
+                      className="px-3 py-2 rounded-full text-xs font-black"
+                      style={{
+                        background: movieMode ? 'linear-gradient(135deg,#ff6b35,#ff2e9d,#9b35ff)' : (isLight ? 'rgba(0,0,0,0.06)' : 'rgba(255,255,255,0.08)'),
+                        color: movieMode ? '#fff' : (isLight ? '#111' : '#fff'),
+                        border: movieMode ? 'none' : '1px solid rgba(255,255,255,0.14)',
+                      }}
+                    >
+                      {movieMode ? 'ON' : 'OFF'}
+                    </button>
+                  </div>
+                  <div className="grid grid-cols-3 gap-2">
+                    {MOVIE_MOODS.map((mood) => (
+                      <button
+                        key={mood.id}
+                        type="button"
+                      onClick={() => applyMovieMood(mood, true)}
+                      className="rounded-2xl p-2 text-left overflow-hidden"
+                        style={{
+                          background: mood.gradient,
+                          border: movieMood.id === mood.id ? '2px solid rgba(255,255,255,0.88)' : '1px solid rgba(255,255,255,0.22)',
+                          boxShadow: movieMood.id === mood.id ? `0 0 18px ${mood.glow}` : 'none',
+                          minHeight: 58,
+                        }}
+                      >
+                        <div className="text-white/75 text-[8px] tracking-[0.14em] uppercase">Mood</div>
+                        <div className="text-white text-[11px] font-black mt-1 leading-tight">{mood.name}</div>
+                      </button>
+                    ))}
+                  </div>
+                  <input
+                    type="text"
+                    value={posterTitle}
+                    onChange={(e) => setPosterTitle(e.target.value)}
+                    placeholder="CITY NIGHTS"
+                    className="w-full px-3 py-2 rounded-xl uppercase font-black"
+                    style={{
+                      background: isLight ? 'rgba(255,255,255,0.78)' : 'rgba(255,255,255,0.08)',
+                      border: '1px solid rgba(255,45,143,0.28)',
+                      color: isLight ? '#000' : '#fff',
+                      fontSize: 13,
+                    }}
+                  />
+                  <textarea
+                    value={caption}
+                    onChange={(e) => setCaption(e.target.value)}
+                    placeholder="Small movie description..."
+                    rows={2}
+                    className="w-full px-3 py-2 rounded-xl resize-none"
+                    style={{
+                      background: isLight ? 'rgba(255,255,255,0.78)' : 'rgba(255,255,255,0.08)',
+                      border: isLight ? '1px solid rgba(0,0,0,0.08)' : '1px solid rgba(255,255,255,0.10)',
+                      color: isLight ? '#000' : '#fff',
+                      fontSize: 12,
+                    }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => applyMovieMood(movieMood, true)}
+                    className="w-full py-2.5 rounded-2xl text-white text-xs font-black"
+                    style={{ background: 'linear-gradient(135deg,#ff6b35,#ff2e9d,#9b35ff)', boxShadow: `0 0 22px ${movieMood.glow}` }}
+                  >
+                    Make it a Movie
+                  </button>
+                </div>
+              )}
+
               {/* Filters Tab */}
               {activeTab === 'filters' && (
                 <div>
@@ -410,14 +599,14 @@ export default function CreatePhotoPost() {
                         onClick={() => setSelectedFilter(f.id)}
                         className="flex-shrink-0"
                       >
-                        <div className="w-20 h-20 rounded-xl overflow-hidden mb-2 transition-transform" style={{
-                          transform: selectedFilter === f.id ? 'scale(1.1)' : 'scale(1)',
-                          border: selectedFilter === f.id ? '3px solid #FF6A00' : '3px solid transparent',
+                        <div className="w-14 h-14 rounded-xl overflow-hidden mb-1.5 transition-transform" style={{
+                          transform: selectedFilter === f.id ? 'scale(1.04)' : 'scale(1)',
+                          border: selectedFilter === f.id ? '2px solid #FF6A00' : '2px solid transparent',
                           boxShadow: selectedFilter === f.id ? '0 4px 12px rgba(255,106,0,0.4)' : 'none',
                         }}>
                           <img src={images[0].url} alt={f.name} className="w-full h-full object-cover" style={{ filter: getFilterStyle(f.id) }} />
                         </div>
-                        <span className="text-xs font-medium" style={{ color: isLight ? 'rgba(0,0,0,0.6)' : 'rgba(255,255,255,0.6)' }}>{f.name}</span>
+                        <span className="text-[10px] font-medium" style={{ color: isLight ? 'rgba(0,0,0,0.6)' : 'rgba(255,255,255,0.6)' }}>{f.name}</span>
                       </button>
                     ))}
                   </div>
@@ -433,7 +622,7 @@ export default function CreatePhotoPost() {
                       <button
                         key={e.id}
                         onClick={() => setSelectedEffect(e.id)}
-                        className="flex-shrink-0 px-5 py-2.5 rounded-full text-sm font-semibold transition-all"
+                        className="flex-shrink-0 px-3 py-2 rounded-full text-xs font-semibold transition-all"
                         style={{
                           background: selectedEffect === e.id 
                             ? 'linear-gradient(135deg, #FF6A00 0%, #FF2D55 100%)' 
@@ -443,6 +632,52 @@ export default function CreatePhotoPost() {
                         }}
                       >
                         {e.name}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Music Tab */}
+              {activeTab === 'poster' && (
+                <div className="space-y-3">
+                  <h3 className="text-sm font-semibold" style={{ color: isLight ? '#000' : '#fff' }}>Poster Text</h3>
+                  <input
+                    type="text"
+                    value={posterTitle}
+                    onChange={(e) => setPosterTitle(e.target.value)}
+                    placeholder="CITY NIGHTS"
+                    className="w-full px-3 py-2.5 rounded-xl uppercase font-black"
+                    style={{
+                      background: isLight ? 'rgba(255,255,255,0.8)' : 'rgba(255,255,255,0.08)',
+                      border: '1px solid rgba(255,45,143,0.30)',
+                      color: isLight ? '#000' : '#fff',
+                      fontSize: 13,
+                    }}
+                  />
+                  <textarea
+                    value={caption}
+                    onChange={(e) => setCaption(e.target.value)}
+                    placeholder="Description - thin white poster text..."
+                    rows={2}
+                    className="w-full px-3 py-2.5 rounded-xl resize-none"
+                    style={{
+                      background: isLight ? 'rgba(255,255,255,0.8)' : 'rgba(255,255,255,0.08)',
+                      border: isLight ? '1px solid rgba(0,0,0,0.1)' : '1px solid rgba(255,255,255,0.1)',
+                      color: isLight ? '#000' : '#fff',
+                      fontSize: 12,
+                    }}
+                  />
+                  <div className="grid grid-cols-2 gap-2">
+                    {['CITY NIGHTS', 'GLOW UP'].map((title) => (
+                      <button
+                        key={title}
+                        type="button"
+                        onClick={() => setPosterTitle(title)}
+                        className="py-2.5 rounded-xl text-white text-xs font-black"
+                        style={{ background: 'linear-gradient(135deg,#ff2d8f,#8b2cff)' }}
+                      >
+                        {title}
                       </button>
                     ))}
                   </div>
@@ -480,6 +715,24 @@ export default function CreatePhotoPost() {
                       fontSize: 15,
                     }}
                   />
+                  <button
+                    type="button"
+                    onClick={() => navigator.geolocation?.getCurrentPosition(async (pos) => {
+                      try {
+                        const res = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${pos.coords.latitude}&lon=${pos.coords.longitude}&format=json`);
+                        const data = await res.json();
+                        setLocation([
+                          data?.address?.city || data?.address?.town || data?.address?.village || data?.address?.county || '',
+                          data?.address?.country || '',
+                        ].filter(Boolean).join(', '));
+                      } catch {}
+                    }, () => {})}
+                    className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-bold"
+                    style={{ background: 'rgba(6,182,212,0.12)', border: '1px solid rgba(6,182,212,0.32)', color: '#22d3ee' }}
+                  >
+                    <MapPin className="w-4 h-4" />
+                    Use current GPS location
+                  </button>
                   {location && (
                     <div className="flex items-center gap-2 p-3 rounded-xl" style={{
                       background: 'rgba(255,106,0,0.15)',
@@ -517,12 +770,12 @@ export default function CreatePhotoPost() {
             </div>
 
             {/* Post Type & Caption */}
-            <div className="space-y-4 pt-4">
+            <div className="space-y-3 pt-1">
               {/* Post Type */}
               <div className="flex gap-2">
                 <button
                   onClick={() => setPostType('feed')}
-                  className="flex-1 py-3.5 rounded-xl font-semibold transition-all"
+                  className="flex-1 py-2.5 rounded-xl text-xs font-black transition-all"
                   style={{
                     background: postType === 'feed' 
                       ? 'linear-gradient(135deg, #FF6A00 0%, #FF2D55 100%)' 
@@ -531,11 +784,11 @@ export default function CreatePhotoPost() {
                     boxShadow: postType === 'feed' ? '0 4px 12px rgba(255,106,0,0.3)' : 'none',
                   }}
                 >
-                  📱 Feed Post
+                  Feed
                 </button>
                 <button
                   onClick={() => setPostType('reel')}
-                  className="flex-1 py-3.5 rounded-xl font-semibold transition-all"
+                  className="flex-1 py-2.5 rounded-xl text-xs font-black transition-all"
                   style={{
                     background: postType === 'reel' 
                       ? 'linear-gradient(135deg, #FF6A00 0%, #FF2D55 100%)' 
@@ -544,24 +797,9 @@ export default function CreatePhotoPost() {
                     boxShadow: postType === 'reel' ? '0 4px 12px rgba(255,106,0,0.3)' : 'none',
                   }}
                 >
-                  🎬 Reel
+                  Reel
                 </button>
               </div>
-
-              {/* Caption */}
-              <textarea
-                value={caption}
-                onChange={(e) => setCaption(e.target.value)}
-                placeholder="Write a caption..."
-                rows={3}
-                className="w-full p-4 rounded-xl resize-none"
-                style={{
-                  background: isLight ? 'rgba(255,255,255,0.8)' : 'rgba(255,255,255,0.08)',
-                  border: isLight ? '1px solid rgba(0,0,0,0.1)' : '1px solid rgba(255,255,255,0.1)',
-                  color: isLight ? '#000' : '#fff',
-                  fontSize: 15,
-                }}
-              />
 
               {/* Photo Grid */}
               {images.length > 1 && (

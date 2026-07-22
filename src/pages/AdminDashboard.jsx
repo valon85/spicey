@@ -11,7 +11,7 @@ import {
   AreaChart, Area, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid
 } from 'recharts';
 
-const ADMIN_EMAILS = ['info@spicey.live', 'valondervishi13@gmail.com'];
+const ADMIN_EMAILS = ['info@spicey.live', 'valondervishi13@gmail.com', 'vlora.dervisi@gmail.com'];
 
 function StatCard({ icon: Icon, label, value, sub, color = '#ff5500', bg }) {
   return (
@@ -149,7 +149,7 @@ export default function AdminDashboard() {
   const chartTabs = [
     { key: 'users', label: 'Users', color: '#ff5500' },
     { key: 'posts', label: 'Posts', color: '#e91e8c' },
-    { key: 'stories', label: 'Stories', color: '#7700cc' },
+    { key: 'stories', label: 'Moments', color: '#7700cc' },
   ];
 
   const handleLogout = async () => {
@@ -372,7 +372,7 @@ export default function AdminDashboard() {
         </div>
 
         {/* ── TOP POSTS ── */}
-        <SectionHeader icon={Eye} title="Top Posts by Engagement" color="#e91e8c" />
+        <SectionHeader icon={Eye} title="Top Spicey Posts by Engagement" color="#e91e8c" />
         <div className="space-y-2">
           {topPosts.slice(0, 8).map((post, i) => (
             <div key={post.id} className="rounded-2xl px-4 py-3 flex items-center gap-3"

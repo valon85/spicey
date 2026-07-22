@@ -77,28 +77,44 @@ export default function ProfileThemePicker({ open, onClose, currentTheme = 'dark
   const { theme, changeTheme } = useTheme();
   const [selected, setSelected] = React.useState(theme || currentTheme);
   const [saving, setSaving] = React.useState(false);
+  const [saveError, setSaveError] = React.useState('');
+  const initialThemeRef = React.useRef(theme || currentTheme);
+  const committedRef = React.useRef(false);
+  const wasOpenRef = React.useRef(false);
 
   React.useEffect(() => {
-    if (open) setSelected(theme || currentTheme);
+    if (open && !wasOpenRef.current) {
+      const startingTheme = theme || currentTheme || 'dark';
+      initialThemeRef.current = startingTheme;
+      committedRef.current = false;
+      setSaveError('');
+      setSelected(startingTheme);
+    }
+    wasOpenRef.current = open;
   }, [open, theme, currentTheme]);
 
   const handleSelect = (key) => {
+    setSaveError('');
     setSelected(key);
     changeTheme(key);
   };
 
+  const handleClose = () => {
+    if (!committedRef.current) changeTheme(initialThemeRef.current);
+    onClose();
+  };
+
   const handleSave = async () => {
     setSaving(true);
+    setSaveError('');
     try {
-      const user = await base44.auth.me();
-      const profiles = await base44.entities.UserProfile.filter({ user_id: user.id });
-      if (profiles.length > 0) {
-        await base44.entities.UserProfile.update(profiles[0].id, { profile_theme: selected });
-      }
+      await base44.auth.updateMe({ profile_theme: selected });
+      committedRef.current = true;
       onThemeChange?.(selected);
       onClose();
     } catch (e) {
       console.error(e);
+      setSaveError(e?.message || 'Theme could not be saved. Please try again.');
     } finally {
       setSaving(false);
     }
@@ -231,7 +247,7 @@ export default function ProfileThemePicker({ open, onClose, currentTheme = 'dark
         <>
           <motion.div
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            onClick={onClose}
+            onClick={handleClose}
             style={{ position: 'fixed', inset: 0, zIndex: 9998, background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(10px)' }}
           />
 
@@ -266,7 +282,7 @@ export default function ProfileThemePicker({ open, onClose, currentTheme = 'dark
                   Choose your vibe · Changes the whole app color
                 </p>
               </div>
-              <button onClick={onClose} style={{
+              <button onClick={handleClose} style={{
                 width: 34, height: 34, borderRadius: '50%',
                 background: 'rgba(255,255,255,0.08)', border: 'none',
                 display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
@@ -309,6 +325,11 @@ export default function ProfileThemePicker({ open, onClose, currentTheme = 'dark
 
             {/* Apply Button */}
             <div style={{ padding: '10px 16px 0', flexShrink: 0 }}>
+              {saveError && (
+                <p role="alert" style={{ color: '#ff8a8a', fontSize: 12, margin: '0 4px 8px', textAlign: 'center' }}>
+                  {saveError}
+                </p>
+              )}
               <motion.button
                 whileTap={{ scale: 0.97 }}
                 onClick={handleSave}

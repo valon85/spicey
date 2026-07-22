@@ -6,6 +6,7 @@ import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import VerifiedBadge from '../shared/VerifiedBadge';
 import { toast } from 'sonner';
+import useScrollLock from '@/hooks/useScrollLock';
 
 // Utility to ensure array safety
 const asArray = (v) => Array.isArray(v) ? v : [];
@@ -24,7 +25,9 @@ export default function CommentsSheet({ post, open, onClose }) {
   const [keyboardOpen, setKeyboardOpen] = useState(false);
   const inputRef = useRef(null);
   const listRef = useRef(null);
+  const sheetRef = useRef(null);
   const queryClient = useQueryClient();
+  useScrollLock(open);
 
   useEffect(() => {
     const check = () => setIsLight(document.documentElement.classList.contains('light-mode'));
@@ -47,7 +50,6 @@ export default function CommentsSheet({ post, open, onClose }) {
     setText('');
     setShowMentions(false);
     setMentionResults([]);
-    setTimeout(() => inputRef.current?.focus(), 400);
   }, [open, post?.id]);
 
   // Detect keyboard open/close via visualViewport
@@ -58,6 +60,9 @@ export default function CommentsSheet({ post, open, onClose }) {
     const onResize = () => {
       const keyboardHeight = window.innerHeight - vv.height;
       setKeyboardOpen(keyboardHeight > 100);
+      if (keyboardHeight > 100) {
+        setTimeout(() => inputRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 80);
+      }
     };
     vv.addEventListener('resize', onResize);
     return () => vv.removeEventListener('resize', onResize);
@@ -247,16 +252,23 @@ export default function CommentsSheet({ post, open, onClose }) {
 
       {/* Sheet */}
       <motion.div
+        ref={sheetRef}
         initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
         transition={{ type: 'spring', damping: 28, stiffness: 300 }}
         className="fixed left-0 right-0 rounded-t-3xl flex flex-col"
+        onClick={(e) => e.stopPropagation()}
         style={{
           zIndex: 10001,
           bottom: 0,
-          maxHeight: '85dvh',
-          height: '75dvh',
-          background: bg,
+          maxHeight: '88dvh',
+          height: 'min(78dvh, 660px)',
+          background: isLight
+            ? 'linear-gradient(180deg, rgba(255,255,255,0.98), rgba(250,245,255,0.99))'
+            : 'linear-gradient(180deg, rgba(20,9,34,0.99), rgba(5,3,9,1))',
           border,
+          boxShadow: isLight ? '0 -22px 55px rgba(160,80,220,0.22)' : '0 -24px 60px rgba(0,0,0,0.72)',
+          overflow: 'hidden',
+          touchAction: 'none',
         }}
       >
         {/* Handle */}
@@ -265,11 +277,11 @@ export default function CommentsSheet({ post, open, onClose }) {
         </div>
 
         {/* Header */}
-        <div className="flex items-center justify-between px-5 pb-3 flex-shrink-0"
+        <div className="flex items-center justify-between px-4 pb-3 flex-shrink-0"
           style={{ borderBottom: isLight ? '1px solid rgba(160,80,220,0.1)' : '1px solid rgba(255,255,255,0.06)' }}>
-          <h3 className="font-extrabold text-base" style={{ color: textMain }}>
+          <h3 className="font-extrabold text-[15px]" style={{ color: textMain }}>
             Comments{' '}
-            <span className="font-normal text-sm" style={{ color: textSub }}>({comments.length})</span>
+            <span className="font-normal text-xs" style={{ color: textSub }}>({comments.length})</span>
           </h3>
           <button onClick={onClose}
             className="w-8 h-8 rounded-full flex items-center justify-center"
@@ -281,12 +293,15 @@ export default function CommentsSheet({ post, open, onClose }) {
         {/* Comment list — scrollable */}
         <div
           ref={listRef}
-          className="flex-1 overflow-y-auto px-4 py-3 space-y-4"
+          className="flex-1 overflow-y-auto px-4 py-3 space-y-3"
           style={{
             WebkitOverflowScrolling: 'touch',
             overscrollBehavior: 'contain',
             touchAction: 'pan-y',
+            minHeight: 0,
           }}
+          onTouchMove={(e) => e.stopPropagation()}
+          onWheel={(e) => e.stopPropagation()}
         >
           {isLoading && localComments.length === 0 ? (
             <div className="flex justify-center py-10">
@@ -300,12 +315,20 @@ export default function CommentsSheet({ post, open, onClose }) {
             </div>
           ) : (
             asArray(comments).map((comment) => (
-              <div key={comment.id} className="flex gap-3">
-                <img
-                  src={comment.author_avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(comment.author_name || 'U')}&background=6d28d9&color=fff&size=40`}
-                  alt=""
-                  className="w-8 h-8 rounded-full object-cover flex-shrink-0 mt-0.5"
-                />
+              <div key={comment.id} className="flex gap-2.5 rounded-2xl px-2.5 py-2"
+                style={{
+                  background: isLight ? 'rgba(255,255,255,0.72)' : 'rgba(255,255,255,0.045)',
+                  border: isLight ? '1px solid rgba(160,80,220,0.10)' : '1px solid rgba(255,255,255,0.06)',
+                }}>
+                <span className="p-[1.5px] rounded-full flex-shrink-0 mt-0.5"
+                  style={{ background: 'conic-gradient(from 0deg, #ff6a00, #ff2d8f, #7c3aed, #ff6a00)' }}>
+                  <img
+                    src={comment.author_avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(comment.author_name || 'U')}&background=6d28d9&color=fff&size=40`}
+                    alt=""
+                    className="w-8 h-8 rounded-full object-cover border-2"
+                    style={{ borderColor: isLight ? '#fff' : '#09030f' }}
+                  />
+                </span>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-1.5 mb-0.5">
                     <Link to={`/profile/${comment.author_id}`} onClick={onClose}>
@@ -316,7 +339,7 @@ export default function CommentsSheet({ post, open, onClose }) {
                     {verifiedCommenters[comment.author_id] && <VerifiedBadge type="verified" size="sm" />}
                     <span className="text-xs" style={{ color: textSub }}>@{comment.author_username}</span>
                   </div>
-                  <p className="text-sm leading-snug" style={{ color: isLight ? 'rgba(40,20,70,0.85)' : 'rgba(255,255,255,0.82)' }}>
+                  <p className="text-[13px] leading-snug" style={{ color: isLight ? 'rgba(40,20,70,0.85)' : 'rgba(255,255,255,0.82)' }}>
                     {asArray((comment.text || '').split(/(@\w+)/g)).map((part, idx) =>
                       part.startsWith('@')
                         ? <span key={idx} style={{ color: '#ff7040', fontWeight: 600 }}>{part}</span>
@@ -327,7 +350,7 @@ export default function CommentsSheet({ post, open, onClose }) {
                 {/* Actions: like + delete (owner only) */}
                 <div className="flex flex-col items-center gap-1 flex-shrink-0">
                   <button onClick={() => likeComment(comment)}
-                    className="w-9 h-9 flex items-center justify-center rounded-full active:scale-90 transition-transform">
+                    className="w-8 h-8 flex items-center justify-center rounded-full active:scale-90 transition-transform">
                     <Heart className="w-4 h-4" style={{
                       color: commentLikes[comment.id] ? '#ec4899' : (isLight ? 'rgba(120,80,180,0.35)' : 'rgba(255,255,255,0.3)'),
                       fill: commentLikes[comment.id] ? '#ec4899' : 'none'
@@ -376,17 +399,22 @@ export default function CommentsSheet({ post, open, onClose }) {
 
         {/* Input bar */}
         <div
-          className="flex-shrink-0 flex items-center gap-2 px-4 pt-3"
+          className="flex-shrink-0 flex items-center gap-2 px-3 pt-2"
           style={{
-            paddingBottom: keyboardOpen ? '16px' : '16px',
+            paddingBottom: keyboardOpen ? '8px' : 'max(10px, env(safe-area-inset-bottom, 8px))',
             borderTop: isLight ? '1px solid rgba(160,80,220,0.12)' : '1px solid rgba(255,255,255,0.07)',
-            background: bg,
+            background: isLight ? 'rgba(248,244,255,0.98)' : 'rgba(14,7,24,0.98)',
+            position: 'sticky',
+            bottom: 0,
+            zIndex: 10002,
+            minHeight: 54,
+            pointerEvents: 'auto',
           }}
         >
           {/* @ shortcut */}
           <button
             onPointerDown={(e) => { e.preventDefault(); handleAtButton(); }}
-            className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0"
+            className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0"
             style={{
               background: isLight ? 'rgba(160,80,220,0.1)' : 'rgba(255,255,255,0.07)',
               border: isLight ? '1px solid rgba(160,80,220,0.2)' : '1px solid rgba(255,255,255,0.1)'
@@ -398,20 +426,26 @@ export default function CommentsSheet({ post, open, onClose }) {
             ref={inputRef}
             value={text}
             onChange={handleTextChange}
-            placeholder="Add a comment..."
-            className="flex-1 outline-none rounded-full px-4 py-2.5"
+            placeholder="Comment..."
+            className="spicey-comment-input flex-1 outline-none rounded-full px-3"
             autoComplete="off"
             autoCorrect="on"
             spellCheck="true"
+            inputMode="text"
             enterKeyHint="send"
             style={{
               fontSize: '16px',
-              background: isLight ? 'rgba(255,255,255,0.9)' : 'rgba(30,15,50,0.95)',
-              border: isLight ? '1px solid rgba(160,80,220,0.25)' : '1px solid rgba(255,100,0,0.3)',
+              lineHeight: '34px',
+              background: isLight ? '#ffffff' : 'rgba(32,18,48,0.98)',
+              border: isLight ? '1px solid rgba(160,80,220,0.22)' : '1px solid rgba(255,255,255,0.14)',
               color: isLight ? '#1a0a2e' : 'white',
               caretColor: '#ff5500',
               minWidth: 0,
-              colorScheme: 'dark',
+              minHeight: 34,
+              height: 34,
+              pointerEvents: 'auto',
+              colorScheme: isLight ? 'light' : 'dark',
+              boxShadow: isLight ? '0 3px 10px rgba(120,80,180,0.08)' : 'inset 0 1px 0 rgba(255,255,255,0.06)',
             }}
             onKeyDown={(e) => {
               if (e.key === 'Enter' && !showMentions) {
@@ -427,7 +461,7 @@ export default function CommentsSheet({ post, open, onClose }) {
           <button
             onPointerDown={(e) => { e.preventDefault(); handleSend(); }}
             disabled={!text.trim() || sending}
-            className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 transition-all disabled:opacity-40"
+            className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 transition-all disabled:opacity-40"
             style={{
               background: text.trim() ? 'linear-gradient(135deg, #ff5500, #e91e8c)' : (isLight ? 'rgba(160,80,220,0.12)' : 'rgba(255,255,255,0.07)'),
               boxShadow: text.trim() ? '0 4px 16px rgba(255,80,0,0.4)' : 'none',

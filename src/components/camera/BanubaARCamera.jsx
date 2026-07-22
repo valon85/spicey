@@ -1,5 +1,5 @@
 /**
- * BanubaARCamera — Real Banuba Face AR SDK with Snapchat/Instagram-style effects
+ * BanubaARCamera — Real Banuba Face AR SDK with Spicey-style effects
  * Auto-initializes on mount with face tracking, beauty effects, and AR masks
  */
 import React, { useState, useRef, useEffect, useCallback } from 'react';
@@ -408,7 +408,7 @@ export default function BanubaARCamera({ onClose, onCapture }) {
       <div className="absolute bottom-0 left-0 right-0 z-30 flex flex-col items-center"
         style={{ paddingBottom: 'max(20px, calc(env(safe-area-inset-bottom) + 8px))' }}>
         
-        {/* Effect carousel - Snapchat/Instagram style */}
+        {/* Effect carousel - Spicey-style */}
         <div className="flex items-center gap-3 mb-6 overflow-x-auto max-w-full px-4 py-2"
           style={{ scrollbarWidth: 'none', WebkitOverflowScrolling: 'touch' }}>
           {/* Beauty effects */}

@@ -2,13 +2,12 @@ import React, { useState, useRef } from 'react';
 import { base44, persistLogin, TokenStorage } from '@/api/base44Client';
 import { spiceyApi } from '@/api/spiceyApi';
 import { Preferences } from '@capacitor/preferences';
-import { ArrowRight, Check, Eye, EyeOff, Lock, Mail, ShieldCheck, Smartphone, User } from 'lucide-react';
+import { ArrowRight, Check, Eye, EyeOff, Lock, Mail, ShieldCheck, User } from 'lucide-react';
 
 console.log('[BUILD_TEST_20260625_NO_PENDING_USER_FIX]');
 
 const SPICEY_LOGO = "https://media.base44.com/images/public/69fe90d3bbe7ad47925e4a0a/a7812bd9b_841b8be5-b1e6-4719-9a32-36fafbb51084.png";
 const SPICEY_BOLT = "https://media.base44.com/images/public/69fe90d3bbe7ad47925e4a0a/a645abc1a_6ab1672f-73ff-4c98-a1ef-817016549a2f.png";
-const LEGAL_VERSION = '3.0';
 
 function isPasswordResetPath() {
   if (typeof window === 'undefined') return false;
@@ -60,8 +59,6 @@ async function apiPost(path, body) {
       password: body.password,
       fullName: body.full_name,
       username: body.email?.split('@')[0],
-      legalAccepted: body.legal_accepted,
-      legalVersion: body.legal_version,
     });
     return {
       access_token: result.session?.access_token,
@@ -77,6 +74,7 @@ async function apiPost(path, body) {
 }
 
 export default function SpiceyAuthModal() {
+  const isNativeIOS = typeof window !== 'undefined' && ['capacitor:', 'spicey:'].includes(window.location.protocol);
   const resetPath = isPasswordResetPath();
   const [mode, setMode] = useState(resetPath ? 'reset' : 'signin');
   const [email, setEmail] = useState('');
@@ -90,12 +88,11 @@ export default function SpiceyAuthModal() {
   const [recoverySession, setRecoverySession] = useState(null);
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [legalAccepted, setLegalAccepted] = useState(false);
 
   const emailRef = useRef('');
   const inFlight = useRef(false);
 
-  const [hasExistingToken, setHasExistingToken] = useState(false);
+  const authCallbackHref = typeof window !== 'undefined' ? window.location.href : '';
 
   React.useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -111,7 +108,6 @@ export default function SpiceyAuthModal() {
 
     if (isResetPath) {
       setMode('reset');
-      setHasExistingToken(false);
     }
 
     if (accessToken && refreshToken && (type === 'recovery' || isResetPath)) {
@@ -132,7 +128,6 @@ export default function SpiceyAuthModal() {
       };
       setRecoverySession(session);
       setMode('reset');
-      setHasExistingToken(false);
       try {
         window.history.replaceState({}, document.title, '/auth/reset-password');
       } catch (_) {}
@@ -168,33 +163,27 @@ export default function SpiceyAuthModal() {
     }
 
     return () => { cancelled = true; };
-  }, []);
+  }, [authCallbackHref]);
 
   React.useEffect(() => {
     if (isPasswordResetPath()) {
-      setHasExistingToken(false);
       return;
     }
-    TokenStorage.get().then(token => {
+    TokenStorage.get().then(async token => {
       let hasRecoverableSession = false;
       try {
         const session = JSON.parse(localStorage.getItem('spicey_session') || 'null');
-        hasRecoverableSession = !!(session?.access_token && session?.refresh_token);
+        hasRecoverableSession = !!session?.access_token;
       } catch (_) {}
       const lsToken = typeof window !== 'undefined' && (localStorage.getItem('spicey_session') || localStorage.getItem('token'));
-      const hasToken = false;
-      console.log('SPICEY_AUTH_MODAL token check:', { capacitorToken: !!token, lsToken: !!lsToken, hasToken });
-      setHasExistingToken(hasToken);
+      const cachedUser = await TokenStorage.getUser().catch(() => null);
+      const hasToken = !!(token || lsToken || hasRecoverableSession);
+      console.log('SPICEY_AUTH_MODAL token check:', { capacitorToken: !!token, lsToken: !!lsToken, cachedUser: !!cachedUser?.id, hasToken });
     });
   }, []);
 
   const isResetMode = mode === 'reset';
-
-  if (hasExistingToken) {
-    console.log('SPICEY_AUTH_MODAL: token exists → returning null');
-    return null;
-  }
-  console.log('SPICEY_AUTH_MODAL: no token → rendering login UI');
+  console.log('SPICEY_AUTH_MODAL: rendering login UI');
 
   const finishLogin = async (token, userFromResponse, emailUsed, sessionFromResponse = null) => {
     if (!token) throw new Error('No token received from server.');
@@ -275,7 +264,6 @@ export default function SpiceyAuthModal() {
   const handleSignup = async () => {
     if (!fullName.trim()) { setError('Please enter your full name.'); return; }
     if (password.length < 6) { setError('Password must be at least 6 characters.'); return; }
-    if (!legalAccepted) { setError('Please read and accept the Terms, Privacy Policy, and Community Guidelines.'); return; }
     if (inFlight.current) return;
     inFlight.current = true;
     setError('');
@@ -285,8 +273,6 @@ export default function SpiceyAuthModal() {
         email: email.trim().toLowerCase(),
         password,
         full_name: fullName.trim(),
-        legal_accepted: true,
-        legal_version: LEGAL_VERSION,
       });
       const token = data?.access_token || data?.token;
       if (token && data?.user?.id) {
@@ -419,7 +405,9 @@ export default function SpiceyAuthModal() {
     display: 'flex', flexDirection: 'column', alignItems: 'center',
     justifyContent: 'flex-start', padding: '0', zIndex: 99999,
     fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
-    overflowY: 'auto',
+    height: '100dvh',
+    overflow: isNativeIOS ? 'hidden' : 'auto',
+    overscrollBehavior: 'none',
     WebkitOverflowScrolling: 'touch',
   };
 
@@ -482,7 +470,8 @@ export default function SpiceyAuthModal() {
   }
 
   return (
-    <div style={containerStyle} className="spicey-auth-screen">
+    <div style={containerStyle} className={`spicey-auth-screen${isNativeIOS ? ' spicey-auth-ios-visible' : ''}`}>
+      {isNativeIOS && <div className="spicey-auth-native-badge">Spicey Login</div>}
       <div className="spicey-auth-orb spicey-auth-orb-left" />
       <div className="spicey-auth-orb spicey-auth-orb-right" />
       <div className="spicey-auth-panel">
@@ -553,21 +542,6 @@ export default function SpiceyAuthModal() {
               autoComplete={mode === 'signup' ? 'new-password' : 'current-password'} />
           </AuthField>
         )}
-        {mode === 'signup' && (
-          <label className="spicey-auth-consent">
-            <input
-              type="checkbox"
-              checked={legalAccepted}
-              onChange={event => setLegalAccepted(event.target.checked)}
-            />
-            <span>
-              I confirm I am at least 13 and have read and accept the{' '}
-              <a href="/terms">Terms of Service</a>,{' '}
-              <a href="/privacy">Privacy Policy</a>, and{' '}
-              <a href="/guidelines">Community Guidelines</a>.
-            </span>
-          </label>
-        )}
         {mode === 'signin' && (
           <div className="spicey-auth-forgot-row">
             <button type="button"
@@ -578,32 +552,16 @@ export default function SpiceyAuthModal() {
           </div>
         )}
         {error ? <ErrorBox msg={error} /> : <div style={{ height: 12 }} />}
-        <button type="submit" disabled={loading || (mode === 'signup' && !legalAccepted)} className="spicey-auth-submit">
+        <button type="submit" disabled={loading} className="spicey-auth-submit">
           {loading
             ? <><Spinner /> {mode === 'signin' ? 'Signing In…' : mode === 'forgot' ? 'Sending…' : mode === 'reset' ? 'Updating…' : 'Creating Account…'}</>
-            : <>{mode === 'signin' ? 'Sign In' : mode === 'forgot' ? 'Send Reset Link' : mode === 'reset' ? 'Save New Password' : 'Create Account'} <ArrowRight /></>}
+            : <>{mode === 'signin' ? 'Sign In with Email' : mode === 'forgot' ? 'Send Reset Link' : mode === 'reset' ? 'Save New Password' : 'Sign Up with Email'} <ArrowRight /></>}
         </button>
         {mode === 'forgot' && (
           <button type="button" onClick={() => { setMode('signin'); setError(''); }}
             className="spicey-auth-back">
             ← Back to Sign In
           </button>
-        )}
-        {mode !== 'forgot' && (
-          <>
-            <div className="spicey-auth-divider"><span />OR<span /></div>
-            <div className="spicey-auth-socials">
-              <button type="button" onClick={() => setError('Google login will be connected after OAuth is enabled.')}>
-                <strong className="google-g">G</strong><span>Google</span>
-              </button>
-              <button type="button" onClick={() => setError('Apple login will be connected after OAuth is enabled.')}>
-                <strong className="apple-logo"></strong><span>Apple</span>
-              </button>
-              <button type="button" onClick={() => setError('Phone login will be connected after SMS auth is enabled.')}>
-                <Smartphone /><span>Phone</span>
-              </button>
-            </div>
-          </>
         )}
         {mode === 'signin' && (
           <p className="spicey-auth-switch">
@@ -626,8 +584,8 @@ export default function SpiceyAuthModal() {
       </form>
       <div className="spicey-auth-legal">
         <ShieldCheck />
-        <p>Your privacy and safety matter.</p>
-        <strong><a href="/terms">Terms</a> · <a href="/privacy">Privacy</a> · <a href="/guidelines">Guidelines</a></strong>
+        <p>By continuing you agree to our</p>
+        <strong>Terms &amp; Privacy Policy</strong>
       </div>
       </div>
       <Styles />
@@ -726,11 +684,42 @@ function Styles() {
         50% { filter: drop-shadow(0 0 38px rgba(255,149,0,0.9)) drop-shadow(0 0 80px rgba(191,90,242,0.5)); }
       }
       .spicey-auth-screen {
+        width: 100vw;
+        height: 100dvh;
+        overflow: hidden;
+        overscroll-behavior: none;
+        touch-action: pan-y;
         background:
           radial-gradient(circle at 50% 4%, rgba(255,45,150,0.18), transparent 31%),
           radial-gradient(circle at 0% 100%, rgba(111,0,255,0.40), transparent 28%),
           radial-gradient(circle at 100% 92%, rgba(255,45,85,0.34), transparent 30%),
           linear-gradient(180deg, #020006 0%, #070213 46%, #020007 100%) !important;
+      }
+      .spicey-auth-ios-visible {
+        height: 100dvh !important;
+        min-height: 100dvh !important;
+        overflow: hidden !important;
+        overscroll-behavior: none !important;
+        background:
+          radial-gradient(circle at 18% 4%, rgba(255,106,0,0.18), transparent 30%),
+          radial-gradient(circle at 94% 8%, rgba(255,45,143,0.18), transparent 32%),
+          linear-gradient(180deg, #020006 0%, #070213 46%, #020007 100%) !important;
+        color: #ffffff !important;
+      }
+      .spicey-auth-native-badge {
+        position: fixed;
+        top: max(12px, env(safe-area-inset-top));
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 5;
+        padding: 8px 14px;
+        border-radius: 999px;
+        background: rgba(12,7,24,0.86);
+        border: 1px solid rgba(255,45,143,0.35);
+        color: #ffffff;
+        font-size: 13px;
+        font-weight: 950;
+        box-shadow: 0 10px 26px rgba(255,45,143,0.18);
       }
       .spicey-auth-screen::before {
         content: "";
@@ -756,11 +745,31 @@ function Styles() {
       }
       .spicey-auth-panel {
         width: min(100%, 410px);
-        min-height: 100%;
+        height: 100%;
         position: relative;
         z-index: 2;
         padding: max(24px, env(safe-area-inset-top)) 30px calc(24px + env(safe-area-inset-bottom));
         box-sizing: border-box;
+        overflow-y: auto;
+        overflow-x: hidden;
+        overscroll-behavior: contain;
+        -webkit-overflow-scrolling: touch;
+      }
+      .spicey-auth-ios-visible .spicey-auth-panel {
+        width: 100%;
+        max-width: 430px;
+        padding: calc(env(safe-area-inset-top, 0px) + 78px) 28px calc(env(safe-area-inset-bottom, 0px) + 26px);
+      }
+      .spicey-auth-ios-visible .spicey-auth-brand {
+        height: 116px;
+        margin-bottom: 6px;
+      }
+      .spicey-auth-ios-visible .spicey-auth-main-logo {
+        height: 92px;
+      }
+      .spicey-auth-ios-visible .spicey-auth-logo-ring {
+        width: 194px;
+        height: 108px;
       }
       .spicey-auth-orb {
         position: fixed;
@@ -976,12 +985,6 @@ function Styles() {
           0 0 22px rgba(255,45,150,0.42),
           0 12px 30px rgba(255,106,0,0.22);
       }
-      .spicey-auth-consent {
-        display: flex; gap: 10px; align-items: flex-start; margin: 12px 2px 2px;
-        color: rgba(255,255,255,0.68); font-size: 12px; line-height: 1.45;
-      }
-      .spicey-auth-consent input { width: 18px; height: 18px; margin-top: 1px; accent-color: #ff5500; flex: 0 0 auto; }
-      .spicey-auth-consent a, .spicey-auth-legal a { color: #ff9b54; font-weight: 700; text-decoration: underline; }
       .spicey-auth-submit:disabled {
         opacity: 0.58;
         cursor: not-allowed;
@@ -998,58 +1001,6 @@ function Styles() {
         color: rgba(255,255,255,0.52);
         font-size: 14px;
         cursor: pointer;
-      }
-      .spicey-auth-divider {
-        display: grid;
-        grid-template-columns: 1fr auto 1fr;
-        align-items: center;
-        gap: 14px;
-        margin: 18px 0 14px;
-        color: rgba(255,255,255,0.50);
-        font-size: 13px;
-        font-weight: 800;
-      }
-      .spicey-auth-divider span {
-        height: 1px;
-        background: rgba(255,255,255,0.13);
-      }
-      .spicey-auth-socials {
-        display: grid;
-        grid-template-columns: repeat(3, 1fr);
-        gap: 10px;
-      }
-      .spicey-auth-socials button {
-        height: 78px;
-        border-radius: 15px;
-        border: 1px solid rgba(255,45,180,0.74);
-        background: rgba(8,4,18,0.64);
-        color: #fff;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        gap: 7px;
-        font-size: 12px;
-        cursor: pointer;
-        box-shadow: 0 0 16px rgba(193,0,255,0.12);
-      }
-      .spicey-auth-socials svg {
-        width: 24px;
-        height: 24px;
-        color: #d33cff;
-      }
-      .google-g {
-        font-size: 28px;
-        line-height: 1;
-        font-family: Arial, sans-serif;
-        background: conic-gradient(from -45deg, #4285f4, #34a853, #fbbc05, #ea4335, #4285f4);
-        -webkit-background-clip: text;
-        background-clip: text;
-        color: transparent;
-      }
-      .apple-logo {
-        font-size: 29px;
-        line-height: 1;
       }
       .spicey-auth-switch {
         margin: 18px 0 0;
@@ -1101,7 +1052,6 @@ function Styles() {
         .spicey-auth-subtitle { margin-bottom: 16px; font-size: 14px; }
         .spicey-auth-field { min-height: 64px; margin-bottom: 11px; }
         .spicey-auth-submit { height: 58px; }
-        .spicey-auth-socials button { height: 82px; }
       }
     `}</style>
   );

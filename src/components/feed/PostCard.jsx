@@ -118,11 +118,6 @@ function CaptionOverlayText({ caption }) {
 
   return (
     <div className="spicey-photo-title-overlay">
-      <div className="spicey-photo-title-kicker">
-        <span>A MOMENT.</span>
-        <span>A STORY.</span>
-        <span>A MOVIE.</span>
-      </div>
       <p className="spicey-photo-title-main">
         {titleLines.map((line) => <span key={line}>{line}</span>)}
       </p>
@@ -337,7 +332,7 @@ function getLikePreviewUsers(post) {
   return [...normalized, ...rotated].slice(0, 3);
 }
 
-function LikedByRow({ post, likesCount, commentsCount, sharesCount, isLight, onLikesClick, onCommentsClick, onSharesClick }) {
+function LikedByRow({ post, likesCount, commentsCount, isLight, onLikesClick, onCommentsClick }) {
   const users = getLikePreviewUsers(post);
   const names = users.map((user) => user.name).join(', ');
   const textColor = isLight ? '#5f5a68' : 'rgba(214,210,224,0.78)';
@@ -362,16 +357,13 @@ function LikedByRow({ post, likesCount, commentsCount, sharesCount, isLight, onL
         </span>
       </button>
       <button type="button" onClick={onCommentsClick} className="spicey-liked-comments" style={{ color: subColor }}>
-        💬 {formatCount(commentsCount || 0)}
-      </button>
-      <button type="button" onClick={onSharesClick} className="spicey-liked-shares" style={{ color: subColor }}>
-        ↗ {formatCount(sharesCount || 0)}
+        {formatCount(commentsCount || 0)} comments
       </button>
     </div>
   );
 }
 
-function LightPostAuthorHeader({ post, avatarSrc, authorBadgeType, onMenuClick }) {
+function LightPostAuthorHeader({ post, avatarSrc, authorIsVerified, onMenuClick }) {
   return (
     <div className="spicey-light-post-author-header">
       <Link to={`/profile/${post.author_id}`} className="spicey-light-post-author-link">
@@ -381,7 +373,7 @@ function LightPostAuthorHeader({ post, avatarSrc, authorBadgeType, onMenuClick }
         <span className="spicey-light-post-author-copy">
           <span className="spicey-light-post-name">
             {post.author_name || 'User'}
-            {authorBadgeType && <VerifiedBadge type={authorBadgeType} size="sm" />}
+            {authorIsVerified && <VerifiedBadge type="verified" size="sm" />}
           </span>
           <span className="spicey-light-post-location">{post.location || post.author_location || `@${post.author_username}`}</span>
         </span>
@@ -394,8 +386,6 @@ function LightPostAuthorHeader({ post, avatarSrc, authorBadgeType, onMenuClick }
 }
 
 export default function PostCard({ post, onCommentClick, currentUser: parentCurrentUser }) {
-  const authorBadgeType = post.author_verification_badge || post.verification_badge || post.author_badge_type || post.badge_type
-    || ((post.author_is_vip || post.is_vip) ? 'vip' : ((post.author_verified || post.verified) ? 'verified' : null));
   const reactionPostKey = getReactionPostKey(post);
   const [currentUser, setCurrentUser] = useState(parentCurrentUser || null);
   const [liked, setLiked] = useState(false);
@@ -424,8 +414,8 @@ export default function PostCard({ post, onCommentClick, currentUser: parentCurr
   const [isLightMode, setIsLightMode] = useState(document.documentElement.classList.contains('light-mode'));
   const [isMuted, setIsMuted] = useState(false);
   const [zoomed, setZoomed] = useState(false);
-  const authorIsVip = authorBadgeType === 'vip';
-  const authorIsVerified = Boolean(authorBadgeType);
+  const [authorIsVip, setAuthorIsVip] = useState(false);
+  const [authorIsVerified, setAuthorIsVerified] = useState(false);
   const [carouselIndex, setCarouselIndex] = useState(0);
   const [showPhotoReel, setShowPhotoReel] = useState(false);
   const [showAdminMenu, setShowAdminMenu] = useState(false);
@@ -507,6 +497,9 @@ export default function PostCard({ post, onCommentClick, currentUser: parentCurr
   useEffect(() => {
     setSavedPost(!!readSavedPostStore()[reactionPostKey]?.saved);
   }, [reactionPostKey]);
+
+  // VIP check disabled to prevent rate limiting
+  // All users show as non-VIP by default
 
   // Use refs so DB updates always use the latest count, not stale closure values
   const likesCountRef = useRef(likesCount);
@@ -696,7 +689,7 @@ export default function PostCard({ post, onCommentClick, currentUser: parentCurr
               <div>
                 <div className="flex items-center gap-1.5">
                   <p className="font-bold text-[13px]" style={{ color: isLightMode ? '#111111' : '#ffffff', textShadow: isLightMode ? 'none' : '0 1px 6px rgba(0,0,0,0.4)', fontWeight: 700 }}>{post.author_name || 'User'}</p>
-                  {authorBadgeType && <VerifiedBadge type={authorBadgeType} size="sm" />}
+                  {authorIsVerified && <VerifiedBadge type="verified" size="sm" />}
                 </div>
                 <p className="text-[11px]" style={{ color: isLightMode ? '#8E8E93' : 'rgba(255,255,255,0.9)', textShadow: isLightMode ? 'none' : '0 1px 4px rgba(0,0,0,0.35)', fontWeight: 500 }}>@{post.author_username} · {timeAgo(post.created_date)}</p>
               </div>
@@ -764,7 +757,7 @@ export default function PostCard({ post, onCommentClick, currentUser: parentCurr
             <LightPostAuthorHeader
               post={post}
               avatarSrc={avatarSrc}
-              authorBadgeType={authorBadgeType}
+              authorIsVerified={authorIsVerified}
               onMenuClick={() => setShowMenu(true)}
             />
           )}
@@ -800,7 +793,7 @@ export default function PostCard({ post, onCommentClick, currentUser: parentCurr
                   <div>
                     <div className="flex items-center gap-1.5">
                       <p className="font-bold text-[13px] leading-tight text-white" style={{ textShadow: 'none' }}>{post.author_name || 'User'}</p>
-                      {authorBadgeType && <VerifiedBadge type={authorBadgeType} size="sm" />}
+                      {authorIsVerified && <VerifiedBadge type="verified" size="sm" />}
                     </div>
                     <p className="text-[11px] leading-tight text-white/75">@{post.author_username} · {timeAgo(post.created_date)}</p>
                   </div>
@@ -865,11 +858,9 @@ export default function PostCard({ post, onCommentClick, currentUser: parentCurr
             post={post}
             likesCount={likesCount}
             commentsCount={post.comments_count}
-            sharesCount={post.shares_count}
             isLight={isLightMode}
             onLikesClick={() => setShowReactions(true)}
             onCommentsClick={() => onCommentClick?.(post)}
-            onSharesClick={() => setShowShare(true)}
           />
 
           {/* Photo Reel Viewer */}
@@ -983,7 +974,7 @@ export default function PostCard({ post, onCommentClick, currentUser: parentCurr
             <LightPostAuthorHeader
               post={post}
               avatarSrc={avatarSrc}
-              authorBadgeType={authorBadgeType}
+              authorIsVerified={authorIsVerified}
               onMenuClick={() => setShowMenu(true)}
             />
           )}
@@ -1111,7 +1102,7 @@ export default function PostCard({ post, onCommentClick, currentUser: parentCurr
                 <div>
                   <div className="flex items-center gap-1.5">
                     <p className="font-bold text-[13px] leading-tight" style={{ color: '#ffffff', textShadow: '0 1px 8px rgba(0,0,0,0.8), 0 2px 12px rgba(0,0,0,0.6)' }}>{post.author_name || 'User'}</p>
-                    {authorBadgeType && <VerifiedBadge type={authorBadgeType} size="sm" />}
+                    {authorIsVerified && <VerifiedBadge type="verified" size="sm" />}
                   </div>
                   <p className="text-[11px] leading-tight" style={{ color: 'rgba(255,255,255,0.9)', textShadow: '0 1px 6px rgba(0,0,0,0.8)' }}>@{post.author_username} · {timeAgo(post.created_date)}</p>
                 </div>
@@ -1165,11 +1156,9 @@ export default function PostCard({ post, onCommentClick, currentUser: parentCurr
             post={post}
             likesCount={likesCount}
             commentsCount={post.comments_count}
-            sharesCount={post.shares_count}
             isLight={isLightMode}
             onLikesClick={() => setShowReactions(true)}
             onCommentsClick={() => onCommentClick?.(post)}
-            onSharesClick={() => setShowShare(true)}
           />
         </>
       )}

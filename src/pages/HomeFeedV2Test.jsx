@@ -709,17 +709,17 @@ export default function HomeFeedV2Test() {
         </div>
 
         <div className="home-v2-mini-title">
-          <h2>Stories</h2>
+          <h2>Moments</h2>
           <span>See all ›</span>
         </div>
         <section className="home-v2-stories" aria-label="Story portals">
           <div className="home-v2-story">
             <div className="home-v2-story-ring home-v2-map-portal"><MapPin size={25} /></div>
-            <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.76)' }}>Map</span>
+            <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.76)' }}>Spicey Map</span>
           </div>
           <div className="home-v2-story">
             <div className="home-v2-story-ring" style={{ display: 'grid', placeItems: 'center' }}><Plus size={28} /></div>
-            <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.76)' }}>Your Story</span>
+            <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.76)' }}>Your Moment</span>
           </div>
           {stories.map(story => (
             <div className="home-v2-story" key={story.name}>
@@ -731,7 +731,7 @@ export default function HomeFeedV2Test() {
 
         <section>
           <div className="home-v2-section-title">
-            <h2><Flame size={19} color="#ff7a00" />Spicey Trending</h2>
+            <h2><Flame size={19} color="#ff7a00" />Spicey Hot</h2>
             <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.62)' }}>See all ›</span>
           </div>
           <div className="home-v2-trends">

@@ -1,10 +1,10 @@
 /**
- * CreatePost — Full Instagram-style Camera
+ * CreatePost — Full Spicey-style Camera
  * All features: effects, gallery, music, location, text, tags
  */
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import SpiceyCamera from '@/components/camera/SpiceyCamera';
+import SpiceyCamera from '@/components/camera/SpiceyCamera.jsx';
 
 export default function CreatePost() {
   const navigate = useNavigate();

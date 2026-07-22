@@ -351,7 +351,7 @@ export default function CreatorScreen({ isOpen, onClose }) {
             return (
               <motion.div
                 key={overlay.id}
-                drag dragMomentum={false}
+                drag dragStoryum={false}
                 className="absolute cursor-move select-none pointer-events-auto"
                 style={{ left: `${overlay.x}%`, top: `${overlay.y}%`, transform: 'translate(-50%,-50%)', zIndex: 10,
                   fontFamily: s.font, fontWeight: s.weight, color: s.color, fontSize: 26,
@@ -367,7 +367,7 @@ export default function CreatorScreen({ isOpen, onClose }) {
           {stickerOverlays.map(s => (
             <motion.div
               key={s.id}
-              drag dragMomentum={false}
+              drag dragStoryum={false}
               className="absolute text-4xl cursor-move select-none pointer-events-auto"
               style={{ left: `${s.x}%`, top: `${s.y}%`, transform: 'translate(-50%,-50%)', zIndex: 10 }}>
               {s.emoji}
@@ -566,7 +566,7 @@ export default function CreatorScreen({ isOpen, onClose }) {
                 <div className="flex items-center gap-2 px-4 pt-4 pb-3"
                   style={{ borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
                   <Music2 className="w-4 h-4 text-orange-400" />
-                  <p className="text-[11px] font-black uppercase tracking-widest text-white/50">Trending Sounds</p>
+                  <p className="text-[11px] font-black uppercase tracking-widest text-white/50">Hot Sounds</p>
                 </div>
                 <div className="p-3 space-y-1.5">
                   {MUSIC_TRACKS.map((track, ti) => (

@@ -6,7 +6,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 
 const CATEGORY_ICONS = {
-  Moments: Clock,
+  Stories: Clock,
   Travel: MapPin,
   Night: Moon,
   Food: Utensils,
@@ -14,7 +14,7 @@ const CATEGORY_ICONS = {
 };
 
 const CATEGORY_COLORS = {
-  Moments: 'from-purple-500 to-pink-500',
+  Stories: 'from-purple-500 to-pink-500',
   Travel: 'from-blue-500 to-cyan-500',
   Night: 'from-indigo-500 to-purple-500',
   Food: 'from-orange-500 to-red-500',

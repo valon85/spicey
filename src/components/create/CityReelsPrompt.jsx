@@ -28,8 +28,8 @@ export default function CityReelsPrompt({ open, postId, cityName, postType, hasV
       toast.success(`Posted to ${cityName} City Reels!`);
       if (onClose) onClose(true);
     } catch (err) {
-      console.error('Failed to post to city reels:', err);
-      toast.error('Failed to post to city reels. Please try again.');
+      console.error('Failed to post to City Reels:', err);
+      toast.error('Failed to post to City Reels. Please try again.');
       if (onClose) onClose(false);
     } finally {
       setPosting(false);

@@ -3,6 +3,12 @@
   "outputDirectory": "dist",
   "installCommand": "npm ci",
   "framework": "vite",
+  "crons": [
+    {
+      "path": "/api/push/engagement",
+      "schedule": "0 19 * * 2,5"
+    }
+  ],
   "rewrites": [
     {
       "source": "/api/profile",

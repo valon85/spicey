@@ -51,7 +51,7 @@ export default function AdminEmailAutomation() {
   const checkAdmin = async () => {
     try {
       const user = await base44.auth.me();
-      if (!['info@spicey.live', 'valondervishi13@gmail.com'].includes((user?.email || '').toLowerCase())) {
+      if (!['info@spicey.live', 'valondervishi13@gmail.com', 'vlora.dervisi@gmail.com'].includes((user?.email || '').toLowerCase())) {
         navigate('/');
         return;
       }

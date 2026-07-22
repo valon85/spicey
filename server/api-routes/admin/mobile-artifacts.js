@@ -1,7 +1,7 @@
 import { handleOptions, sendJson, setCors } from '../_lib/http.js';
 import { getSupabaseUser } from '../_lib/supabaseRest.js';
 
-const ADMIN_EMAILS = new Set(['info@spicey.live', 'valondervishi13@gmail.com']);
+const ADMIN_EMAILS = new Set(['info@spicey.live', 'valondervishi13@gmail.com', 'vlora.dervisi@gmail.com']);
 const ARTIFACTS = [
   { key: 'ipa', label: 'iOS IPA', artifactName: 'spicey-ios-ipa', fileName: 'Spicey.ipa' },
   { key: 'apk', label: 'Android APK', artifactName: 'spicey-signed-apk', fileName: 'Spicey-release.apk' },

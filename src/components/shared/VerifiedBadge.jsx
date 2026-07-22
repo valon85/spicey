@@ -8,7 +8,7 @@ export default function VerifiedBadge({ type = 'verified', size = 'md', classNam
     business: ['#B8860B', '#FFD700'],
     creator:  ['#5E5CE6', '#C100FF'],
     verified: ['#1D9BF0', '#0070C9'],
-    vip:      ['#1D9BF0', '#0A84FF'],
+    vip:      ['#C13CFF', '#7A18E8'],
   };
   const [c1, c2] = colors[type] || colors.verified;
   const gradId = `vbg_${type}`;

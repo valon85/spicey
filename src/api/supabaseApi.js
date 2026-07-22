@@ -1,4 +1,4 @@
-import { spiceySession } from './spiceyApi';
+import { ensureFreshSpiceySession, spiceySession } from './spiceyApi';
 
 const env = import.meta.env || {};
 const SUPABASE_URL = (env.VITE_SUPABASE_URL || '').replace(/\/$/, '');
@@ -24,6 +24,7 @@ const TABLE_NAMES = {
   ProfileCategory: 'profile_categories',
   ProfilePhotoComment: 'profile_photo_comments',
   ProfilePhotoReaction: 'profile_photo_reactions',
+  PushDevice: 'push_devices',
   Reaction: 'reactions',
   Report: 'reports',
   StockVideo: 'stock_videos',
@@ -65,8 +66,9 @@ function buildQuery(params = {}) {
   return text ? `?${text}` : '';
 }
 
-async function rest(table, { method = 'GET', query = '', body, single = false } = {}) {
+async function rest(table, { method = 'GET', query = '', body, single = false, retryAuth = true } = {}) {
   requireSupabase();
+  await ensureFreshSpiceySession();
   const token = spiceySession.token();
   const response = await fetch(`${SUPABASE_URL}/rest/v1/${table}${query}`, {
     method,
@@ -85,6 +87,10 @@ async function rest(table, { method = 'GET', query = '', body, single = false } 
     data = text ? JSON.parse(text) : null;
   } catch (_) {
     throw new Error(`Supabase returned non-JSON from ${table}.`);
+  }
+  if (!response.ok && retryAuth && (response.status === 401 || response.status === 403) && spiceySession.get()?.refresh_token) {
+    await ensureFreshSpiceySession({ force: true });
+    return rest(table, { method, query, body, single, retryAuth: false });
   }
   if (!response.ok) throw new Error(data?.message || data?.error || `Supabase request failed (${response.status})`);
   return data;
@@ -168,8 +174,9 @@ function makeEntity(entityName) {
 const entities = Object.fromEntries(ENTITY_NAMES.map((entityName) => [entityName, makeEntity(entityName)]));
 
 const auth = {
-  async me() {
+  async me(retryAuth = true) {
     requireSupabase();
+    await ensureFreshSpiceySession();
     const response = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
       headers: {
         apikey: SUPABASE_ANON_KEY,
@@ -177,6 +184,10 @@ const auth = {
       },
     });
     const data = await response.json().catch(() => ({}));
+    if (!response.ok && retryAuth && (response.status === 401 || response.status === 403) && spiceySession.get()?.refresh_token) {
+      await ensureFreshSpiceySession({ force: true });
+      return auth.me(false);
+    }
     if (!response.ok) throw new Error(data.message || data.error || 'Not authenticated');
     return data;
   },

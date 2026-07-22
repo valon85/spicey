@@ -7,8 +7,8 @@ const SHARE_OPTIONS = [
   {
     id: 'reels',
     icon: Film,
-    label: 'Share to Reels',
-    desc: 'Post as a short video reel',
+    label: 'Share to Spicey Clips',
+    desc: 'Post as a Spicey Clip',
     color: '#e91e8c',
     path: '/create?type=video',
   },
@@ -23,8 +23,8 @@ const SHARE_OPTIONS = [
   {
     id: 'story',
     icon: Sparkles,
-    label: 'Add to Story',
-    desc: 'Share as a 24h story',
+    label: 'Add to Moment',
+    desc: 'Share as a 24h moment',
     color: '#ff8800',
     path: '/create?mode=story',
   },

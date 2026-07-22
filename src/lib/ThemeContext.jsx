@@ -185,11 +185,113 @@ export const VIP_THEMES = {
   },
 };
 
-const ALL_VIP_CSS_VARS = ['--background','--foreground','--card','--card-foreground','--border','--primary','--primary-foreground','--accent','--accent-foreground','--muted','--muted-foreground'];
+const ALL_VIP_CSS_VARS = ['--background','--foreground','--card','--card-foreground','--border','--primary','--primary-foreground','--accent','--accent-foreground','--muted','--muted-foreground','--popover','--popover-foreground','--secondary','--secondary-foreground','--input','--ring'];
+
+const GLOBAL_THEME_VARS = [
+  '--spicey-page-bg', '--spicey-page-surface', '--spicey-page-surface-strong',
+  '--spicey-page-text', '--spicey-page-muted', '--spicey-page-border',
+  '--spicey-page-accent', '--spicey-page-accent-2', '--spicey-theme-gradient',
+  '--spicey-theme-soft', '--spicey-theme-ring', '--spicey-theme-shadow',
+];
+
+const GLOBAL_THEME_PALETTES = {
+  dark: {
+    bg: 'linear-gradient(145deg, #08030f 0%, #11061d 55%, #1a0a2e 100%)',
+    surface: 'rgba(16,7,27,0.92)', strong: '#160a24', text: '#ffffff', muted: 'rgba(255,255,255,0.68)',
+    border: 'rgba(255,255,255,0.14)', accent: '#ff6a00', accent2: '#ff2d8f',
+    gradient: 'linear-gradient(135deg, #ff6a00, #ff2d8f 55%, #8b2cff)',
+    soft: 'linear-gradient(145deg, rgba(255,106,0,0.16), rgba(255,45,143,0.12), rgba(139,44,255,0.14))',
+    ring: 'linear-gradient(135deg, rgba(255,106,0,0.82), rgba(255,45,143,0.72), rgba(139,44,255,0.78))',
+    shadow: 'rgba(255,45,143,0.24)',
+  },
+  light: {
+    bg: 'linear-gradient(145deg, #ffffff 0%, #ffffff 42%, #fff0f6 70%, #fff3e8 100%)',
+    surface: 'rgba(255,255,255,0.88)', strong: '#ffffff', text: '#201523', muted: '#736875',
+    border: 'rgba(255,91,24,0.20)', accent: '#ff6a00', accent2: '#ff2d8f',
+    gradient: 'linear-gradient(135deg, #ff6a00, #ff2d8f 55%, #8b2cff)',
+    soft: 'linear-gradient(145deg, rgba(255,106,0,0.12), rgba(255,45,143,0.10), rgba(139,44,255,0.12))',
+    ring: 'linear-gradient(135deg, rgba(255,106,0,0.78), rgba(255,45,143,0.66), rgba(139,44,255,0.74))',
+    shadow: 'rgba(255,45,143,0.22)',
+  },
+  sunset_glow: {
+    bg: 'linear-gradient(145deg, #321006 0%, #a83208 52%, #ff6a00 100%)',
+    surface: 'rgba(79,20,5,0.92)', strong: '#8f2608', text: '#ffffff', muted: 'rgba(255,255,255,0.72)',
+    border: 'rgba(255,255,255,0.20)', accent: '#ff6a00', accent2: '#ff2d8f',
+    gradient: 'linear-gradient(135deg, #ff5a00, #ff8c00 52%, #ff2d8f)',
+    soft: 'linear-gradient(145deg, rgba(255,106,0,0.24), rgba(255,140,0,0.16), rgba(255,45,143,0.12))',
+    ring: 'linear-gradient(135deg, rgba(255,106,0,0.88), rgba(255,140,0,0.78), rgba(255,45,143,0.68))',
+    shadow: 'rgba(255,106,0,0.30)',
+  },
+  royal_purple: {
+    bg: 'linear-gradient(145deg, #160525 0%, #4a1090 55%, #8b2cff 100%)',
+    surface: 'rgba(42,9,72,0.92)', strong: '#5c19a7', text: '#ffffff', muted: 'rgba(255,255,255,0.72)',
+    border: 'rgba(255,255,255,0.20)', accent: '#8b2cff', accent2: '#ff2d8f',
+    gradient: 'linear-gradient(135deg, #7b2fff, #b02cff 48%, #ff2d8f)',
+    soft: 'linear-gradient(145deg, rgba(123,47,255,0.24), rgba(176,44,255,0.16), rgba(255,45,143,0.12))',
+    ring: 'linear-gradient(135deg, rgba(123,47,255,0.88), rgba(176,44,255,0.78), rgba(255,45,143,0.68))',
+    shadow: 'rgba(139,44,255,0.31)',
+  },
+  ocean_blue: {
+    bg: 'linear-gradient(145deg, #020d31 0%, #0033a6 55%, #126dff 100%)',
+    surface: 'rgba(3,29,92,0.92)', strong: '#0646c7', text: '#ffffff', muted: 'rgba(255,255,255,0.72)',
+    border: 'rgba(255,255,255,0.20)', accent: '#2378ff', accent2: '#ff2d8f',
+    gradient: 'linear-gradient(135deg, #136dff, #00b8ff 48%, #8b2cff)',
+    soft: 'linear-gradient(145deg, rgba(35,120,255,0.24), rgba(0,184,255,0.16), rgba(139,44,255,0.12))',
+    ring: 'linear-gradient(135deg, rgba(35,120,255,0.88), rgba(0,184,255,0.74), rgba(139,44,255,0.68))',
+    shadow: 'rgba(35,120,255,0.30)',
+  },
+  mint_fresh: {
+    bg: 'linear-gradient(145deg, #03271d 0%, #007755 55%, #00c990 100%)',
+    surface: 'rgba(3,67,50,0.92)', strong: '#008866', text: '#ffffff', muted: 'rgba(255,255,255,0.72)',
+    border: 'rgba(255,255,255,0.20)', accent: '#00cc8f', accent2: '#ff6a00',
+    gradient: 'linear-gradient(135deg, #00cc8f, #00e0b0 48%, #ff8a00)',
+    soft: 'linear-gradient(145deg, rgba(0,204,143,0.24), rgba(0,224,176,0.14), rgba(255,138,0,0.13))',
+    ring: 'linear-gradient(135deg, rgba(0,204,143,0.88), rgba(0,224,176,0.74), rgba(255,138,0,0.68))',
+    shadow: 'rgba(0,204,143,0.30)',
+  },
+  cherry_blossom: {
+    bg: 'linear-gradient(145deg, #3a061f 0%, #b3005c 55%, #ff3399 100%)',
+    surface: 'rgba(88,5,48,0.92)', strong: '#ca0b70', text: '#ffffff', muted: 'rgba(255,255,255,0.72)',
+    border: 'rgba(255,255,255,0.20)', accent: '#ff3399', accent2: '#8b2cff',
+    gradient: 'linear-gradient(135deg, #ff3399, #ff66b8 48%, #8b2cff)',
+    soft: 'linear-gradient(145deg, rgba(255,51,153,0.24), rgba(255,102,184,0.15), rgba(139,44,255,0.12))',
+    ring: 'linear-gradient(135deg, rgba(255,51,153,0.9), rgba(255,102,184,0.74), rgba(139,44,255,0.68))',
+    shadow: 'rgba(255,51,153,0.31)',
+  },
+  lavender_dream: {
+    bg: 'linear-gradient(145deg, #1e103d 0%, #6644cc 55%, #a477ff 100%)',
+    surface: 'rgba(48,28,99,0.92)', strong: '#7653dd', text: '#ffffff', muted: 'rgba(255,255,255,0.72)',
+    border: 'rgba(255,255,255,0.20)', accent: '#a477ff', accent2: '#ff2d8f',
+    gradient: 'linear-gradient(135deg, #9966ff, #c59bff 48%, #ff2d8f)',
+    soft: 'linear-gradient(145deg, rgba(153,102,255,0.24), rgba(197,155,255,0.15), rgba(255,45,143,0.12))',
+    ring: 'linear-gradient(135deg, rgba(153,102,255,0.88), rgba(197,155,255,0.74), rgba(255,45,143,0.68))',
+    shadow: 'rgba(153,102,255,0.31)',
+  },
+};
+
+function applyGlobalPalette(themeKey) {
+  GLOBAL_THEME_VARS.forEach((key) => document.documentElement.style.removeProperty(key));
+  document.documentElement.setAttribute('data-spicey-theme', themeKey);
+  const palette = GLOBAL_THEME_PALETTES[themeKey];
+  if (!palette) return;
+  document.documentElement.style.setProperty('--spicey-page-bg', palette.bg);
+  document.documentElement.style.setProperty('--spicey-page-surface', palette.surface);
+  document.documentElement.style.setProperty('--spicey-page-surface-strong', palette.strong);
+  document.documentElement.style.setProperty('--spicey-page-text', palette.text);
+  document.documentElement.style.setProperty('--spicey-page-muted', palette.muted);
+  document.documentElement.style.setProperty('--spicey-page-border', palette.border);
+  document.documentElement.style.setProperty('--spicey-page-accent', palette.accent);
+  document.documentElement.style.setProperty('--spicey-page-accent-2', palette.accent2);
+  document.documentElement.style.setProperty('--spicey-theme-gradient', palette.gradient || `linear-gradient(135deg, ${palette.accent}, ${palette.accent2})`);
+  document.documentElement.style.setProperty('--spicey-theme-soft', palette.soft || `linear-gradient(145deg, color-mix(in srgb, ${palette.accent} 16%, transparent), color-mix(in srgb, ${palette.accent2} 12%, transparent))`);
+  document.documentElement.style.setProperty('--spicey-theme-ring', palette.ring || `linear-gradient(135deg, ${palette.accent}, ${palette.accent2})`);
+  document.documentElement.style.setProperty('--spicey-theme-shadow', palette.shadow || 'rgba(255,45,143,0.22)');
+}
 
 function applyVIPTheme(themeKey) {
   const theme = VIP_THEMES[themeKey];
   if (!theme) return;
+  applyGlobalPalette(themeKey);
 
   // Reset everything first
   ALL_VIP_CSS_VARS.forEach(k => document.documentElement.style.removeProperty(k));
@@ -225,13 +327,19 @@ export const ThemeProvider = ({ children }) => {
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
+    const requestedTheme = new URLSearchParams(window.location.search).get('previewTheme');
     const saved = localStorage.getItem('spicey-theme') || 'dark';
-    setTheme(saved);
-    applyVIPTheme(saved);
+    const initialTheme = requestedTheme && VIP_THEMES[requestedTheme]
+      ? requestedTheme
+      : (VIP_THEMES[saved] ? saved : 'dark');
+    setTheme(initialTheme);
+    applyVIPTheme(initialTheme);
+    if (requestedTheme && VIP_THEMES[requestedTheme]) localStorage.setItem('spicey-theme', initialTheme);
     setMounted(true);
   }, []);
 
   const changeTheme = (newTheme) => {
+    if (!VIP_THEMES[newTheme]) return;
     // Clear VIP body bg when switching to free themes
     if (newTheme === 'dark' || newTheme === 'light') {
       document.body.style.removeProperty('background');

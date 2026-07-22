@@ -1,6 +1,5 @@
-import React, { useState, useRef, useCallback, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { SpiceBurstManual, EnergyWave } from './SpiceBurst';
+import React, { useState, useRef, useCallback } from 'react';
+import { motion } from 'framer-motion';
 
 function formatCount(num) {
   if (!num) return '0';
@@ -29,8 +28,8 @@ function AnimatedCount({ value }) {
         initial={{ y: animUp ? 10 : -10, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ duration: 0.25, ease: 'easeOut' }}
-        className="text-[11px] font-bold text-white drop-shadow-lg leading-none block"
-        style={{ textShadow: '0 0 8px rgba(255,255,255,0.4)' }}
+        className="text-[10px] font-bold text-white leading-none block"
+        style={{ textShadow: '0 1px 2px rgba(0,0,0,0.65)' }}
       >
         {formatCount(display)}
       </motion.span>
@@ -41,43 +40,43 @@ function AnimatedCount({ value }) {
 const TYPE_CONFIGS = {
   heart: {
     burstType: 'heart',
-    activeGlow: 'rgba(233, 30, 140, 0.9)',
-    activeGlow2: 'rgba(180, 0, 200, 0.6)',
+    activeGlow: 'rgba(233, 30, 140, 0.42)',
+    activeGlow2: 'rgba(180, 0, 200, 0.18)',
     activeBorder: 'rgba(255, 80, 180, 0.8)',
     activeBg: 'rgba(233, 30, 140, 0.18)',
-    idleGlow: 'rgba(233, 30, 140, 0.18)',
+    idleGlow: 'rgba(233, 30, 140, 0.07)',
     waveColor: '#e91e8c',
     ringColor: 'rgba(233, 30, 140, 0.4)',
   },
   fire: {
     burstType: 'fire',
-    activeGlow: 'rgba(255, 85, 0, 0.9)',
-    activeGlow2: 'rgba(255, 180, 0, 0.5)',
+    activeGlow: 'rgba(255, 85, 0, 0.46)',
+    activeGlow2: 'rgba(255, 180, 0, 0.16)',
     activeBorder: 'rgba(255, 130, 30, 0.85)',
     activeBg: 'rgba(255, 85, 0, 0.18)',
-    idleGlow: 'rgba(255, 85, 0, 0.15)',
+    idleGlow: 'rgba(255, 85, 0, 0.07)',
     waveColor: '#ff5500',
     ringColor: 'rgba(255, 85, 0, 0.4)',
   },
   comment: {
     burstType: 'comment',
-    activeGlow: 'rgba(120, 40, 255, 0.8)',
-    activeGlow2: 'rgba(80, 0, 200, 0.5)',
+    activeGlow: 'rgba(120, 40, 255, 0.34)',
+    activeGlow2: 'rgba(80, 0, 200, 0.14)',
     activeBorder: 'rgba(160, 80, 255, 0.75)',
     activeBg: 'rgba(120, 40, 255, 0.15)',
-    idleGlow: 'rgba(120, 40, 255, 0.12)',
+    idleGlow: 'rgba(120, 40, 255, 0.05)',
     waveColor: '#7b2fff',
     ringColor: 'rgba(120, 40, 255, 0.35)',
   },
   wow: {
-    burstType: 'share',
-    activeGlow: 'rgba(210, 80, 255, 0.9)',
-    activeGlow2: 'rgba(0, 220, 255, 0.52)',
-    activeBorder: 'rgba(255, 70, 210, 0.82)',
-    activeBg: 'rgba(175, 55, 255, 0.18)',
-    idleGlow: 'rgba(255, 70, 210, 0.16)',
-    waveColor: '#ff45d4',
-    ringColor: 'rgba(0, 220, 255, 0.38)',
+    burstType: 'comment',
+    activeGlow: 'rgba(255, 209, 102, 0.52)',
+    activeGlow2: 'rgba(255, 180, 0, 0.18)',
+    activeBorder: 'rgba(255, 209, 102, 0.88)',
+    activeBg: 'rgba(255, 209, 102, 0.18)',
+    idleGlow: 'rgba(255, 209, 102, 0.07)',
+    waveColor: '#FFD166',
+    ringColor: 'rgba(255, 209, 102, 0.42)',
   },
   share: {
     burstType: 'share',
@@ -115,6 +114,7 @@ export default function SideAction({ icon: Icon, count, onClick, onLongPress, ac
   const [tapped, setTapped] = useState(0);
   const [wave, setWave] = useState(false);
   const longPressTimer = useRef(null);
+  const pointerTapRef = useRef(false);
   // Read once — parent PostCard already tracks this and re-renders when theme changes
   const [isLight, setIsLight] = useState(() => document.documentElement.classList.contains('light-mode'));
   React.useEffect(() => {
@@ -144,49 +144,58 @@ export default function SideAction({ icon: Icon, count, onClick, onLongPress, ac
       clearTimeout(longPressTimer.current);
       longPressTimer.current = null;
     }
+    if (!onLongPress) {
+      e.preventDefault();
+      e.stopPropagation();
+      pointerTapRef.current = true;
+      handleTap();
+      window.setTimeout(() => { pointerTapRef.current = false; }, 0);
+    }
+  }, [handleTap, onLongPress]);
+
+  const handlePointerCancel = useCallback(() => {
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current);
+      longPressTimer.current = null;
+    }
   }, []);
 
   const handleClick = useCallback((e) => {
-    // Always trigger onClick for normal clicks
+    e.stopPropagation();
+    if (pointerTapRef.current) return;
     handleTap();
   }, [handleTap]);
 
-  const activeIconColor = type === 'heart' ? '#ff1493'
-    : type === 'fire' ? '#ff5500'
-    : type === 'comment' ? '#9d4edd'
-    : type === 'share' ? '#00bfff'
-    : type === 'wow' ? '#ff45d4'
-    : '#ffa500';
-
-  // In light mode, idle icons use vibrant accent colors instead of white
-  const idleIconColor = isLight
-    ? (type === 'heart' ? '#e91e8c'
-      : type === 'fire' ? '#ff5500'
-      : type === 'comment' ? '#9d4edd'
-      : type === 'share' ? '#00bfff'
-      : type === 'wow' ? '#ff45d4'
-      : '#ffa500')
-    : 'rgba(255,255,255,0.85)';
-
-  // Count text color: white on media (always on dark photo), soft dark in light mode
-  const countColor = isLight ? 'rgba(40,20,60,0.75)' : 'white';
-
+  const activeIconColor = {
+    heart: 'var(--spicey-page-accent-2, #FF2D55)',
+    fire: 'var(--spicey-page-accent, #FF6A00)',
+    wow: 'color-mix(in srgb, var(--spicey-page-accent, #FFD166) 62%, #ffd166)',
+    save: 'var(--spicey-page-accent, #FFB000)',
+    share: 'var(--spicey-page-accent-2, #00c8ff)',
+    comment: 'var(--spicey-page-accent, #ffffff)',
+  }[type] || cfg.waveColor || '#ffffff';
+  const railIconColor = active ? activeIconColor : 'color-mix(in srgb, var(--spicey-page-accent, #ffffff) 28%, #e9e9ee)';
+  const wowFaceStyle = {
+    fontSize: active ? 32 : 29,
+    lineHeight: 1,
+    transition: 'all 0.2s ease',
+    color: active ? activeIconColor : 'color-mix(in srgb, var(--spicey-page-accent, #ffffff) 28%, #e9e9ee)',
+    filter: active ? 'drop-shadow(0 0 6px rgba(255,209,102,0.42))' : 'none',
+  };
   // On images (PostCard), icons sit over potentially bright content — always use a dark pill backdrop
   // so they remain readable in both light mode and over bright photos/videos.
   return (
     <button
       onClick={handleClick}
-      onPointerDown={handlePointerDown}
+      onPointerDown={onLongPress ? handlePointerDown : undefined}
       onPointerUp={handlePointerUp}
-      onPointerLeave={handlePointerUp}
-      className="flex flex-col items-center gap-2 relative"
-      style={{ WebkitTapHighlightColor: 'transparent', background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}
+      onPointerLeave={onLongPress ? handlePointerCancel : undefined}
+      data-active={active ? 'true' : 'false'}
+      data-reaction-type={type}
+      type="button"
+      className="flex flex-col items-center justify-center gap-1 relative spicey-fluid-side-action"
+      style={{ WebkitTapHighlightColor: 'transparent', background: 'none', border: 'none', padding: 0, cursor: 'pointer', gap: 0 }}
     >
-      {/* Particle burst layer */}
-      <div className="absolute inset-0 pointer-events-none overflow-visible z-30 flex items-center justify-center">
-        <SpiceBurstManual type={cfg.burstType} burst={tapped % 2 === 1} />
-      </div>
-
       {/* Icon — pure CSS tap scale, no framer-motion on scroll path */}
       <div
         className="relative z-10 cursor-pointer flex items-center justify-center active:scale-90"
@@ -197,31 +206,21 @@ export default function SideAction({ icon: Icon, count, onClick, onLongPress, ac
           willChange: 'transform',
         }}
       >
-        <div style={{ 
-          filter: 'none',
+        <div style={{
+          filter: active ? `drop-shadow(0 0 10px ${cfg.activeGlow})` : 'none',
           transition: 'transform 0.2s ease',
         }}>
           {type === 'wow' ? (
-            <span
-              className="spicey-wow-mark spicey-wow-face"
-              style={{
-                width: active ? 36 : 32,
-                height: active ? 36 : 32,
-                color: '#ffffff',
-              }}
-            >
-              <i className="spicey-wow-eye spicey-wow-eye-left" />
-              <i className="spicey-wow-eye spicey-wow-eye-right" />
-              <i className="spicey-wow-mouth" />
-            </span>
+            <span style={wowFaceStyle}>😮</span>
           ) : (
             <Icon
               style={{
-                width: active ? 36 : 32,
-                height: active ? 36 : 32,
-                color: active ? activeIconColor : '#ffffff',
+                width: active ? 31 : 28,
+                height: active ? 31 : 28,
+                color: railIconColor,
                 fill: active && (type === 'heart' || type === 'fire' || type === 'save') ? activeIconColor : 'none',
-                strokeWidth: active ? 1.5 : 2,
+                strokeWidth: active ? 1.7 : 2.15,
+                filter: 'none',
                 transition: 'width 0.2s ease, height 0.2s ease, color 0.2s ease',
               }}
             />
@@ -229,8 +228,8 @@ export default function SideAction({ icon: Icon, count, onClick, onLongPress, ac
         </div>
       </div>
 
-      {/* Count — white with text-shadow so visible over any image */}
-      {count !== undefined && <AnimatedCountColored value={count} color="white" />}
+      {/* Count — hidden at zero so the action rail stays clean on new posts */}
+      {Number(count) > 0 && <AnimatedCountColored value={count} color={active ? activeIconColor : '#d6d6dc'} />}
     </button>
   );
 }
@@ -249,14 +248,14 @@ function AnimatedCountColored({ value, color }) {
   }, [value]);
 
   return (
-    <div className="overflow-hidden h-4 flex items-center justify-center">
+    <div className="overflow-hidden h-3 flex items-center justify-center -mt-0.5">
       <motion.span
         key={value}
         initial={{ y: animUp ? 10 : -10, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ duration: 0.25, ease: 'easeOut' }}
-        className="text-[11px] font-bold leading-none block"
-        style={{ color, textShadow: color === 'white' ? '0 0 8px rgba(255,255,255,0.4)' : 'none' }}
+        className="text-[10px] font-black leading-none block"
+        style={{ color, textShadow: 'none' }}
       >
         {formatCount(display)}
       </motion.span>

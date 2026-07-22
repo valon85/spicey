@@ -4,7 +4,7 @@ import { base44 } from '@/api/base44Client';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Send, Mic, MicOff, Download, ChevronLeft, Shield, RefreshCw } from 'lucide-react';
 
-const ADMIN_EMAILS = ['info@spicey.live', 'valondervishi13@gmail.com'];
+const ADMIN_EMAILS = ['info@spicey.live', 'valondervishi13@gmail.com', 'vlora.dervisi@gmail.com'];
 
 const QUICK_COMMANDS = [
   { icon: '💾', label: 'Save Backup', cmd: 'Save a backup now.' },

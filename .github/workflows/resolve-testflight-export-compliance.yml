@@ -80,7 +80,11 @@ jobs:
             }
           }
           jwt = token(private_key, key_id, issuer_id)
-          request(:patch, "/v1/builds/#{build.fetch('id')}", jwt, payload)
+          begin
+            request(:patch, "/v1/builds/#{build.fetch('id')}", jwt, payload)
+          rescue => error
+            raise unless error.message.include?('You cannot update when the value is already set.')
+          end
           puts 'EXPORT_COMPLIANCE_DECLARED=true'
 
           detail_query = URI.encode_www_form('fields[buildBetaDetails]' => 'internalBuildState,externalBuildState')

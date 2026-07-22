@@ -53,7 +53,7 @@ jobs:
 
           def request(method, path, jwt, body = nil)
             uri = URI("https://api.appstoreconnect.apple.com#{path}")
-            klass = { get: Net::HTTP::Get, post: Net::HTTP::Post }.fetch(method)
+            klass = { get: Net::HTTP::Get, post: Net::HTTP::Post, delete: Net::HTTP::Delete }.fetch(method)
             req = klass.new(uri)
             req['Authorization'] = "Bearer #{jwt}"
             req['Content-Type'] = 'application/json'
@@ -90,6 +90,14 @@ jobs:
           internal_groups.each do |group|
             jwt = token(private_key, key_id, issuer_id)
             payload = { data: [{ type: 'betaTesters', id: tester.fetch('id') }] }
+            begin
+              request(:delete, "/v1/betaGroups/#{group.fetch('id')}/relationships/betaTesters", jwt, payload)
+              puts "Removed stale tester membership from internal beta group #{group.dig('attributes', 'name')}"
+            rescue RuntimeError => e
+              raise unless e.message.include?('HTTP 404')
+            end
+
+            jwt = token(private_key, key_id, issuer_id)
             request(:post, "/v1/betaGroups/#{group.fetch('id')}/relationships/betaTesters", jwt, payload)
             puts "Restored tester to internal beta group #{group.dig('attributes', 'name')}"
           rescue RuntimeError => e

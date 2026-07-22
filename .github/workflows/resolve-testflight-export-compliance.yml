@@ -1,0 +1,106 @@
+name: Resolve TestFlight export compliance
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  resolve:
+    runs-on: macos-26
+    timeout-minutes: 15
+    steps:
+      - name: Setup Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.3"
+
+      - name: Install JWT dependency
+        run: gem install jwt --no-document
+
+      - name: Declare exempt encryption and verify TestFlight state
+        env:
+          APPSTORE_CONNECT_API_KEY_BASE64: ${{ secrets.APPSTORE_CONNECT_API_KEY_BASE64 }}
+          APPSTORE_CONNECT_KEY_ID: ${{ secrets.APPSTORE_CONNECT_KEY_ID }}
+          APPSTORE_CONNECT_ISSUER_ID: ${{ secrets.APPSTORE_CONNECT_ISSUER_ID }}
+          IOS_BUNDLE_ID: com.base69fe90d3bbe7ad47925e4a0a.app
+        run: |
+          ruby <<'RUBY'
+          require 'base64'
+          require 'json'
+          require 'jwt'
+          require 'net/http'
+          require 'openssl'
+          require 'uri'
+
+          key_id = ENV.fetch('APPSTORE_CONNECT_KEY_ID')
+          issuer_id = ENV.fetch('APPSTORE_CONNECT_ISSUER_ID')
+          private_key = OpenSSL::PKey::EC.new(Base64.strict_decode64(ENV.fetch('APPSTORE_CONNECT_API_KEY_BASE64')))
+          bundle_id = ENV.fetch('IOS_BUNDLE_ID')
+
+          def token(private_key, key_id, issuer_id)
+            now = Time.now.to_i
+            JWT.encode({ iss: issuer_id, iat: now, exp: now + 900, aud: 'appstoreconnect-v1' }, private_key, 'ES256', { kid: key_id, typ: 'JWT' })
+          end
+
+          def request(method, path, jwt, body = nil)
+            uri = URI("https://api.appstoreconnect.apple.com#{path}")
+            klass = { get: Net::HTTP::Get, patch: Net::HTTP::Patch }.fetch(method)
+            req = klass.new(uri)
+            req['Authorization'] = "Bearer #{jwt}"
+            req['Content-Type'] = 'application/json'
+            req.body = JSON.generate(body) if body
+            response = Net::HTTP.start(uri.hostname, uri.port, use_ssl: true) { |http| http.request(req) }
+            raise "#{method.to_s.upcase} #{path} failed (HTTP #{response.code}): #{response.body}" unless response.code.to_i.between?(200, 299)
+            response.body.to_s.empty? ? {} : JSON.parse(response.body)
+          end
+
+          jwt = token(private_key, key_id, issuer_id)
+          app_query = URI.encode_www_form('filter[bundleId]' => bundle_id, 'limit' => 1)
+          app = request(:get, "/v1/apps?#{app_query}", jwt).fetch('data').first
+          raise 'App not found' unless app
+
+          build_query = URI.encode_www_form('filter[app]' => app.fetch('id'), 'filter[version]' => '1025', 'limit' => 10)
+          build = request(:get, "/v1/builds?#{build_query}", jwt).fetch('data').first
+          raise 'Build 1025 not found' unless build
+
+          payload = {
+            data: {
+              type: 'builds',
+              id: build.fetch('id'),
+              attributes: { usesNonExemptEncryption: false }
+            }
+          }
+          jwt = token(private_key, key_id, issuer_id)
+          request(:patch, "/v1/builds/#{build.fetch('id')}", jwt, payload)
+          puts 'EXPORT_COMPLIANCE_DECLARED=true'
+
+          detail_query = URI.encode_www_form('fields[buildBetaDetails]' => 'internalBuildState,externalBuildState')
+          internal_state = nil
+          12.times do
+            sleep 10
+            jwt = token(private_key, key_id, issuer_id)
+            detail = request(:get, "/v1/builds/#{build.fetch('id')}/buildBetaDetail?#{detail_query}", jwt).fetch('data')
+            internal_state = detail.dig('attributes', 'internalBuildState')
+            puts "INTERNAL_BUILD_STATE=#{internal_state}"
+            break unless %w[PROCESSING MISSING_EXPORT_COMPLIANCE IN_EXPORT_COMPLIANCE_REVIEW].include?(internal_state)
+          end
+
+          group_query = URI.encode_www_form(
+            'filter[app]' => app.fetch('id'),
+            'filter[isInternalGroup]' => 'true',
+            'fields[betaGroups]' => 'name,hasAccessToAllBuilds',
+            'limit' => 200
+          )
+          jwt = token(private_key, key_id, issuer_id)
+          groups = request(:get, "/v1/betaGroups?#{group_query}", jwt).fetch('data')
+          group = groups.find { |item| item.dig('attributes', 'name') == 'Spicey Internal' } || groups.first
+          raise 'Internal group not found' unless group
+          jwt = token(private_key, key_id, issuer_id)
+          group_builds = request(:get, "/v1/betaGroups/#{group.fetch('id')}/relationships/builds?limit=200", jwt).fetch('data')
+
+          puts "BUILD_1025_IN_GROUP=#{group_builds.any? { |item| item.fetch('id') == build.fetch('id') }}"
+          puts "GROUP_HAS_ACCESS_TO_ALL_BUILDS=#{group.dig('attributes', 'hasAccessToAllBuilds')}"
+          raise "Build 1025 is not ready for internal testing (#{internal_state})" unless %w[READY_FOR_BETA_TESTING IN_BETA_TESTING].include?(internal_state)
+          RUBY

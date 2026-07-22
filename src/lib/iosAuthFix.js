@@ -31,6 +31,7 @@ export async function preAuthCheck() {
   console.log('[PRE-AUTH] Capacitor.isNativePlatform:', window.Capacitor?.isNativePlatform?.());
   
   let token = null;
+  let session = null;
   let user = null;
   
   // STEP 1: Try Capacitor Preferences first (native iOS persistent storage)
@@ -40,7 +41,8 @@ export async function preAuthCheck() {
       const tokenResult = await Preferences.get({ key: TOKEN_KEY });
       if (tokenResult?.value) {
         try {
-          token = JSON.parse(tokenResult.value)?.access_token || tokenResult.value;
+          session = JSON.parse(tokenResult.value);
+          token = session?.access_token || tokenResult.value;
         } catch (_) {
           token = tokenResult.value;
         }
@@ -72,7 +74,8 @@ export async function preAuthCheck() {
     try {
       const rawSession = localStorage.getItem(TOKEN_KEY);
       try {
-        token = rawSession ? JSON.parse(rawSession)?.access_token : null;
+        session = rawSession ? JSON.parse(rawSession) : null;
+        token = session?.access_token || null;
       } catch (_) {
         token = rawSession;
       }
@@ -121,8 +124,12 @@ export async function preAuthCheck() {
   if (!token) {
     console.log('[PRE-AUTH] ❌ REASON FOR LOGIN SCREEN: NO TOKEN FOUND IN ANY STORAGE');
   }
+
+  if (session?.access_token && typeof window !== 'undefined') {
+    try { localStorage.setItem(TOKEN_KEY, JSON.stringify(session)); } catch (_) {}
+  }
   
-  return { token, user, isNative };
+  return { token, session, user, isNative };
 }
 
 /**
@@ -166,7 +173,7 @@ export async function initializeIOSAuth(base44) {
   console.log('║  IOS-AUTH-INIT: Starting iOS auth init       ║');
   console.log('╚══════════════════════════════════════════════╝');
   
-  const { token, user: cachedUser, isNative } = await preAuthCheck();
+  const { token, session, user: cachedUser, isNative } = await preAuthCheck();
   
   if (!token) {
     console.log('[IOS-AUTH-INIT] ❌ No token found — show auth screen');
@@ -174,6 +181,9 @@ export async function initializeIOSAuth(base44) {
   }
   
   // Inject token into SDK before any API calls
+  if (session?.access_token && typeof window !== 'undefined') {
+    try { localStorage.setItem(TOKEN_KEY, JSON.stringify(session)); } catch (_) {}
+  }
   injectTokenIntoSDK(token, base44);
   
   // Validate token with server (2-3 retries for iOS network delay)

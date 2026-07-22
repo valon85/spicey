@@ -1,6 +1,6 @@
-import { Plugins } from '@capacitor/core';
+import { registerPlugin } from '@capacitor/core';
 
-const { CallKit } = Plugins;
+const CallKit = registerPlugin('CallKit');
 
 /**
  * CallKit API for Spicey iOS app
@@ -15,13 +15,15 @@ export class CallKitAPI {
   static async reportIncomingCall({
     callerName,
     callerHandle,
-    hasVideo = true
+    hasVideo = true,
+    callSessionId
   }) {
     try {
       const result = await CallKit.reportIncomingCall({
         callerName,
         callerHandle,
-        hasVideo
+        hasVideo,
+        callSessionId
       });
       console.log('[CallKit] Incoming call reported:', result);
       return { success: true, uuid: result.uuid };
@@ -142,7 +144,7 @@ export class CallKitAPI {
    * Listen for CallKit events from native layer
    */
   static addListener(eventName, callback) {
-    return window.Capacitor.Plugins.App.addListener(eventName, callback);
+    return CallKit.addListener(eventName, callback);
   }
 }
 

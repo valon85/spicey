@@ -7,6 +7,7 @@ import { initializeIOSAuth } from '@/lib/iosAuthFix';
 import { Preferences } from '@capacitor/preferences';
 import useBackgroundCallWatch from '@/hooks/useBackgroundCallWatch';
 import { App as CapacitorApp } from '@capacitor/app';
+import { CallKitAPI } from '@/lib/callkit';
 
 const AuthContext = createContext();
 
@@ -60,16 +61,19 @@ export const AuthProvider = ({ children }) => {
     }
   }, [user?.id]);
 
-  // Subscribe to new messages for notifications (web only — native uses APNs)
+  // Keep an in-app subscription on every platform. APNs handles background
+  // delivery, while this subscription is the reliable foreground fallback.
   useEffect(() => {
-    if (!user?.id || isNative) return;
+    if (!user?.id) return;
     
     const uid = user.id;
     let isMounted = true;
+    let pollTimer = null;
+    let baselineLoaded = false;
+    const knownNotificationIds = new Set();
 
-    const unsubscribe = base44.entities.Notification.subscribe((event) => {
+    const processNotification = (notif) => {
       if (!isMounted) return;
-      const notif = event.data;
       if (!notif || notif.user_id !== uid) return;
 
       // Determine title + vibration pattern by type
@@ -119,11 +123,48 @@ export const AuthProvider = ({ children }) => {
           console.warn('[NOTIF] Show failed:', e);
         }
       }
+    };
+
+    const unsubscribe = base44.entities.Notification.subscribe((event) => {
+      const notif = event.data;
+      if (!notif?.id || knownNotificationIds.has(notif.id)) return;
+      knownNotificationIds.add(notif.id);
+      processNotification(notif);
     });
+
+    // The compatibility client has no persistent Realtime socket yet, so a
+    // short authenticated poll guarantees foreground delivery on both phones.
+    const pollNotifications = async () => {
+      if (!isMounted) return;
+      try {
+        const rows = await base44.entities.Notification.filter(
+          { user_id: uid },
+          '-created_date',
+          30
+        );
+        const ordered = [...(rows || [])].reverse();
+        if (!baselineLoaded) {
+          ordered.forEach((notif) => notif?.id && knownNotificationIds.add(notif.id));
+          baselineLoaded = true;
+        } else {
+          ordered.forEach((notif) => {
+            if (!notif?.id || knownNotificationIds.has(notif.id)) return;
+            knownNotificationIds.add(notif.id);
+            processNotification(notif);
+          });
+        }
+      } catch (error) {
+        console.warn('[NOTIF] Foreground poll failed:', error?.message || error);
+      } finally {
+        if (isMounted) pollTimer = setTimeout(pollNotifications, 4000);
+      }
+    };
+    pollNotifications();
 
     return () => {
       isMounted = false;
       unsubscribe();
+      clearTimeout(pollTimer);
     };
   }, [user?.id]);
 
@@ -409,9 +450,10 @@ export const AuthProvider = ({ children }) => {
   // Kept as a no-op to avoid breaking any external callers in the context value.
   const checkAuth = async () => {};
 
-  // Real-time subscription + polling fallback for incoming calls (web only — native uses VoIP/APNs)
+  // Realtime + polling runs on iOS too. PushKit wakes a background app, while
+  // this fallback guarantees that two open phones still receive call state.
   useEffect(() => {
-    if (!user?.id || isNative) return;
+    if (!user?.id) return;
 
     const uid = user.id;
     let isMounted = true;
@@ -525,10 +567,17 @@ export const AuthProvider = ({ children }) => {
         });
       }
 
-      // Clear incoming modal if no longer ringing
+      const terminalStatuses = ['ended', 'declined', 'missed', 'cancelled'];
+
+      // Clear incoming modal and every local alert when ringing stops.
       const incoming = incomingCallRef.current;
       if (incoming && incoming.id === session.id && session.status !== 'ringing' && isMounted) {
         setIncomingCall(null);
+        if (window.__callVibrationInterval) {
+          clearInterval(window.__callVibrationInterval);
+          window.__callVibrationInterval = null;
+        }
+        if (navigator.vibrate) navigator.vibrate(0);
         // Cancel missed-call timer if they accepted/declined before timeout
         if (ringingTimersRef.current[session.id]) {
           clearTimeout(ringingTimersRef.current[session.id]);
@@ -539,9 +588,14 @@ export const AuthProvider = ({ children }) => {
       // Active call ended/declined remotely
       const active = activeCallRef.current;
       if (active && active.id === session.id && isMounted) {
-        if (session.status === 'ended' || session.status === 'declined') {
+        if (terminalStatuses.includes(session.status)) {
           console.log('[CALL] Active call ended remotely:', session.status);
           setActiveCall(null);
+          if (window.__callVibrationInterval) {
+            clearInterval(window.__callVibrationInterval);
+            window.__callVibrationInterval = null;
+          }
+          if (navigator.vibrate) navigator.vibrate(0);
         }
         if (session.status === 'accepted' && !active.accepted) {
           setActiveCall(prev => prev ? { ...prev, accepted: true } : prev);
@@ -695,6 +749,80 @@ export const AuthProvider = ({ children }) => {
       console.error('Failed to end call:', err);
     }
   };
+
+  // Bridge actions from the native CallKit screen back into the shared
+  // call_sessions state. Without this, tapping Decline/End in iOS only closes
+  // CallKit locally and the caller keeps ringing indefinitely.
+  useEffect(() => {
+    if (!isNative || !user?.id) return undefined;
+
+    let disposed = false;
+    const listeners = [];
+
+    const loadSession = async (callSessionId) => {
+      if (!callSessionId) throw new Error('CallKit event is missing callSessionId');
+      const rows = await base44.entities.CallSession.filter({ id: callSessionId }, '-created_date', 1);
+      const session = rows?.[0];
+      if (!session) throw new Error(`Call session ${callSessionId} was not found`);
+      return session;
+    };
+
+    const onAnswer = async ({ callSessionId } = {}) => {
+      try {
+        const session = await loadSession(callSessionId);
+        const updated = await base44.entities.CallSession.update(callSessionId, {
+          status: 'accepted',
+          accepted_at: new Date().toISOString(),
+        });
+        if (disposed) return;
+        seenCallIdsRef.current.add(callSessionId);
+        setIncomingCall(null);
+        setActiveCall({
+          ...session,
+          ...updated,
+          id: callSessionId,
+          isIncoming: true,
+          accepted: true,
+        });
+      } catch (error) {
+        console.error('[CallKit] Failed to accept native call:', error);
+      }
+    };
+
+    const onEnd = async ({ callSessionId } = {}) => {
+      try {
+        const session = await loadSession(callSessionId);
+        const status = session.status === 'ringing' ? 'declined' : 'ended';
+        await base44.entities.CallSession.update(callSessionId, {
+          status,
+          ended_at: new Date().toISOString(),
+        });
+      } catch (error) {
+        console.error('[CallKit] Failed to end native call:', error);
+      } finally {
+        if (!disposed) {
+          setIncomingCall(null);
+          setActiveCall(null);
+          if (navigator.vibrate) navigator.vibrate(0);
+        }
+      }
+    };
+
+    Promise.all([
+      CallKitAPI.addListener('answerCall', onAnswer),
+      CallKitAPI.addListener('endCall', onEnd),
+    ]).then((registered) => {
+      if (disposed) registered.forEach((listener) => listener.remove());
+      else listeners.push(...registered);
+    }).catch((error) => {
+      console.error('[CallKit] Native event listeners unavailable:', error);
+    });
+
+    return () => {
+      disposed = true;
+      listeners.forEach((listener) => listener.remove());
+    };
+  }, [isNative, user?.id]);
 
   return (
     <AuthContext.Provider value={{

@@ -9,18 +9,18 @@ import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import { ThemeProvider } from '@/lib/ThemeContext';
 import AuthLoader from '@/components/AuthLoader';
 import SpiceyAuthModal from '@/components/SpiceyAuthModal';
-import Feed from './pages/Feed';
+import Feed from './pages/Feed.jsx';
 import Explore from './pages/Explore';
-import Profile from './pages/Profile.jsx?v=profile-reference-layout1';
+import Profile from './pages/Profile.jsx';
 import Messages from './pages/Messages';
 import ContactsMap from './pages/ContactsMap';
-import SpiceyReels from './pages/SpiceyReels';
+import SpiceyReels from './pages/SpiceyReels.jsx';
 import Notifications from './pages/Notifications';
 import AccountSettings from './pages/AccountSettings';
 import LiveStream from './pages/LiveStream.jsx';
 import LiveWatcher from './pages/LiveWatcher.jsx';
-import CreatePost from './pages/CreatePost';
-import AIGenerator from './pages/AIGenerator.jsx?spiceyAI=talkNaturalOpenAIVoice';
+import CreatePost from './pages/CreatePost.jsx';
+import AIGenerator from './pages/AIGenerator.jsx';
 import CreateTextPost from './pages/CreateTextPost';
 import CreateVideoPost from './pages/CreateVideoPost';
 import CreatePhotoPost from './pages/CreatePhotoPost';
@@ -107,6 +107,7 @@ function AppContent() {
   const [callSheetOpen, setCallSheetOpen] = React.useState(false);
   const renderCountRef = React.useRef(0);
   renderCountRef.current += 1;
+  const hasConfirmedUser = !!(user?.id && !String(user.id).startsWith('pending_'));
 
   // ── DIAGNOSTIC LOGS ──────────────────────────────────────────────────────
   const isNativeIOS = typeof window !== 'undefined' && ['capacitor:', 'spicey:'].includes(window.location.protocol);
@@ -114,13 +115,23 @@ function AppContent() {
     && !isNativeIOS
     && window.matchMedia('(min-width: 1024px)').matches;
   const lsToken = typeof window !== 'undefined' && (localStorage.getItem('spicey_session') || localStorage.getItem('token'));
+  const localSearchParams = typeof window !== 'undefined'
+    ? new URLSearchParams(window.location.search)
+    : new URLSearchParams();
   const isLocalFeedPreview = typeof window !== 'undefined'
-    && import.meta.env.DEV
     && ['localhost', '127.0.0.1'].includes(window.location.hostname)
     && (
-      new URLSearchParams(window.location.search).get('preview') === 'feed'
+      localSearchParams.get('preview') === 'feed'
+      || localSearchParams.get('previewTheme') === 'light'
       || window.location.pathname === '/'
     );
+  const isLocalChatPreview = typeof window !== 'undefined'
+    && ['localhost', '127.0.0.1'].includes(window.location.hostname)
+    && localSearchParams.get('chatPreview') === '1'
+    && window.location.pathname === '/messages';
+  const isLocalProfilePreview = typeof window !== 'undefined'
+    && ['localhost', '127.0.0.1'].includes(window.location.hostname)
+    && window.location.pathname.startsWith('/profile');
 
   console.log(`APP_RENDER #${renderCountRef.current}`, {
     userExists: !!user,
@@ -179,8 +190,7 @@ function AppContent() {
     return <SpiceyAuthModal />;
   }
 
-  // Legal documents must remain available before login so a person can read
-  // them before accepting them during account creation.
+  // Legal documents must remain readable before login and during review.
   const publicLegalPages = {
     '/privacy': <PrivacyPolicy />,
     '/privacy-policy': <PrivacyPolicy />,
@@ -191,13 +201,13 @@ function AppContent() {
   };
   if (publicLegalPages[location.pathname]) return publicLegalPages[location.pathname];
 
-  if (isNativeIOS && (isLoadingAuth || !authChecked)) {
-    console.log('RETURN_LOADING - iOS validating stored session');
+  if (isNativeIOS && !hasConfirmedUser && (isLoadingAuth || !authChecked)) {
+    console.log('RETURN_LOADING - iOS checking stored session before login');
     return <AuthLoader />;
   }
 
-  if (isNativeIOS && user?.id) {
-    console.log('RETURN_FEED - iOS verified session with routing');
+  if (isNativeIOS && hasConfirmedUser) {
+    console.log('RETURN_FEED - iOS confirmed session with routing');
     
     return (
       <div style={{ display: 'flex', flexDirection: 'column', height: '100dvh', width: '100vw', overscrollBehavior: 'none', position: 'relative', zIndex: 0 }}>
@@ -273,10 +283,47 @@ function AppContent() {
       </div>
     );
   }
+
+  if (isNativeIOS && !hasConfirmedUser) {
+    console.log('RETURN_AUTH - iOS has no confirmed user, showing login');
+    return <SpiceyAuthModal />;
+  }
   // ════════════════════════════════════════════════════════════
 
-  // Normal auth check (emergency iOS bypass handled above)
-  const isAuth = !!(user?.id || hasToken || isLocalFeedPreview);
+  if (isLocalChatPreview) {
+    console.log('RETURN_CHAT_PREVIEW - local chat preview bypass');
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', height: '100dvh', width: '100vw', overflow: 'hidden', background: '#050407', position: 'relative', zIndex: 0 }}>
+        <Routes>
+          <Route path="/messages" element={<Messages />} />
+          <Route path="*" element={<Messages />} />
+        </Routes>
+      </div>
+    );
+  }
+
+  // Normal auth check: a stored token alone is not enough to render the app.
+  // Feed opens only with a confirmed user, except explicit local preview URLs.
+  const isAuth = !!(hasConfirmedUser || isLocalFeedPreview || isLocalChatPreview || isLocalProfilePreview);
+
+  if ((isLocalFeedPreview || isLocalChatPreview || isLocalProfilePreview) && (isLoadingAuth || !authChecked)) {
+    console.log('RETURN_PREVIEW - local preview bypass while auth initializes');
+    const previewShell = (
+      <div style={{ display: 'flex', flexDirection: 'column', height: '100dvh', width: isDesktopWeb ? '100%' : '100vw', overscrollBehavior: 'none', position: 'relative', zIndex: 0 }}>
+        <div id="main-scroll" style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', WebkitOverflowScrolling: 'touch', overscrollBehavior: 'contain', paddingBottom: hideNav ? 0 : 'calc(72px + env(safe-area-inset-bottom, 0px))', position: 'relative', zIndex: 1 }}>
+          <Routes>
+            <Route path="/" element={<Feed />} />
+            <Route path="/profile/:userId" element={<Profile />} />
+            <Route path="/profile" element={<Profile />} />
+            <Route path="/messages" element={<Messages />} />
+            <Route path="*" element={isLocalChatPreview ? <Messages /> : isLocalProfilePreview ? <Profile /> : <Feed />} />
+          </Routes>
+        </div>
+        {!hideNav && <BottomNav />}
+      </div>
+    );
+    return isDesktopWeb ? <WebLayout>{previewShell}</WebLayout> : previewShell;
+  }
 
   if (isLoadingAuth || !authChecked) {
     console.log('RETURN_LOADING - Auth still loading', { isLoadingAuth, authChecked });
@@ -294,7 +341,7 @@ function AppContent() {
     console.log('RETURN_FEED - Normal authenticated path with Routes');
     const authenticatedShell = (
       <div style={{ display: 'flex', flexDirection: 'column', height: '100dvh', width: isDesktopWeb ? '100%' : '100vw', overscrollBehavior: 'none', position: 'relative', zIndex: 0 }}>
-        <div id="main-scroll" style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', WebkitOverflowScrolling: 'touch', overscrollBehavior: 'contain', paddingBottom: (hideNav || isDesktopWeb) ? 0 : 'calc(72px + env(safe-area-inset-bottom, 0px))', position: 'relative', zIndex: 1 }}>
+        <div id="main-scroll" style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', WebkitOverflowScrolling: 'touch', overscrollBehavior: 'contain', paddingBottom: hideNav ? 0 : 'calc(72px + env(safe-area-inset-bottom, 0px))', position: 'relative', zIndex: 1 }}>
           <Routes>
             <Route path="/" element={<Feed />} />
             <Route path="/explore" element={<Explore />} />
@@ -362,7 +409,7 @@ function AppContent() {
             img: activeCall.isIncoming ? (activeCall.callerAvatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(activeCall.callerName || 'U')}&background=1a0a2e&color=fff&size=120`) : (activeCall.receiverAvatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(activeCall.receiverName || 'U')}&background=1a0a2e&color=fff&size=120`),
           }} isVideo={activeCall.type === 'video'} isIncoming={activeCall.isIncoming} callSession={{ id: activeCall.id, status: activeCall.status }} />
         )}
-        {!hideNav && !isDesktopWeb && <BottomNav />}
+        {!hideNav && <BottomNav />}
       </div>
     );
     return isDesktopWeb ? <WebLayout>{authenticatedShell}</WebLayout> : authenticatedShell;

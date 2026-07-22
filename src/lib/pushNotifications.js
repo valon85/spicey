@@ -8,6 +8,31 @@ const NATIVE_API_BASE_URL = (import.meta.env.VITE_SPICEY_NATIVE_API_URL || 'http
 const API_BASE_URL = CONFIGURED_API_BASE_URL || (Capacitor.isNativePlatform() ? NATIVE_API_BASE_URL : '');
 const BUNDLE_ID = 'com.base69fe90d3bbe7ad47925e4a0a.app';
 
+function navigateInsideApp(path, detail = {}) {
+  if (!path || typeof window === 'undefined') return;
+  window.history.pushState({}, document.title, path);
+  window.dispatchEvent(new PopStateEvent('popstate'));
+  window.dispatchEvent(new CustomEvent('spicey-notification-open', { detail }));
+}
+
+function notificationDestination(data = {}) {
+  const type = String(data.type || '').toLowerCase();
+  if (type === 'message') {
+    const chatId = data.chatId || data.chat_id;
+    return chatId ? `/messages?chatId=${encodeURIComponent(chatId)}` : '/messages';
+  }
+  if (type === 'reel') {
+    const reelId = data.reelId || data.reel_id;
+    return reelId ? `/reels?reelId=${encodeURIComponent(reelId)}` : '/reels';
+  }
+  if (type === 'post' || type === 'promotion' || type === 'engagement') return '/';
+  if (type === 'call' || type === 'missed_call') {
+    const sessionId = data.callSessionId || data.call_session_id;
+    return sessionId ? `/messages?callSessionId=${encodeURIComponent(sessionId)}` : '/messages';
+  }
+  return '/';
+}
+
 async function getDeviceId() {
   const existing = await Preferences.get({ key: 'spiceyDeviceId' }).catch(() => ({ value: null }));
   if (existing?.value) return existing.value;
@@ -135,16 +160,7 @@ export async function initializePushNotifications() {
       
       // Navigate based on notification data
       const data = notification.notification.data;
-      if (data.type === 'message') {
-        window.location.href = '/messages';
-      } else if (data.type === 'post') {
-        window.location.href = '/';
-      } else if (data.type === 'call') {
-        // Handle incoming call - navigate to call screen
-        console.log('[Push] Call notification tapped - opening call screen');
-        // The call UI should already be visible from GlobalIncomingCallHandler
-        // This just ensures the app opens if it was closed
-      }
+      navigateInsideApp(notificationDestination(data), data);
     });
 
     await PushNotifications.addListener('registrationError', (error) => {

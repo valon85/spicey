@@ -9,6 +9,36 @@ import React from 'react'
 import ReactDOM from 'react-dom/client'
 import '@/index.css'
 
+class RootErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { error: null };
+  }
+
+  static getDerivedStateFromError(error) {
+    return { error };
+  }
+
+  componentDidCatch(error, info) {
+    console.error('[MAIN] React render failure:', error, info);
+  }
+
+  render() {
+    if (!this.state.error) return this.props.children;
+    const message = this.state.error?.message || 'The application could not finish loading.';
+    return (
+      <main style={{ minHeight: '100vh', background: '#000', color: '#fff', display: 'grid', placeItems: 'center', padding: 24, fontFamily: '-apple-system, BlinkMacSystemFont, Segoe UI, sans-serif' }}>
+        <section style={{ width: '100%', maxWidth: 420, border: '1px solid rgba(255,45,143,.4)', borderRadius: 22, padding: 22, background: '#110812' }}>
+          <h1 style={{ margin: '0 0 8px', fontSize: 24, color: '#ff4b9b' }}>Spicey</h1>
+          <p style={{ color: 'rgba(255,255,255,.8)', lineHeight: 1.5 }}>We could not open this screen safely.</p>
+          <pre style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word', fontSize: 12, padding: 12, borderRadius: 12, background: '#050005', color: '#ffd1ec' }}>{message}</pre>
+          <button type="button" onClick={() => window.location.reload()} style={{ width: '100%', marginTop: 14, border: 0, borderRadius: 14, padding: 13, fontWeight: 800, color: '#fff', background: 'linear-gradient(90deg,#ff6a00,#ff2d8f,#8d2cff)' }}>Try again</button>
+        </section>
+      </main>
+    );
+  }
+}
+
 function routePasswordRecoveryBeforeAuth() {
   const hashParams = new URLSearchParams((window.location.hash || '').replace(/^#/, ''));
   const searchParams = new URLSearchParams(window.location.search || '');
@@ -148,7 +178,7 @@ async function bootReactApp() {
   const { default: RootComponent } = await import('@/App.jsx');
 
   ReactDOM.createRoot(rootElement).render(
-    <RootComponent />
+    <RootErrorBoundary><RootComponent /></RootErrorBoundary>
   );
   rootElement.dataset.reactMounted = '1';
   console.log('[MAIN] React app rendered successfully');

@@ -8,27 +8,49 @@ class AppDelegate: UIResponder, UIApplicationDelegate, PKPushRegistryDelegate {
     var window: UIWindow?
     private var voipRegistry: PKPushRegistry?
     private var voipCallUUIDs: [String: UUID] = [:]
+    private var callKitPluginRegistered = false
 
     func application(
         _ application: UIApplication,
         didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
     ) -> Bool {
+        configureBridgeAppearance()
         let environment = currentApsEnvironment()
         storeNativePreference(environment, forKey: "apnsEnvironment")
         configureVoipPushRegistry()
+        registerCallKitPluginWhenReady(attempt: 0)
+        return true
+    }
 
-        DispatchQueue.main.async { [weak self] in
-            guard
-                let bridgeViewController = self?.window?.rootViewController as? CAPBridgeViewController,
-                let bridge = bridgeViewController.bridge
-            else {
-                print("[CallKit] Capacitor bridge unavailable; plugin registration skipped")
+    private func configureBridgeAppearance() {
+        window?.backgroundColor = .black
+        guard let bridgeViewController = window?.rootViewController as? CAPBridgeViewController else { return }
+        bridgeViewController.view.backgroundColor = .black
+        guard let webView = bridgeViewController.webView else { return }
+        webView.backgroundColor = .black
+        webView.scrollView.backgroundColor = .black
+        webView.isOpaque = false
+        webView.scrollView.contentInsetAdjustmentBehavior = .never
+    }
+
+    private func registerCallKitPluginWhenReady(attempt: Int) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + (attempt == 0 ? 0.1 : 0.35)) { [weak self] in
+            guard let self = self, !self.callKitPluginRegistered else { return }
+            self.configureBridgeAppearance()
+            if let bridgeViewController = self.window?.rootViewController as? CAPBridgeViewController,
+               let bridge = bridgeViewController.bridge {
+                bridge.registerPluginInstance(CallKitPlugin())
+                self.callKitPluginRegistered = true
+                print("[CallKit] Capacitor plugin registered")
                 return
             }
-            bridge.registerPluginInstance(CallKitPlugin())
-            print("[CallKit] Capacitor plugin registered")
+
+            if attempt < 20 {
+                self.registerCallKitPluginWhenReady(attempt: attempt + 1)
+            } else {
+                print("[CallKit] Capacitor bridge unavailable after retries")
+            }
         }
-        return true
     }
 
     private func currentApsEnvironment() -> String {

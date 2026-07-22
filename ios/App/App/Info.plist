@@ -17,11 +17,24 @@
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
-	<string>1.0.0</string>
+	<string>$(MARKETING_VERSION)</string>
 	<key>CFBundleVersion</key>
 	<string>$(CURRENT_PROJECT_VERSION)</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>com.base69fe90d3bbe7ad47925e4a0a.app</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>spicey</string>
+			</array>
+		</dict>
+	</array>
 	<key>SpiceyAPNSEnvironment</key>
 	<string>$(APS_ENVIRONMENT)</string>
 	<key>UILaunchStoryboardName</key>

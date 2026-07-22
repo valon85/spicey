@@ -150,6 +150,13 @@ export default function Messages() {
   });
   const chats = chatsData || EMPTY_LIST;
 
+  useEffect(() => {
+    const chatId = new URLSearchParams(location.search).get('chatId');
+    if (!chatId || conversations.length === 0) return;
+    const conversation = conversations.find(c => c.chatId === chatId || c.id === chatId);
+    if (conversation) setActiveChat({ ...conversation, chatId: conversation.chatId, userId: conversation.userId });
+  }, [location.search, conversations]);
+
   // Handle direct message navigation from profile
   useEffect(() => {
     if (location.state?.directUserId) {

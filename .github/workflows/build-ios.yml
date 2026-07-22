@@ -74,8 +74,8 @@ jobs:
       - name: Verify Supabase configuration is embedded
         run: |
           set -euo pipefail
-          rg -q --fixed-strings "${VITE_SUPABASE_URL%/}" dist/assets
-          rg -q --fixed-strings "${VITE_SUPABASE_ANON_KEY}" dist/assets
+          grep -R -F -q -- "${VITE_SUPABASE_URL%/}" dist/assets
+          grep -R -F -q -- "${VITE_SUPABASE_ANON_KEY}" dist/assets
 
       - name: Sync Capacitor iOS
         run: npx cap sync ios

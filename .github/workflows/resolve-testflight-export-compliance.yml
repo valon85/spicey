@@ -2,6 +2,11 @@ name: Resolve TestFlight export compliance
 
 on:
   workflow_dispatch:
+    inputs:
+      build_number:
+        description: TestFlight build number
+        required: true
+        default: "1026"
 
 permissions:
   contents: read
@@ -25,6 +30,7 @@ jobs:
           APPSTORE_CONNECT_KEY_ID: ${{ secrets.APPSTORE_CONNECT_KEY_ID }}
           APPSTORE_CONNECT_ISSUER_ID: ${{ secrets.APPSTORE_CONNECT_ISSUER_ID }}
           IOS_BUNDLE_ID: com.base69fe90d3bbe7ad47925e4a0a.app
+          BUILD_NUMBER: ${{ inputs.build_number }}
         run: |
           ruby <<'RUBY'
           require 'base64'
@@ -38,6 +44,7 @@ jobs:
           issuer_id = ENV.fetch('APPSTORE_CONNECT_ISSUER_ID')
           private_key = OpenSSL::PKey::EC.new(Base64.strict_decode64(ENV.fetch('APPSTORE_CONNECT_API_KEY_BASE64')))
           bundle_id = ENV.fetch('IOS_BUNDLE_ID')
+          build_number = ENV.fetch('BUILD_NUMBER')
 
           def token(private_key, key_id, issuer_id)
             now = Time.now.to_i
@@ -46,7 +53,7 @@ jobs:
 
           def request(method, path, jwt, body = nil)
             uri = URI("https://api.appstoreconnect.apple.com#{path}")
-            klass = { get: Net::HTTP::Get, patch: Net::HTTP::Patch }.fetch(method)
+            klass = { get: Net::HTTP::Get, patch: Net::HTTP::Patch, post: Net::HTTP::Post }.fetch(method)
             req = klass.new(uri)
             req['Authorization'] = "Bearer #{jwt}"
             req['Content-Type'] = 'application/json'
@@ -61,9 +68,9 @@ jobs:
           app = request(:get, "/v1/apps?#{app_query}", jwt).fetch('data').first
           raise 'App not found' unless app
 
-          build_query = URI.encode_www_form('filter[app]' => app.fetch('id'), 'filter[version]' => '1025', 'limit' => 10)
+          build_query = URI.encode_www_form('filter[app]' => app.fetch('id'), 'filter[version]' => build_number, 'limit' => 10)
           build = request(:get, "/v1/builds?#{build_query}", jwt).fetch('data').first
-          raise 'Build 1025 not found' unless build
+          raise "Build #{build_number} not found" unless build
 
           payload = {
             data: {
@@ -100,7 +107,18 @@ jobs:
           jwt = token(private_key, key_id, issuer_id)
           group_builds = request(:get, "/v1/betaGroups/#{group.fetch('id')}/relationships/builds?limit=200", jwt).fetch('data')
 
-          puts "BUILD_1025_IN_GROUP=#{group_builds.any? { |item| item.fetch('id') == build.fetch('id') }}"
+          unless group_builds.any? { |item| item.fetch('id') == build.fetch('id') }
+            jwt = token(private_key, key_id, issuer_id)
+            request(:post, "/v1/betaGroups/#{group.fetch('id')}/relationships/builds", jwt, {
+              data: [{ type: 'builds', id: build.fetch('id') }]
+            })
+            jwt = token(private_key, key_id, issuer_id)
+            group_builds = request(:get, "/v1/betaGroups/#{group.fetch('id')}/relationships/builds?limit=200", jwt).fetch('data')
+          end
+
+          in_group = group_builds.any? { |item| item.fetch('id') == build.fetch('id') }
+          puts "BUILD_#{build_number}_IN_GROUP=#{in_group}"
           puts "GROUP_HAS_ACCESS_TO_ALL_BUILDS=#{group.dig('attributes', 'hasAccessToAllBuilds')}"
-          raise "Build 1025 is not ready for internal testing (#{internal_state})" unless %w[READY_FOR_BETA_TESTING IN_BETA_TESTING].include?(internal_state)
+          raise "Build #{build_number} was not added to Spicey Internal" unless in_group
+          raise "Build #{build_number} is not ready for internal testing (#{internal_state})" unless %w[READY_FOR_BETA_TESTING IN_BETA_TESTING].include?(internal_state)
           RUBY

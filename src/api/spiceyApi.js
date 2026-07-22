@@ -271,6 +271,33 @@ async function apiRequest(path, options = {}, retryAuth = true) {
   return data;
 }
 
+// Authentication bootstrap endpoints must be callable before a session exists.
+// Keep this separate from apiRequest so no future refactor can accidentally
+// require a Bearer token in order to obtain the first Bearer token.
+async function publicApiRequest(path, options = {}) {
+  const response = await fetch(`${API_BASE_URL}${path}`, {
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...(options.headers || {}),
+    },
+  });
+
+  const text = await response.text();
+  let data = {};
+  try {
+    data = text ? JSON.parse(text) : {};
+  } catch (_) {
+    throw new Error(`Expected JSON from Spicey API but received HTML/text from ${path}.`);
+  }
+
+  if (!response.ok) {
+    throw new Error(data.error || data.message || `Spicey API error (${response.status})`);
+  }
+
+  return data;
+}
+
 export const spiceyApi = {
   auth: {
     async me() {
@@ -302,7 +329,7 @@ export const spiceyApi = {
           if (!isLocalPreview() || !isFetchFailure(error)) throw error;
         }
       }
-      const data = await apiRequest('/api/auth/login', {
+      const data = await publicApiRequest('/api/auth/login', {
         method: 'POST',
         body: JSON.stringify({ email, password }),
       });
@@ -335,7 +362,7 @@ export const spiceyApi = {
           if (!isLocalPreview() || !isFetchFailure(error)) throw error;
         }
       }
-      const data = await apiRequest('/api/auth/signup', {
+      const data = await publicApiRequest('/api/auth/signup', {
         method: 'POST',
         body: JSON.stringify({ email, password, fullName, username, legalAccepted, legalVersion }),
       });
@@ -355,7 +382,7 @@ export const spiceyApi = {
           if (!isLocalPreview() || !isFetchFailure(error)) throw error;
         }
       }
-      return apiRequest('/api/auth/forgot-password', {
+      return publicApiRequest('/api/auth/forgot-password', {
         method: 'POST',
         body: JSON.stringify({ email, redirectTo }),
       });
@@ -408,7 +435,7 @@ export const spiceyApi = {
       } catch (error) {
         if (!isLocalPreview() || !isFetchFailure(error)) throw error;
       }
-      const data = await apiRequest('/api/auth/update-password', {
+      const data = await publicApiRequest('/api/auth/update-password', {
         method: 'POST',
         body: JSON.stringify({ accessToken, refreshToken, password }),
       });

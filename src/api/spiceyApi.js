@@ -1,4 +1,10 @@
-const API_BASE_URL = (import.meta.env.VITE_SPICEY_API_URL || '').replace(/\/$/, '');
+const CONFIGURED_API_BASE_URL = import.meta.env.VITE_SPICEY_API_URL || '';
+const NATIVE_API_BASE_URL = import.meta.env.VITE_SPICEY_NATIVE_API_URL || 'https://spicey.live';
+const API_BASE_URL = (
+  typeof window !== 'undefined' && ['capacitor:', 'spicey:'].includes(window.location.protocol)
+    ? NATIVE_API_BASE_URL
+    : CONFIGURED_API_BASE_URL
+).replace(/\/$/, '');
 const SUPABASE_URL = (import.meta.env.VITE_SUPABASE_URL || '').replace(/\/$/, '');
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
 const SESSION_KEY = 'spicey_session';

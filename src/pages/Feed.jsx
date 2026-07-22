@@ -348,6 +348,7 @@ function PremiumPostCard({ post, index = 0, onCommentClick, currentUser }) {
   const moodPressTimerRef = React.useRef(null);
   const moodLongPressRef = React.useRef(false);
   const moodControlRef = React.useRef(null);
+  const reactionRequestRef = React.useRef({});
   const heroImage = images[photoIndex] || images[0];
   const authorAvatar = post?.author_avatar || PREMIUM_STORIES[(index % (PREMIUM_STORIES.length - 1)) + 1]?.image || PREMIUM_STORIES[0].image;
   const authorName = post?.author_name || ['Vlora Dervishi', 'Valon Dervishi', 'Ardian Dervishi'][index % 3];
@@ -365,6 +366,18 @@ function PremiumPostCard({ post, index = 0, onCommentClick, currentUser }) {
     window.clearTimeout(moodPressTimerRef.current);
   }, []);
   React.useEffect(() => {
+    if (!post?.id || !currentUser?.id) return;
+    let cancelled = false;
+    base44.entities.Reaction.filter({ post_id: post.id, user_id: currentUser.id })
+      .then((rows = []) => {
+        if (cancelled) return;
+        const serverState = rows.reduce((state, row) => ({ ...state, [row.type]: true }), {});
+        setReactions((previous) => ({ ...previous, ...serverState }));
+      })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [post?.id, currentUser?.id]);
+  React.useEffect(() => {
     if (!moodPickerOpen) return undefined;
     const closePicker = (event) => {
       if (!moodControlRef.current?.contains(event.target)) setMoodPickerOpen(false);
@@ -372,7 +385,8 @@ function PremiumPostCard({ post, index = 0, onCommentClick, currentUser }) {
     document.addEventListener('pointerdown', closePicker);
     return () => document.removeEventListener('pointerdown', closePicker);
   }, [moodPickerOpen]);
-  const toggleReaction = (key) => {
+  const toggleReaction = async (key) => {
+    if (!post?.id || !currentUser?.id || reactionRequestRef.current[key]) return;
     const nextActive = !reactions[key];
     const next = { ...reactions, [key]: nextActive };
     setReactions(next);
@@ -381,6 +395,19 @@ function PremiumPostCard({ post, index = 0, onCommentClick, currentUser }) {
       store[postKey] = next;
       localStorage.setItem('spicey_premium_reactions_v2', JSON.stringify(store));
     } catch {}
+    reactionRequestRef.current[key] = true;
+    try {
+      const response = await base44.functions.invoke('toggleReaction', { post_id: post.id, type: key });
+      const action = response?.data?.action || response?.action;
+      if (action && (action === 'added') !== nextActive) {
+        setReactions((previous) => ({ ...previous, [key]: action === 'added' }));
+      }
+    } catch (error) {
+      setReactions((previous) => ({ ...previous, [key]: !nextActive }));
+      console.error('[Feed] Reaction could not be saved:', error);
+    } finally {
+      reactionRequestRef.current[key] = false;
+    }
     if (nextActive && key === 'like') {
       window.clearTimeout(likeBurstTimerRef.current);
       setLikeBurst(prev => prev + 1);

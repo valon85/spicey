@@ -1,5 +1,5 @@
 import { handleOptions, readJson, sendJson, setCors } from '../_lib/http.js';
-import { getSupabaseUser, supabaseTable } from '../_lib/supabaseRest.js';
+import { apiErrorStatus, getSupabaseUser, supabaseTable } from '../_lib/supabaseRest.js';
 import { sendVoipPush, summarizeApnsResult } from '../_lib/apns.js';
 
 const TERMINAL_STATUSES = new Set(['ended', 'declined', 'missed', 'cancelled']);
@@ -48,6 +48,7 @@ export default async function handler(req, res) {
         'caller_ice',
         'receiver_ice',
         'accepted_at',
+        'connected_at',
         'ended_at',
       ].forEach((key) => {
         if (Object.prototype.hasOwnProperty.call(body, key)) updates[key] = body[key];
@@ -77,7 +78,7 @@ export default async function handler(req, res) {
           callerName: existingSession.caller_name || 'Spicey call',
           callerId: existingSession.caller_id,
           callSessionId: sessionId,
-          callType: existingSession.call_type || 'voice',
+          callType: existingSession.type || 'voice',
           event: updates.status,
           environment: device.environment,
         })));
@@ -98,6 +99,8 @@ export default async function handler(req, res) {
 
     return sendJson(res, 405, { error: 'Method not allowed' });
   } catch (error) {
-    return sendJson(res, 400, { error: error.message || 'Call session request failed' });
+    const status = apiErrorStatus(error);
+    console.error('[Calls] Session request failed', { status, message: error?.message || 'unknown error' });
+    return sendJson(res, status, { error: error.message || 'Call session request failed' });
   }
 }

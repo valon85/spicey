@@ -262,13 +262,11 @@ export default function CommentsSheet({ post, open, onClose }) {
           bottom: 0,
           maxHeight: '88dvh',
           height: 'min(78dvh, 660px)',
-          background: isLight
-            ? 'linear-gradient(180deg, rgba(255,255,255,0.98), rgba(250,245,255,0.99))'
-            : 'linear-gradient(180deg, rgba(20,9,34,0.99), rgba(5,3,9,1))',
+          background: isLight ? '#ffffff' : '#000000',
           border,
           boxShadow: isLight ? '0 -22px 55px rgba(160,80,220,0.22)' : '0 -24px 60px rgba(0,0,0,0.72)',
           overflow: 'hidden',
-          touchAction: 'none',
+          touchAction: 'pan-y',
         }}
       >
         {/* Handle */}
@@ -317,7 +315,7 @@ export default function CommentsSheet({ post, open, onClose }) {
             asArray(comments).map((comment) => (
               <div key={comment.id} className="flex gap-2.5 rounded-2xl px-2.5 py-2"
                 style={{
-                  background: isLight ? 'rgba(255,255,255,0.72)' : 'rgba(255,255,255,0.045)',
+                  background: isLight ? 'rgba(255,255,255,0.72)' : '#000000',
                   border: isLight ? '1px solid rgba(160,80,220,0.10)' : '1px solid rgba(255,255,255,0.06)',
                 }}>
                 <span className="p-[1.5px] rounded-full flex-shrink-0 mt-0.5"

@@ -1,9 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { ChevronLeft, Send, Phone, Video, Mic, Image as ImageIcon, Smile, Check, CheckCheck, Heart, Camera, Film, MapPin, Gift, Play } from 'lucide-react';
+import { ChevronLeft, Send, Phone, Video, Mic, Image as ImageIcon, Smile, Check, CheckCheck, Camera, Film, MapPin, Gift, Play } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { base44 } from '@/api/base44Client';
 import { useAuth } from '@/lib/AuthContext';
-import CallSheet from '../panels/CallSheet.jsx';
 
 function useIsLightMode() {
   const [isLight, setIsLight] = React.useState(() => document.documentElement.classList.contains('light-mode'));
@@ -262,6 +261,7 @@ export default function ChatView({ convo, onBack }) {
   const chatIdRef = useRef(convo.chatId || null);
   const currentUserRef = useRef(null);
   const bottomRef = useRef(null);
+  const initialScrollPendingRef = useRef(true);
   const fileInputRef = useRef(null);
   const videoInputRef = useRef(null);
   const deletedIdsRef = useRef(new Set());
@@ -322,6 +322,7 @@ export default function ChatView({ convo, onBack }) {
 
   // Load current user and chat history
   useEffect(() => {
+    initialScrollPendingRef.current = true;
     setMessages([]);
     setChatId(null);
     chatIdRef.current = null;
@@ -381,6 +382,11 @@ export default function ChatView({ convo, onBack }) {
   useEffect(() => {
     const el = scrollContainerRef.current;
     if (!el) return;
+    if (initialScrollPendingRef.current && messages.length > 0) {
+      initialScrollPendingRef.current = false;
+      requestAnimationFrame(() => bottomRef.current?.scrollIntoView({ behavior: 'auto', block: 'end' }));
+      return;
+    }
     // Only auto-scroll if user is near bottom (within 120px)
     const distFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
     if (distFromBottom < 120) {
@@ -483,9 +489,7 @@ export default function ChatView({ convo, onBack }) {
 
   const initiateCall = async (callType) => {
     if (!currentUser || !convo.userId) return;
-    const optimisticCallId = `outgoing-${Date.now()}`;
     const outgoingCall = {
-      id: optimisticCallId,
       caller_id: currentUser.id,
       receiver_id: convo.userId,
       type: callType,
@@ -497,19 +501,16 @@ export default function ChatView({ convo, onBack }) {
       receiverAvatar: convo.img || null,
     };
 
-    // Show the outgoing-call screen immediately. Network/APNs setup must not
-    // make the Call button appear dead while the server creates the session.
-    setActiveCall(outgoingCall);
-
     try {
       const result = await base44.functions.invoke('initiateCall', {
         receiver_id: convo.userId,
         type: callType
       });
       const callSession = result.data.call_session;
+      if (!callSession?.id) throw new Error('Call session was not created');
       setActiveCall({
         ...outgoingCall,
-        id: callSession?.id || optimisticCallId,
+        id: callSession.id,
         caller_id: callSession?.caller_id || currentUser.id,
         receiver_id: callSession?.receiver_id || convo.userId,
         type: callSession?.type || callType,

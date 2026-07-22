@@ -8275,9 +8275,23 @@ html[data-vip-theme] body .spicey-premium-feed-page .spicey-premium-actions butt
   filter: none !important;
 }
 
-/* Keep the Like heart clean on themed photo rails—solid, without a white outline. */
+/* Keep idle icons clean and let active reactions use the selected theme color. */
 html[data-vip-theme] body .spicey-premium-post-card .post-actions .like svg {
-  fill: #ffffff !important;
+  fill: transparent !important;
+  stroke: currentColor !important;
+}
+
+html[data-vip-theme] body .spicey-premium-post-card .post-actions .like.active,
+html[data-vip-theme] body .spicey-premium-post-card .post-actions .like.active small,
+html[data-vip-theme] body .spicey-premium-post-card .post-actions .fire.active,
+html[data-vip-theme] body .spicey-premium-post-card .post-actions .fire.active small {
+  color: var(--spicey-page-accent-2) !important;
+}
+
+html[data-vip-theme] body .spicey-premium-post-card .post-actions .like.active svg,
+html[data-vip-theme] body .spicey-premium-post-card .post-actions .fire.active svg {
+  color: var(--spicey-page-accent-2) !important;
+  fill: var(--spicey-page-accent-2) !important;
   stroke: transparent !important;
 }
 

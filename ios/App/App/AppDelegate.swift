@@ -96,6 +96,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate, PKPushRegistryDelegate {
         _ application: UIApplication,
         didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data
     ) {
+        storeNativePreference(hexToken(deviceToken), forKey: "apnsPushToken")
         storeNativePreference(currentApsEnvironment(), forKey: "apnsEnvironment")
         print("[Push] APNs token registered")
         NotificationCenter.default.post(

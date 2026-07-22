@@ -472,11 +472,8 @@ export default function SpiceyAuthModal() {
   return (
     <div style={containerStyle} className={`spicey-auth-screen${isNativeIOS ? ' spicey-auth-ios-visible' : ''}`}>
       {isNativeIOS && <div className="spicey-auth-native-badge">Spicey Login</div>}
-      <div className="spicey-auth-orb spicey-auth-orb-left" />
-      <div className="spicey-auth-orb spicey-auth-orb-right" />
       <div className="spicey-auth-panel">
         <div className="spicey-auth-brand">
-          <div className="spicey-auth-logo-ring" />
           <img src={SPICEY_LOGO} alt="Spicey" className="spicey-auth-main-logo" />
         </div>
 
@@ -767,21 +764,6 @@ function Styles() {
       .spicey-auth-ios-visible .spicey-auth-main-logo {
         height: 92px;
       }
-      .spicey-auth-ios-visible .spicey-auth-logo-ring {
-        width: 194px;
-        height: 108px;
-      }
-      .spicey-auth-orb {
-        position: fixed;
-        pointer-events: none;
-        width: 210px;
-        height: 210px;
-        border-radius: 999px;
-        border: 1px solid rgba(255,45,180,0.16);
-        opacity: 0.65;
-      }
-      .spicey-auth-orb-left { left: -126px; bottom: -92px; box-shadow: inset 0 0 34px rgba(111,0,255,0.62), 0 0 54px rgba(111,0,255,0.36); }
-      .spicey-auth-orb-right { right: -130px; bottom: -60px; box-shadow: inset 0 0 38px rgba(255,45,150,0.62), 0 0 58px rgba(255,45,150,0.30); }
       .spicey-auth-brand {
         height: 142px;
         display: flex;
@@ -790,16 +772,6 @@ function Styles() {
         justify-content: center;
         position: relative;
         margin-bottom: 10px;
-      }
-      .spicey-auth-logo-ring {
-        position: absolute;
-        top: 2px;
-        width: 210px;
-        height: 124px;
-        border-radius: 999px;
-        border: 1px solid rgba(255,45,150,0.10);
-        background: radial-gradient(ellipse at center, rgba(255,45,150,0.14), rgba(255,106,0,0.08) 42%, transparent 72%);
-        box-shadow: inset 0 0 42px rgba(255,45,150,0.08), 0 0 36px rgba(255,45,150,0.16);
       }
       .spicey-auth-main-logo {
         width: min(280px, 80vw);
@@ -862,7 +834,7 @@ function Styles() {
       .spicey-auth-field {
         min-height: 60px;
         display: grid;
-        grid-template-columns: 48px 1fr 32px;
+        grid-template-columns: 40px 1fr 28px;
         gap: 8px;
         align-items: center;
         padding: 8px 12px 8px 10px;
@@ -877,9 +849,9 @@ function Styles() {
           0 0 18px rgba(193,0,255,0.14);
       }
       .spicey-auth-field-icon {
-        width: 38px;
-        height: 38px;
-        border-radius: 12px;
+        width: 32px;
+        height: 32px;
+        border-radius: 10px;
         display: flex;
         align-items: center;
         justify-content: center;
@@ -887,8 +859,8 @@ function Styles() {
         box-shadow: inset 0 1px 0 rgba(255,255,255,0.06);
       }
       .spicey-auth-field-icon svg {
-        width: 21px;
-        height: 21px;
+        width: 18px;
+        height: 18px;
         color: #ff3d8f;
         filter: drop-shadow(0 0 8px rgba(255,45,150,0.48));
       }
@@ -1046,7 +1018,6 @@ function Styles() {
       @media (max-height: 780px) {
         .spicey-auth-panel { padding-top: max(18px, env(safe-area-inset-top)); }
         .spicey-auth-brand { height: 118px; margin-bottom: 8px; }
-        .spicey-auth-logo-ring { width: 190px; height: 104px; }
         .spicey-auth-main-logo { width: min(246px, 76vw); height: 98px; }
         .spicey-auth-title { font-size: 23px; }
         .spicey-auth-subtitle { margin-bottom: 16px; font-size: 14px; }

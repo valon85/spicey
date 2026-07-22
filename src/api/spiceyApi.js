@@ -1,5 +1,6 @@
 import { Preferences } from '@capacitor/preferences';
 import { isAdminEmail } from '@/lib/adminAccess';
+import { PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_ANON_KEY } from '@/config/publicRuntime';
 
 const CONFIGURED_API_BASE_URL = import.meta.env.VITE_SPICEY_API_URL || '';
 const NATIVE_API_BASE_URL = import.meta.env.VITE_SPICEY_NATIVE_API_URL || 'https://spicey.live';
@@ -8,8 +9,8 @@ const API_BASE_URL = (
     ? NATIVE_API_BASE_URL
     : CONFIGURED_API_BASE_URL
 ).replace(/\/$/, '');
-const SUPABASE_URL = (import.meta.env.VITE_SUPABASE_URL || '').replace(/\/$/, '');
-const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
+const SUPABASE_URL = PUBLIC_SUPABASE_URL;
+const SUPABASE_ANON_KEY = PUBLIC_SUPABASE_ANON_KEY;
 const SESSION_KEY = 'spicey_session';
 const NATIVE_PASSWORD_RESET_REDIRECT = 'spicey://localhost/auth/reset-password';
 let nativeSessionHydrated = false;

@@ -31,6 +31,9 @@ env:
   VITE_SPICEY_API_URL: https://spicey.live
   VITE_SPICEY_NATIVE_API_URL: https://spicey.live
   VITE_MAPBOX_TOKEN: ${{ secrets.VITE_MAPBOX_TOKEN }}
+  VITE_TURN_URLS: ${{ secrets.VITE_TURN_URLS }}
+  VITE_TURN_USERNAME: ${{ secrets.VITE_TURN_USERNAME }}
+  VITE_TURN_CREDENTIAL: ${{ secrets.VITE_TURN_CREDENTIAL }}
 
 jobs:
   build-android:

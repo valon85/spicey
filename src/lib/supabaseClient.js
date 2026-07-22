@@ -1,5 +1,7 @@
-const SUPABASE_URL = (import.meta.env.VITE_SUPABASE_URL || '').replace(/\/$/, '');
-const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
+import { PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_ANON_KEY } from '@/config/publicRuntime';
+
+const SUPABASE_URL = PUBLIC_SUPABASE_URL;
+const SUPABASE_ANON_KEY = PUBLIC_SUPABASE_ANON_KEY;
 
 export const supabaseConfigured = !!(SUPABASE_URL && SUPABASE_ANON_KEY);
 

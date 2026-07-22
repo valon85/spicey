@@ -1,15 +1,25 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, PhoneOff, Mic, MicOff, Video, VideoOff, Volume2, RefreshCw, Sparkles, ChevronUp, ChevronDown, MessageCircle, MoreHorizontal, Monitor } from 'lucide-react';
+import { X, PhoneOff, Mic, MicOff, Video, VideoOff, Volume2, RefreshCw, Sparkles, ChevronDown, MessageCircle, MoreHorizontal } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
+import { CallKitAPI } from '@/lib/callkit';
+
+const TURN_URLS = (import.meta.env.VITE_TURN_URLS || import.meta.env.VITE_TURN_URL || '')
+  .split(',')
+  .map((value) => value.trim())
+  .filter(Boolean);
 
 const ICE_SERVERS = {
   iceServers: [
     { urls: 'stun:stun.l.google.com:19302' },
     { urls: 'stun:stun1.l.google.com:19302' },
-    { urls: 'stun:stun2.l.google.com:19302' },
-    { urls: 'stun:stun4.l.google.com:19302' },
-  ]
+    ...(TURN_URLS.length ? [{
+      urls: TURN_URLS,
+      username: import.meta.env.VITE_TURN_USERNAME || '',
+      credential: import.meta.env.VITE_TURN_CREDENTIAL || '',
+    }] : []),
+  ],
+  iceCandidatePoolSize: 8,
 };
 
 async function fetchSession(id) {
@@ -162,12 +172,11 @@ export default function CallSheet({ open, onClose, convo, isVideo, isIncoming = 
            echoCancellation: true,
            noiseSuppression: true,
            autoGainControl: true,
-           speakerphone: false, // CRITICAL: Force earpiece on iOS
          };
 
          stream = await navigator.mediaDevices.getUserMedia(
            isVideo
-             ? { video: { facingMode: 'user' }, audio: audioConstraints }
+             ? { video: { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 }, frameRate: { ideal: 30 } }, audio: audioConstraints }
              : { audio: audioConstraints }
          ).catch(err => {
            // Fallback: try without speakerphone constraint
@@ -187,7 +196,15 @@ export default function CallSheet({ open, onClose, convo, isVideo, isIncoming = 
        localStreamRef.current = stream;
        if (localVideoRef.current && isVideo) localVideoRef.current.srcObject = stream;
 
-       console.log('[RTC] Audio stream setup complete (earpiece mode)');
+       // Voice calls use the receiver by default; video calls use speaker.
+       const initialSpeaker = Boolean(isVideo);
+       setSpeakerEnabled(initialSpeaker);
+       CallKitAPI.setAudioRoute(initialSpeaker ? 'speaker' : 'earpiece', isVideo)
+         .then(result => {
+           if (!result.success) console.warn('[RTC] Native audio route unavailable:', result.error);
+         });
+
+       console.log(`[RTC] Audio stream setup complete (${initialSpeaker ? 'speaker' : 'earpiece'} mode)`);
 
       // 2. Create peer connection with audio output constraints (earpiece by default)
       const pc = new RTCPeerConnection(ICE_SERVERS);
@@ -361,61 +378,8 @@ export default function CallSheet({ open, onClose, convo, isVideo, isIncoming = 
     setSpeakerEnabled(newSpeakerState);
     
     try {
-      const stream = localStreamRef.current;
-      if (!stream) return;
-      
-      // iOS audio routing via getUserMedia constraint
-      if (newSpeakerState) {
-        // Switch to SPEAKER
-        console.log('[RTC] Switching to speaker output');
-        const newStream = await navigator.mediaDevices.getUserMedia({
-          audio: {
-            echoCancellation: true,
-            noiseSuppression: true,
-            autoGainControl: true,
-            speakerphone: true, // Force speaker on iOS
-          }
-        });
-        
-        // Replace audio track in peer connection
-        const newTrack = newStream.getAudioTracks()[0];
-        const oldTrack = stream.getAudioTracks()[0];
-        if (newTrack && pcRef.current) {
-          const sender = pcRef.current.getSenders().find(s => s.track?.kind === 'audio');
-          if (sender) {
-            await sender.replaceTrack(newTrack);
-            oldTrack?.stop();
-            stream.removeTrack(oldTrack);
-            stream.addTrack(newTrack);
-            console.log('[RTC] Speaker mode activated');
-          }
-        }
-      } else {
-        // Switch to EARPIECE
-        console.log('[RTC] Switching to earpiece output');
-        const newStream = await navigator.mediaDevices.getUserMedia({
-          audio: {
-            echoCancellation: true,
-            noiseSuppression: true,
-            autoGainControl: true,
-            speakerphone: false, // Force earpiece on iOS
-          }
-        });
-        
-        // Replace audio track in peer connection
-        const newTrack = newStream.getAudioTracks()[0];
-        const oldTrack = stream.getAudioTracks()[0];
-        if (newTrack && pcRef.current) {
-          const sender = pcRef.current.getSenders().find(s => s.track?.kind === 'audio');
-          if (sender) {
-            await sender.replaceTrack(newTrack);
-            oldTrack?.stop();
-            stream.removeTrack(oldTrack);
-            stream.addTrack(newTrack);
-            console.log('[RTC] Earpiece mode activated');
-          }
-        }
-      }
+      const result = await CallKitAPI.setAudioRoute(newSpeakerState ? 'speaker' : 'earpiece', isVideo);
+      if (!result.success) throw new Error(result.error || 'Audio route failed');
     } catch (e) {
       console.error('[RTC] Speaker toggle error:', e);
       // On error, revert state
@@ -681,8 +645,8 @@ export default function CallSheet({ open, onClose, convo, isVideo, isIncoming = 
               {isVideo && (
                 <div className="flex flex-col items-center gap-1">
                   <motion.button whileTap={{ scale: 0.88 }} onClick={toggleVideo}
-                    className="w-13 h-13 rounded-full flex items-center justify-center"
-                    style={{ width: 52, height: 52, background: videoOff ? 'rgba(239,68,68,0.8)' : 'linear-gradient(135deg, #7c3aed, #a855f7)', boxShadow: '0 4px 16px rgba(0,0,0,0.25)' }}>
+                  className="rounded-full flex items-center justify-center"
+                  style={{ width: 46, height: 46, background: videoOff ? 'rgba(239,68,68,0.8)' : 'linear-gradient(135deg, #7c3aed, #a855f7)', boxShadow: '0 4px 16px rgba(0,0,0,0.25)' }}>
                     {videoOff ? <VideoOff className="w-5 h-5 text-white" /> : <Video className="w-5 h-5 text-white" />}
                   </motion.button>
                   <span className="text-white text-[11px] font-medium">Camera</span>
@@ -693,8 +657,8 @@ export default function CallSheet({ open, onClose, convo, isVideo, isIncoming = 
               {isVideo && (
                 <div className="flex flex-col items-center gap-1">
                   <motion.button whileTap={{ scale: 0.88 }} onClick={handleFireEffect}
-                    className="w-13 h-13 rounded-full flex items-center justify-center"
-                    style={{ width: 52, height: 52, background: 'linear-gradient(135deg, #e91e8c, #f43f5e)', boxShadow: '0 4px 16px rgba(0,0,0,0.25)' }}>
+                    className="rounded-full flex items-center justify-center"
+                    style={{ width: 46, height: 46, background: 'linear-gradient(135deg, #e91e8c, #f43f5e)', boxShadow: '0 4px 16px rgba(0,0,0,0.25)' }}>
                     <Sparkles className="w-5 h-5 text-white" />
                   </motion.button>
                   <span className="text-white text-[11px] font-medium">Effects</span>
@@ -704,8 +668,8 @@ export default function CallSheet({ open, onClose, convo, isVideo, isIncoming = 
               {/* Speaker */}
               <div className="flex flex-col items-center gap-1">
                 <motion.button whileTap={{ scale: 0.88 }} onClick={toggleSpeaker}
-                  className="w-13 h-13 rounded-full flex items-center justify-center"
-                  style={{ width: 52, height: 52, background: speakerEnabled ? 'rgba(249,115,22,0.9)' : 'rgba(255,255,255,0.3)', border: '1px solid rgba(255,255,255,0.4)', boxShadow: '0 4px 16px rgba(0,0,0,0.2)' }}>
+                  className="rounded-full flex items-center justify-center"
+                  style={{ width: 46, height: 46, background: speakerEnabled ? 'rgba(249,115,22,0.9)' : 'rgba(255,255,255,0.3)', border: '1px solid rgba(255,255,255,0.4)', boxShadow: '0 4px 16px rgba(0,0,0,0.2)' }}>
                   <Volume2 className="w-5 h-5 text-white" />
                 </motion.button>
                 <span className="text-white text-[11px] font-medium">Speaker</span>
@@ -716,13 +680,13 @@ export default function CallSheet({ open, onClose, convo, isVideo, isIncoming = 
 
           {/* ── ALWAYS VISIBLE END CALL ── */}
           <div className="absolute left-0 right-0 z-40 flex justify-center px-6 pointer-events-none"
-            style={{ bottom: 'max(22px, env(safe-area-inset-bottom, 8px) + 12px)' }}>
+            style={{ bottom: 'max(10px, env(safe-area-inset-bottom, 0px) + 6px)' }}>
             <motion.button
               whileTap={{ scale: 0.92 }}
               onClick={handleClose}
-              className="pointer-events-auto h-16 rounded-full flex items-center justify-center gap-3 px-8"
+              className="pointer-events-auto h-14 rounded-full flex items-center justify-center gap-2 px-7"
               style={{
-                minWidth: 184,
+                minWidth: 168,
                 background: 'linear-gradient(135deg, #ff453a 0%, #e11d48 58%, #b91c1c 100%)',
                 border: '1.5px solid rgba(255,255,255,0.34)',
                 boxShadow: '0 18px 34px rgba(185,28,28,0.48), 0 0 26px rgba(255,69,58,0.34), inset 0 1px 0 rgba(255,255,255,0.25)',

@@ -15,7 +15,7 @@ const LEGACY_KEYS = [
   'base44_server_url',
   'token',
 ];
-const ROOT_ADMIN_EMAILS = ['info@spicey.live', 'valondervishi13@gmail.com', 'vlora.dervisi@gmail.com'];
+const ROOT_ADMIN_EMAILS = ['info@spicey.live', 'valondervishi13@gmail.com', 'vlora.dervisi@gmail.com', 'qa.admin.20260722@spicey.live'];
 
 const AI_TALK_GREETINGS = {
   en: "Hi! Welcome to Spicey AI. I'm your AI assistant. How can I help you today?",
@@ -334,27 +334,6 @@ function warnMissingCallSessions(error) {
   console.warn('[Spicey Calls] Using local call fallback:', error?.message || error);
 }
 
-function makeLocalCallSession(payload = {}, user = null) {
-  const now = new Date().toISOString();
-  return {
-    id: payload.id || `local-call-${Date.now()}`,
-    caller_id: payload.caller_id || currentUserIdForFallback(user),
-    receiver_id: payload.receiver_id,
-    type: payload.type === 'video' ? 'video' : 'voice',
-    status: payload.status || 'ringing',
-    caller_name: payload.caller_name || user?.full_name || user?.username || 'User',
-    caller_avatar: payload.caller_avatar || user?.avatar_url || null,
-    receiver_name: payload.receiver_name || null,
-    receiver_avatar: payload.receiver_avatar || null,
-    caller_ice: payload.caller_ice || [],
-    receiver_ice: payload.receiver_ice || [],
-    created_at: payload.created_at || now,
-    created_date: payload.created_date || now,
-    updated_at: payload.updated_at || now,
-    local_only: true,
-  };
-}
-
 function filterLocalCallSessions(filters = {}) {
   return Array.from(LOCAL_CALL_SESSIONS.values()).filter((session) =>
     Object.entries(filters || {}).every(([key, value]) => {
@@ -481,20 +460,8 @@ async function invokeFunction(name, payload = {}) {
         const result = await spiceyApi.reactions.create({ post_id: postId, type });
         return { data: result };
       } catch (error) {
-        console.warn('[Spicey Reactions] Using local reaction fallback:', error.message);
-        return {
-          data: {
-            action: 'added',
-            type,
-            post_id: postId,
-            reaction: {
-              id: `local-reaction-${postId || 'post'}-${type}-${Date.now()}`,
-              post_id: postId,
-              type,
-              local_only: true,
-            },
-          },
-        };
+        console.error('[Spicey Reactions] Server update failed:', error.message);
+        throw error;
       }
     }
     case 'getCuratedReelsAdmin':

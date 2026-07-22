@@ -292,7 +292,7 @@ export default function Messages() {
       let profilesByUserId = {};
       if (otherUserIds.length > 0) {
         try {
-          const profiles = await base44.entities.UserProfile.list('-updated_date', 500);
+          const profiles = await base44.entities.UserProfile.list('-updated_at', 500);
           profiles.forEach(p => { if (p.user_id) profilesByUserId[p.user_id] = p; });
         } catch (e) {}
       }
@@ -301,7 +301,7 @@ export default function Messages() {
         const otherUserId = chat.participant_ids?.find(id => id !== currentUser?.id);
         if (!otherUserId) continue;
 
-        const profile = profilesByUserId[otherUserId];
+        const profile = chat.other_profile || profilesByUserId[otherUserId];
         const name = profile?.full_name || profile?.username ||
           chat.participant_usernames?.[chat.participant_ids?.indexOf(otherUserId)] || 'User';
         const avatar = profile?.avatar_url ||
@@ -314,7 +314,7 @@ export default function Messages() {
           img: avatar,
           preview: chat.last_message || 'No messages yet',
           time: timeStr,
-          unread: Number(chat.unread_count || 0),
+          unread: activeChat?.chatId === chat.id ? 0 : Number(chat.unread_count || 0),
           online: false,
           chatId: chat.id,
           userId: otherUserId,
@@ -327,10 +327,9 @@ export default function Messages() {
     let cancelled = false;
     buildConversations().then((conversationsList) => {
       if (cancelled) return;
-      // Sort: unread first, then by most recent message time (newest first)
+      // The inbox is chronological. Unread state is shown by the badge, but it
+      // must never move an older conversation above a newer message.
       conversationsList.sort((a, b) => {
-        if (a.unread > 0 && b.unread === 0) return -1;
-        if (b.unread > 0 && a.unread === 0) return 1;
         const timeDiff = new Date(b.lastMessageTime).getTime() - new Date(a.lastMessageTime).getTime();
         if (timeDiff !== 0) return timeDiff;
         // Fallback: if times are equal, sort by name alphabetically
@@ -356,8 +355,6 @@ export default function Messages() {
         }));
 
       const combined = [...missedCallItems, ...conversationsList].sort((a, b) => {
-        if (a.unread > 0 && b.unread === 0) return -1;
-        if (b.unread > 0 && a.unread === 0) return 1;
         const timeDiff = new Date(b.lastMessageTime).getTime() - new Date(a.lastMessageTime).getTime();
         if (timeDiff !== 0) return timeDiff;
         return a.name.localeCompare(b.name);
@@ -367,7 +364,7 @@ export default function Messages() {
       setConversationsReady(true);
     }).catch(() => {});
     return () => { cancelled = true; };
-  }, [chatsData, currentUser?.id, missedCalls]);
+  }, [chatsData, currentUser?.id, missedCalls, activeChat?.chatId]);
 
   // A push notification can cold-launch the app. Open the exact conversation
   // only after the authenticated inbox has finished building its rows.

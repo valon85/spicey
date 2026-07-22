@@ -125,6 +125,16 @@ export class CallKitAPI {
     }
   }
 
+  static async setAudioRoute(route, isVideo = false) {
+    try {
+      await CallKit.setAudioRoute({ route, isVideo });
+      return { success: true };
+    } catch (error) {
+      console.error('[CallKit] Error changing audio route:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
   /**
    * Get VoIP push token (for backend to send call notifications)
    */

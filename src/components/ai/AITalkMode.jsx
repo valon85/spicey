@@ -176,11 +176,7 @@ export default function AITalkMode({ onClose }) {
   const [textInput, setTextInput] = useState('');
   const [inputFocused, setInputFocused] = useState(false);
   const [chatMessages, setChatMessages] = useState([
-    { role: 'assistant', text: "Hi Valon! ✨\nI'm Spicey AI, your personal assistant.\nHow can I help you today?", time: '9:41 AM' },
-    { role: 'user', text: 'Can you give me some ideas\nfor my new project?', time: '9:42 AM' },
-    { role: 'assistant', text: 'Of course! 🚀\nHere are a few creative ideas for your project:\n\n• AI-powered video stories\n• Interactive city map with live clips\n• Voice rooms for real-time chats\n• Personalized AI avatars\n• Premium themes for VIP users\n\nWhich one interests you the most?', time: '9:42 AM' },
-    { role: 'user', text: 'I like the AI avatars. Tell me more!', time: '9:43 AM' },
-    { role: 'assistant', text: 'Great choice! 🤖✨\nAI avatars can create realistic or fantasy versions of you, use them in videos, live chats and stories. We can add beauty filters, voice cloning and even animated expressions.\n\nWould you like me to prepare a full plan for this feature?', time: '9:44 AM' },
+    { role: 'assistant', text: "Hi, I'm Spicey AI. Choose your language, then speak or type anything.", time: '' },
   ]);
 
   // Refs — avoid stale closures

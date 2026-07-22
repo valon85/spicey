@@ -170,6 +170,15 @@ export async function initializePushNotifications() {
     await PushNotifications.register();
     console.log('[Push] Registered with APNs');
 
+    // iOS can deliver the APNs token before JavaScript/auth is ready. The
+    // native delegate persists it so every successful login can register it.
+    const storedToken = await Preferences.get({ key: 'apnsPushToken' }).catch(() => ({ value: null }));
+    if (storedToken?.value) {
+      await registerDeviceToken(storedToken.value, 'apns').catch((error) => {
+        console.error('[Push] Stored APNs token registration failed:', error);
+      });
+    }
+
   } catch (error) {
     console.error('[Push] Initialization error:', error);
   }

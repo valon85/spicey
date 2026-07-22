@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import { useAuth } from '@/lib/AuthContext';
 import { initializePushNotifications } from '@/lib/pushNotifications';
 
@@ -9,11 +9,16 @@ import { initializePushNotifications } from '@/lib/pushNotifications';
  */
 export default function PushNotificationProvider() {
   const { user, authChecked } = useAuth();
-  const initialized = useRef(false);
+  const initializedForUser = useRef('');
 
   useEffect(() => {
-    if (!authChecked || !user || initialized.current) return;
-    initialized.current = true;
+    if (!authChecked) return;
+    if (!user) {
+      initializedForUser.current = '';
+      return;
+    }
+    if (initializedForUser.current === user.id) return;
+    initializedForUser.current = user.id;
     
     // CRITICAL: Defer push init with setTimeout so it never blocks rendering
     const timeoutId = setTimeout(async () => {

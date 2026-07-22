@@ -13,16 +13,6 @@ const TABS = [
   { key: 'share', label: 'Share', emoji: '↗' },
 ];
 
-const FALLBACK_REACTION_USERS = [
-  { name: 'John', avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=96&h=96&fit=crop&crop=face&q=90', type: 'like', userId: 'fallback-john' },
-  { name: 'Ardian', avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=96&h=96&fit=crop&crop=face&q=90', type: 'fire', userId: 'fallback-ardian' },
-  { name: 'Vlora', avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=96&h=96&fit=crop&crop=face&q=90', type: 'like', userId: 'fallback-vlora' },
-  { name: 'Mia', avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=96&h=96&fit=crop&crop=face&q=90', type: 'like', userId: 'fallback-mia' },
-  { name: 'Valon', avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=96&h=96&fit=crop&crop=face&q=90', type: 'comment', userId: 'fallback-valon-comment' },
-  { name: 'Mia', avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=96&h=96&fit=crop&crop=face&q=90', type: 'comment', userId: 'fallback-mia-comment' },
-  { name: 'Sophia', avatar: 'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=96&h=96&fit=crop&crop=face&q=90', type: 'share', userId: 'fallback-sophia' },
-];
-
 export default function ReactionsSheet({ open, onClose, post, currentUser, liked, fireReacted, initialTab = 'all' }) {
   const [tab, setTab] = useState('all');
   const [users, setUsers] = useState([]);
@@ -63,7 +53,7 @@ export default function ReactionsSheet({ open, onClose, post, currentUser, liked
           type: user.type || 'like',
           userId: user.user_id || user.id || `preview-${index}`,
         }));
-        setUsers(previewUsers.length ? previewUsers : FALLBACK_REACTION_USERS);
+        setUsers(previewUsers);
         setLoading(false);
         return;
       }
@@ -79,15 +69,6 @@ export default function ReactionsSheet({ open, onClose, post, currentUser, liked
         return { name, avatar, type: r.type, userId: r.user_id || r.created_by };
       });
 
-      const sharePreviewUsers = shareCount > 0
-        ? FALLBACK_REACTION_USERS
-            .filter((u) => u.type === 'share')
-            .slice(0, Math.min(shareCount, 3))
-        : [];
-      const commentPreviewUsers = commentsCount > 0
-        ? FALLBACK_REACTION_USERS.filter((u) => u.type === 'comment')
-        : [];
-
       // Deduplicate by userId — keep only first occurrence of each user
       const seenUserIds = new Set();
       const dedupedList = userList.filter(u => {
@@ -96,10 +77,10 @@ export default function ReactionsSheet({ open, onClose, post, currentUser, liked
         return true;
       });
 
-      setUsers([...dedupedList, ...commentPreviewUsers, ...sharePreviewUsers]);
+      setUsers(dedupedList);
       setLoading(false);
     }).catch(() => {
-      setUsers(FALLBACK_REACTION_USERS);
+      setUsers([]);
       setLoading(false);
     });
   }, [open, post?.id]);
@@ -123,11 +104,12 @@ export default function ReactionsSheet({ open, onClose, post, currentUser, liked
             transition={{ type: 'spring', damping: 28, stiffness: 300 }}
             className="fixed bottom-0 left-0 right-0 z-[9999] rounded-t-3xl pb-10 flex flex-col"
             style={{
-              background: isLightMode ? 'rgba(255,255,255,0.92)' : 'linear-gradient(180deg, rgba(22,10,38,0.99), rgba(10,5,18,1))',
+              background: isLightMode ? 'rgba(255,255,255,0.96)' : '#000000',
               border: isLightMode ? '1px solid rgba(160,80,255,0.15)' : '1px solid rgba(255,255,255,0.08)',
               backdropFilter: 'blur(24px)',
               boxShadow: isLightMode ? '0 -4px 30px rgba(120,80,200,0.12)' : 'none',
-              maxHeight: '85vh', display: 'flex', flexDirection: 'column'
+              height: 'min(78dvh, 660px)', maxHeight: '85dvh', display: 'flex', flexDirection: 'column',
+              overflow: 'hidden', overscrollBehavior: 'contain'
             }}>
 
             {/* Handle */}
@@ -169,7 +151,9 @@ export default function ReactionsSheet({ open, onClose, post, currentUser, liked
 
             {/* User list */}
             <div className="flex-1 overflow-y-auto overflow-x-hidden px-4 space-y-1"
-              style={{ WebkitOverflowScrolling: 'touch', minHeight: '0', paddingBottom: '20px' }}>
+              onTouchMove={(event) => event.stopPropagation()}
+              onWheel={(event) => event.stopPropagation()}
+              style={{ WebkitOverflowScrolling: 'touch', minHeight: '0', paddingBottom: '20px', touchAction: 'pan-y', overscrollBehavior: 'contain' }}>
               {loading ? (
                 <div className="flex items-center justify-center h-32">
                   <div className="w-4 h-4 border-2 rounded-full animate-spin"

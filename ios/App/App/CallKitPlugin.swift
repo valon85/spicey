@@ -11,7 +11,8 @@ public class CallKitPlugin: CAPPlugin, CAPBridgedPlugin {
         CAPPluginMethod(name: "endCall", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "answerCall", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "startOutgoingCall", returnType: CAPPluginReturnPromise),
-        CAPPluginMethod(name: "getActiveCalls", returnType: CAPPluginReturnPromise)
+        CAPPluginMethod(name: "getActiveCalls", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "setAudioRoute", returnType: CAPPluginReturnPromise)
     ]
 
     public override func load() {
@@ -178,5 +179,16 @@ public class CallKitPlugin: CAPPlugin, CAPBridgedPlugin {
     @objc func getActiveCalls(_ call: CAPPluginCall) {
         let calls = CallKitManager.shared.getActiveCalls()
         call.resolve(["calls": calls])
+    }
+
+    @objc func setAudioRoute(_ call: CAPPluginCall) {
+        let route = call.getString("route") ?? "earpiece"
+        let isVideo = call.getBool("isVideo") ?? false
+        do {
+            try CallKitManager.shared.setAudioRoute(useSpeaker: route == "speaker", isVideo: isVideo)
+            call.resolve()
+        } catch {
+            call.reject("Failed to set audio route: \(error.localizedDescription)")
+        }
     }
 }

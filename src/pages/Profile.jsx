@@ -3,16 +3,14 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
 import { spiceyApi } from '@/api/spiceyApi';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import {
-  Settings, Camera, Grid3X3, Play, Bookmark,
-  BadgeCheck, Share2, Flame, Edit3, Link2, Heart, MessageCircle, X, Trash2, ChevronLeft, Lock, Unlock, UserCheck, UserPlus, Type, Clock, MapPin, Moon, Utensils, Shirt, Mail, MessageSquare, Facebook, Instagram, Twitter, Crown, Shield, Upload, Bell, MoreHorizontal, Plus, Sparkles, Clapperboard, Plane, Users
+import { Camera, Grid3X3, Play, Bookmark,
+  BadgeCheck, Share2, Flame, Edit3, Link2, Heart, MessageCircle, X, Trash2, ChevronLeft, Lock, UserCheck, UserPlus, Type, Clock, MapPin, Utensils, Mail, MessageSquare, Shield, Bell, MoreHorizontal, Plus, Sparkles, Clapperboard, Plane
 } from 'lucide-react';
 import DeleteConfirmSheet from '@/components/shared/DeleteConfirmSheet';
 import { toast } from 'sonner';
 import CategoryManager from '@/components/profile/CategoryManager';
 import VerifiedBadge from '@/components/shared/VerifiedBadge';
 import BottomNavEnhanced from '../components/feed/BottomNavEnhanced';
-import ProfileHeader from '@/components/profile/ProfileHeader';
 import { motion, AnimatePresence } from 'framer-motion';
 import EditProfileSheet from '../components/panels/EditProfileSheet.jsx';
 import AvatarPickerSheet from '@/components/profile/AvatarPickerSheet';
@@ -21,7 +19,6 @@ import PhotoViewer from '../components/feed/PhotoViewer.jsx';
 import FollowRequestsSheet from '../components/panels/FollowRequestsSheet.jsx';
 import ShareSheet from '../components/panels/ShareSheet.jsx';
 import ImageWithFallback from '@/components/feed/ImageWithFallback';
-import { PROFILE_THEMES } from '@/components/profile/ProfileThemePicker';
 import { usePageBackground, useIsLightMode } from '@/hooks/usePageBackground';
 const HIGHLIGHTS = [
   { label: 'New', icon: Plus, color: '#ff4bd8' },
@@ -1124,31 +1121,7 @@ export default function Profile() {
       </div>
 
       {/* ── Profile Hero ── */}
-      <div className="relative z-10 px-4 pt-1">
-          <div
-            className="relative overflow-hidden rounded-[32px] h-[178px]"
-            style={{
-              background: isLightMode
-                ? 'linear-gradient(135deg, rgba(255,255,255,0.86) 0%, rgba(255,204,186,0.78) 36%, rgba(255,46,126,0.66) 76%, rgba(186,86,255,0.42) 100%)'
-                : 'linear-gradient(135deg, rgba(16,8,18,0.96) 0%, rgba(56,18,44,0.84) 36%, rgba(134,18,88,0.54) 76%, rgba(95,40,168,0.34) 100%)',
-              border: isLightMode ? '1px solid rgba(255,255,255,0.78)' : '1px solid rgba(255,46,157,0.32)',
-              boxShadow: isLightMode ? '0 20px 44px rgba(255,80,150,0.18)' : '0 20px 44px rgba(0,0,0,0.42)',
-            }}
-          >
-            <div className="absolute -right-10 -top-8 w-44 h-44 rounded-full" style={{ background: isLightMode ? 'radial-gradient(circle, rgba(255,46,157,0.46), transparent 68%)' : 'radial-gradient(circle, rgba(255,46,157,0.34), transparent 68%)' }} />
-            <div
-              className="absolute right-16 top-10 w-28 h-28 rounded-[30px] rotate-12 flex items-center justify-center"
-              style={{
-                background: 'linear-gradient(135deg, rgba(255,255,255,0.34), rgba(255,255,255,0.12))',
-                border: '1px solid rgba(255,255,255,0.54)',
-                boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.50), 0 14px 30px rgba(255,46,157,0.16)',
-              }}
-            >
-              <Sparkles className="w-14 h-14 -rotate-12" style={{ color: '#ff6b35', fill: '#ff2e9d', filter: 'drop-shadow(0 10px 14px rgba(255,46,157,0.26))' }} />
-            </div>
-          </div>
-        </div>
-      <div className="relative z-10 px-4 pb-3 -mt-12">
+      <div className="relative z-10 px-4 pb-3 pt-1">
         <section
           className="spicey-profile-hero relative overflow-hidden px-4 pb-4"
           style={{

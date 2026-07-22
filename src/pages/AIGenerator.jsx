@@ -6,14 +6,11 @@ import {
   Camera,
   ChevronRight,
   Clapperboard,
-  Crown,
-  Flame,
   Hash,
   Home,
   ImagePlus,
   Lightbulb,
   Loader2,
-  Menu,
   MessageSquare,
   Mic,
   Paperclip,
@@ -25,7 +22,6 @@ import {
   Video,
   Wand2,
   X,
-  Zap,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
@@ -615,10 +611,10 @@ function VideoStudio() {
   );
 }
 
-function MediaStudio() {
-  const [kind, setKind] = useState('photo');
-  const [format, setFormat] = useState('portrait');
-  const [seconds, setSeconds] = useState(8);
+function MediaStudio({ initialKind = 'photo', shortFilm = false }) {
+  const [kind, setKind] = useState(initialKind);
+  const [format, setFormat] = useState(shortFilm ? 'landscape' : 'portrait');
+  const [seconds, setSeconds] = useState(shortFilm ? 12 : 8);
   const [prompt, setPrompt] = useState('');
   const [filePreview, setFilePreview] = useState('');
   const [uploadedUrl, setUploadedUrl] = useState('');
@@ -684,19 +680,19 @@ function MediaStudio() {
         <span className="ai-creator-v2-icon">{kind === 'photo' ? <Camera size={22} /> : <Clapperboard size={22} />}</span>
         <div>
           <small>SPICEY CREATIVE STUDIO</small>
-          <h2>{kind === 'photo' ? 'Create an AI Photo' : 'Create an AI Video'}</h2>
-          <p>{kind === 'photo' ? 'Turn an idea into a polished image.' : 'Describe a scene and generate a vertical reel.'}</p>
+          <h2>{shortFilm ? 'Create a Short Film' : kind === 'photo' ? 'Create an AI Photo' : 'Create an AI Video'}</h2>
+          <p>{shortFilm ? 'Turn a story idea into a cinematic landscape clip.' : kind === 'photo' ? 'Turn an idea into a polished image.' : 'Describe a scene and generate a vertical reel.'}</p>
         </div>
       </section>
 
-      <div className="ai-creator-v2-toggle">
+      {!shortFilm && <div className="ai-creator-v2-toggle">
         <button type="button" className={kind === 'photo' ? 'active' : ''} onClick={() => setKind('photo')}>
           <Camera size={16} /> Photo
         </button>
         <button type="button" className={kind === 'video' ? 'active' : ''} onClick={() => setKind('video')}>
           <Video size={16} /> Video
         </button>
-      </div>
+      </div>}
 
       <div className="ai-creator-v2-preview">
       <input ref={fileRef} type="file" accept={kind === 'photo' ? 'image/*' : 'video/*'} hidden onChange={chooseFile} />
@@ -724,7 +720,7 @@ function MediaStudio() {
         <textarea
           value={prompt}
           onChange={(event) => setPrompt(event.target.value)}
-          placeholder={kind === 'video' ? 'A cinematic New York night, neon reflections, smooth camera movement...' : 'A realistic fashion portrait, orange and pink neon light, editorial quality...'}
+          placeholder={shortFilm ? 'Scene, character, action, mood and camera direction for your short film...' : kind === 'video' ? 'A cinematic New York night, neon reflections, smooth camera movement...' : 'A realistic fashion portrait, orange and pink neon light, editorial quality...'}
           rows={4}
           maxLength={600}
         />
@@ -732,7 +728,7 @@ function MediaStudio() {
       </label>
 
       <div className="ai-creator-v2-chips">
-        {(kind === 'photo' ? ['Editorial', 'Neon night', 'Luxury', 'Ultra realistic'] : ['Cinematic', 'Fast motion', 'Night city', 'Viral reel']).map((style) => (
+        {(shortFilm ? ['Cinematic story', 'Opening shot', 'Character scene', 'Dramatic ending'] : kind === 'photo' ? ['Editorial', 'Neon night', 'Luxury', 'Ultra realistic'] : ['Cinematic', 'Fast motion', 'Night city', 'Viral reel']).map((style) => (
           <button key={style} type="button" onClick={() => setPrompt((current) => current ? `${current}, ${style.toLowerCase()}` : style)}>
             {style}
           </button>
@@ -748,7 +744,7 @@ function MediaStudio() {
             ))}
           </div>
         </div>
-        {kind === 'video' && (
+        {kind === 'video' && !shortFilm && (
           <div>
             <span>Length</span>
             <div className="ai-creator-v2-segmented">
@@ -762,7 +758,7 @@ function MediaStudio() {
 
       <button type="button" className="ai-creator-v2-generate" disabled={!prompt.trim() || loading} onClick={generate}>
         {loading ? <Loader2 size={17} className="ai-spin" /> : <Wand2 size={17} />}
-        {loading ? (kind === 'video' ? 'Generating video...' : 'Creating photo...') : kind === 'video' ? 'Generate AI Video' : 'Generate AI Photo'}
+        {loading ? (kind === 'video' ? 'Generating video...' : 'Creating photo...') : shortFilm ? 'Generate Short Film Scene' : kind === 'video' ? 'Generate AI Video' : 'Generate AI Photo'}
       </button>
     </div>
   );
@@ -785,7 +781,7 @@ export default function AIGenerator() {
   const [currentUserAvatar, setCurrentUserAvatar] = useState('');
   const [mode, setMode] = useState(() => {
     const requestedMode = new URLSearchParams(window.location.search).get('mode');
-    return ['home', 'chat', 'media'].includes(requestedMode) ? requestedMode : 'home';
+    return ['home', 'chat', 'photo', 'video', 'short-film'].includes(requestedMode) ? requestedMode : 'home';
   });
   const [chatPrompt, setChatPrompt] = useState('');
   const [talkOpen, setTalkOpen] = useState(false);
@@ -860,13 +856,17 @@ export default function AIGenerator() {
             <MessageSquare size={20} />
             <span>AI Chat</span>
           </button>
-          <button type="button" className={mode === 'media' ? 'active' : ''} onClick={() => openMode('media')}>
+          <button type="button" className={mode === 'photo' ? 'active' : ''} onClick={() => openMode('photo')}>
             <ImagePlus size={20} />
             <span>AI Photo</span>
           </button>
-          <button type="button" onClick={() => openMode('media')}>
+          <button type="button" className={mode === 'video' ? 'active' : ''} onClick={() => openMode('video')}>
             <Video size={20} />
             <span>AI Video</span>
+          </button>
+          <button type="button" className={mode === 'short-film' ? 'active' : ''} onClick={() => openMode('short-film')}>
+            <Clapperboard size={20} />
+            <span>Short Film</span>
           </button>
       </nav>
 
@@ -882,7 +882,9 @@ export default function AIGenerator() {
           >
             {mode === 'home' && <LightAIHome onStartChat={startChat} onMode={openMode} isLight={isLight} />}
             {mode === 'chat' && <ChatMode isLight={isLight} initialPrompt={chatPrompt} onClose={() => setMode('home')} />}
-            {mode === 'media' && <MediaStudio />}
+            {mode === 'photo' && <MediaStudio initialKind="photo" />}
+            {mode === 'video' && <MediaStudio initialKind="video" />}
+            {mode === 'short-film' && <MediaStudio initialKind="video" shortFilm />}
           </motion.div>
         </AnimatePresence>
       </main>

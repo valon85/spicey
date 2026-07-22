@@ -1,8 +1,8 @@
 import { ensureFreshSpiceySession, spiceySession } from './spiceyApi';
+import { PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_ANON_KEY } from '@/config/publicRuntime';
 
-const env = import.meta.env || {};
-const SUPABASE_URL = (env.VITE_SUPABASE_URL || '').replace(/\/$/, '');
-const SUPABASE_ANON_KEY = env.VITE_SUPABASE_ANON_KEY || '';
+const SUPABASE_URL = PUBLIC_SUPABASE_URL;
+const SUPABASE_ANON_KEY = PUBLIC_SUPABASE_ANON_KEY;
 
 const TABLE_NAMES = {
   AdCampaign: 'ad_campaigns',

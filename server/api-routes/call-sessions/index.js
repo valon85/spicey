@@ -50,7 +50,7 @@ export default async function handler(req, res) {
           receiver_id: body.receiver_id,
           type: body.type === 'video' ? 'video' : 'voice',
           status: 'ringing',
-          caller_name: profile.full_name || user.user_metadata?.full_name || user.email?.split('@')[0] || 'User',
+          caller_name: profile.full_name || profile.username || user.user_metadata?.full_name || user.email?.split('@')[0] || 'Spicey user',
           caller_avatar: profile.avatar_url || null,
           receiver_name: body.receiver_name || null,
           receiver_avatar: body.receiver_avatar || null,

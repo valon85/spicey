@@ -168,6 +168,15 @@ public class CallKitManager: NSObject {
             "isOnHold": false
         ]]
     }
+
+    public func setAudioRoute(useSpeaker: Bool, isVideo: Bool) throws {
+        let session = AVAudioSession.sharedInstance()
+        let mode: AVAudioSession.Mode = isVideo ? .videoChat : .voiceChat
+        try session.setCategory(.playAndRecord, mode: mode, options: [.allowBluetooth, .allowBluetoothA2DP])
+        try session.overrideOutputAudioPort(useSpeaker ? .speaker : .none)
+        try session.setActive(true)
+        print("[CallKit] Audio route: \(useSpeaker ? "speaker" : "earpiece")")
+    }
 }
 
 // MARK: - CXProviderDelegate
@@ -181,6 +190,12 @@ extension CallKitManager: CXProviderDelegate {
 
     public func provider(_ provider: CXProvider, didActivate audioSession: AVAudioSession) {
         print("[CallKit] Audio session activated")
+        do {
+            try audioSession.setCategory(.playAndRecord, mode: .voiceChat, options: [.allowBluetooth, .allowBluetoothA2DP])
+            try audioSession.overrideOutputAudioPort(.none)
+        } catch {
+            print("[CallKit] Audio session configuration failed: \(error.localizedDescription)")
+        }
     }
 
     public func provider(_ provider: CXProvider, didDeactivate audioSession: AVAudioSession) {

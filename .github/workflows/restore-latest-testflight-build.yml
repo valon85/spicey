@@ -1,0 +1,90 @@
+name: Restore latest TestFlight build
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  restore:
+    runs-on: macos-26
+    timeout-minutes: 15
+    steps:
+      - name: Setup Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.3"
+
+      - name: Install JWT dependency
+        run: gem install jwt --no-document
+
+      - name: Attach newest valid build to existing beta groups
+        env:
+          APPSTORE_CONNECT_API_KEY_BASE64: ${{ secrets.APPSTORE_CONNECT_API_KEY_BASE64 }}
+          APPSTORE_CONNECT_KEY_ID: ${{ secrets.APPSTORE_CONNECT_KEY_ID }}
+          APPSTORE_CONNECT_ISSUER_ID: ${{ secrets.APPSTORE_CONNECT_ISSUER_ID }}
+          IOS_BUNDLE_ID: com.base69fe90d3bbe7ad47925e4a0a.app
+        run: |
+          ruby <<'RUBY'
+          require 'base64'
+          require 'json'
+          require 'jwt'
+          require 'net/http'
+          require 'openssl'
+          require 'uri'
+
+          key_id = ENV.fetch('APPSTORE_CONNECT_KEY_ID')
+          issuer_id = ENV.fetch('APPSTORE_CONNECT_ISSUER_ID')
+          private_key = OpenSSL::PKey::EC.new(Base64.strict_decode64(ENV.fetch('APPSTORE_CONNECT_API_KEY_BASE64')))
+          bundle_id = ENV.fetch('IOS_BUNDLE_ID')
+
+          def token(private_key, key_id, issuer_id)
+            now = Time.now.to_i
+            JWT.encode({ iss: issuer_id, iat: now, exp: now + 900, aud: 'appstoreconnect-v1' }, private_key, 'ES256', { kid: key_id, typ: 'JWT' })
+          end
+
+          def request(method, path, jwt, body = nil)
+            uri = URI("https://api.appstoreconnect.apple.com#{path}")
+            klass = { get: Net::HTTP::Get, post: Net::HTTP::Post }.fetch(method)
+            req = klass.new(uri)
+            req['Authorization'] = "Bearer #{jwt}"
+            req['Content-Type'] = 'application/json'
+            req.body = JSON.generate(body) if body
+            response = Net::HTTP.start(uri.hostname, uri.port, use_ssl: true) { |http| http.request(req) }
+            unless response.code.to_i.between?(200, 299)
+              raise "App Store Connect #{method.to_s.upcase} #{path} failed (HTTP #{response.code}): #{response.body}"
+            end
+            response.body.to_s.empty? ? {} : JSON.parse(response.body)
+          end
+
+          jwt = token(private_key, key_id, issuer_id)
+          app_query = URI.encode_www_form('filter[bundleId]' => bundle_id, 'limit' => 1)
+          app = request(:get, "/v1/apps?#{app_query}", jwt).fetch('data').first
+          raise "No app found for #{bundle_id}" unless app
+
+          build_query = URI.encode_www_form('filter[app]' => app.fetch('id'), 'sort' => '-uploadedDate', 'limit' => 50)
+          builds = request(:get, "/v1/builds?#{build_query}", jwt).fetch('data')
+          build = builds.find { |item| item.dig('attributes', 'processingState') == 'VALID' && !item.dig('attributes', 'expired') }
+          raise 'No active valid TestFlight build found' unless build
+
+          group_query = URI.encode_www_form('filter[app]' => app.fetch('id'), 'limit' => 200)
+          groups = request(:get, "/v1/betaGroups?#{group_query}", jwt).fetch('data')
+          raise 'No TestFlight beta groups found' if groups.empty?
+
+          groups.each do |group|
+            jwt = token(private_key, key_id, issuer_id)
+            payload = { data: [{ type: 'builds', id: build.fetch('id') }] }
+            request(:post, "/v1/betaGroups/#{group.fetch('id')}/relationships/builds", jwt, payload)
+            puts "Attached build #{build.dig('attributes', 'version')} to beta group #{group.dig('attributes', 'name')}"
+          rescue RuntimeError => e
+            if e.message.include?('HTTP 409')
+              puts "Build already attached to beta group #{group.dig('attributes', 'name')}"
+            else
+              raise
+            end
+          end
+
+          puts "RESTORED_BUILD=#{build.dig('attributes', 'version')}"
+          puts "BETA_GROUP_COUNT=#{groups.length}"
+          RUBY

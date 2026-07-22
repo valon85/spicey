@@ -86,6 +86,7 @@ jobs:
           testers = request(:get, "/v1/betaTesters?#{tester_query}", jwt).fetch('data')
           tester = testers.find { |item| item.dig('attributes', 'email').to_s.downcase == tester_email }
           raise "No App Store Connect tester found for #{tester_email}" unless tester
+          puts "TESTER_STATE_BEFORE=#{tester.dig('attributes', 'state')}"
 
           internal_groups.each do |group|
             jwt = token(private_key, key_id, issuer_id)
@@ -107,6 +108,20 @@ jobs:
               raise
             end
           end
+
+          jwt = token(private_key, key_id, issuer_id)
+          invitation_payload = {
+            data: {
+              type: 'betaTesterInvitations',
+              relationships: {
+                betaTester: {
+                  data: { type: 'betaTesters', id: tester.fetch('id') }
+                }
+              }
+            }
+          }
+          request(:post, '/v1/betaTesterInvitations', jwt, invitation_payload)
+          puts 'TESTFLIGHT_INVITATION_SENT=true'
 
           puts "RESTORED_BUILD=#{build.dig('attributes', 'version')}"
           puts "INTERNAL_BETA_GROUP_COUNT=#{internal_groups.length}"

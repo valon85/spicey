@@ -114,6 +114,9 @@ jobs:
             data: {
               type: 'betaTesterInvitations',
               relationships: {
+                app: {
+                  data: { type: 'apps', id: app.fetch('id') }
+                },
                 betaTester: {
                   data: { type: 'betaTesters', id: tester.fetch('id') }
                 }

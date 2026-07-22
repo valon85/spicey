@@ -2,6 +2,11 @@ name: Restore latest TestFlight build
 
 on:
   workflow_dispatch:
+    inputs:
+      tester_email:
+        description: Apple ID email to restore as an internal TestFlight tester
+        required: true
+        type: string
 
 permissions:
   contents: read
@@ -19,12 +24,13 @@ jobs:
       - name: Install JWT dependency
         run: gem install jwt --no-document
 
-      - name: Attach newest valid build to existing beta groups
+      - name: Restore internal tester access to newest valid build
         env:
           APPSTORE_CONNECT_API_KEY_BASE64: ${{ secrets.APPSTORE_CONNECT_API_KEY_BASE64 }}
           APPSTORE_CONNECT_KEY_ID: ${{ secrets.APPSTORE_CONNECT_KEY_ID }}
           APPSTORE_CONNECT_ISSUER_ID: ${{ secrets.APPSTORE_CONNECT_ISSUER_ID }}
           IOS_BUNDLE_ID: com.base69fe90d3bbe7ad47925e4a0a.app
+          TESTER_EMAIL: ${{ inputs.tester_email }}
         run: |
           ruby <<'RUBY'
           require 'base64'
@@ -38,6 +44,7 @@ jobs:
           issuer_id = ENV.fetch('APPSTORE_CONNECT_ISSUER_ID')
           private_key = OpenSSL::PKey::EC.new(Base64.strict_decode64(ENV.fetch('APPSTORE_CONNECT_API_KEY_BASE64')))
           bundle_id = ENV.fetch('IOS_BUNDLE_ID')
+          tester_email = ENV.fetch('TESTER_EMAIL').strip.downcase
 
           def token(private_key, key_id, issuer_id)
             now = Time.now.to_i
@@ -72,22 +79,28 @@ jobs:
           groups = request(:get, "/v1/betaGroups?#{group_query}", jwt).fetch('data')
           raise 'No TestFlight beta groups found' if groups.empty?
 
-          external_groups = groups.reject { |group| group.dig('attributes', 'isInternalGroup') }
-          raise 'No external TestFlight beta groups found' if external_groups.empty?
+          internal_groups = groups.select { |group| group.dig('attributes', 'isInternalGroup') }
+          raise 'No internal TestFlight beta groups found' if internal_groups.empty?
 
-          external_groups.each do |group|
+          tester_query = URI.encode_www_form('filter[email]' => tester_email, 'limit' => 10)
+          testers = request(:get, "/v1/betaTesters?#{tester_query}", jwt).fetch('data')
+          tester = testers.find { |item| item.dig('attributes', 'email').to_s.downcase == tester_email }
+          raise "No App Store Connect tester found for #{tester_email}" unless tester
+
+          internal_groups.each do |group|
             jwt = token(private_key, key_id, issuer_id)
-            payload = { data: [{ type: 'builds', id: build.fetch('id') }] }
-            request(:post, "/v1/betaGroups/#{group.fetch('id')}/relationships/builds", jwt, payload)
-            puts "Attached build #{build.dig('attributes', 'version')} to beta group #{group.dig('attributes', 'name')}"
+            payload = { data: [{ type: 'betaTesters', id: tester.fetch('id') }] }
+            request(:post, "/v1/betaGroups/#{group.fetch('id')}/relationships/betaTesters", jwt, payload)
+            puts "Restored tester to internal beta group #{group.dig('attributes', 'name')}"
           rescue RuntimeError => e
             if e.message.include?('HTTP 409')
-              puts "Build already attached to beta group #{group.dig('attributes', 'name')}"
+              puts "Tester already belongs to internal beta group #{group.dig('attributes', 'name')}"
             else
               raise
             end
           end
 
           puts "RESTORED_BUILD=#{build.dig('attributes', 'version')}"
-          puts "EXTERNAL_BETA_GROUP_COUNT=#{external_groups.length}"
+          puts "INTERNAL_BETA_GROUP_COUNT=#{internal_groups.length}"
+          puts 'TESTER_RESTORED=true'
           RUBY

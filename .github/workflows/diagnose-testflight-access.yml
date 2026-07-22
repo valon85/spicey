@@ -1,0 +1,98 @@
+name: Diagnose TestFlight access
+
+on:
+  workflow_dispatch:
+    inputs:
+      tester_email:
+        description: Apple ID email to verify
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose:
+    runs-on: macos-26
+    timeout-minutes: 10
+    steps:
+      - name: Setup Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.3"
+
+      - name: Install JWT dependency
+        run: gem install jwt --no-document
+
+      - name: Read TestFlight state
+        env:
+          APPSTORE_CONNECT_API_KEY_BASE64: ${{ secrets.APPSTORE_CONNECT_API_KEY_BASE64 }}
+          APPSTORE_CONNECT_KEY_ID: ${{ secrets.APPSTORE_CONNECT_KEY_ID }}
+          APPSTORE_CONNECT_ISSUER_ID: ${{ secrets.APPSTORE_CONNECT_ISSUER_ID }}
+          IOS_BUNDLE_ID: com.base69fe90d3bbe7ad47925e4a0a.app
+          TESTER_EMAIL: ${{ inputs.tester_email }}
+        run: |
+          ruby <<'RUBY'
+          require 'base64'
+          require 'json'
+          require 'jwt'
+          require 'net/http'
+          require 'openssl'
+          require 'uri'
+
+          key_id = ENV.fetch('APPSTORE_CONNECT_KEY_ID')
+          issuer_id = ENV.fetch('APPSTORE_CONNECT_ISSUER_ID')
+          private_key = OpenSSL::PKey::EC.new(Base64.strict_decode64(ENV.fetch('APPSTORE_CONNECT_API_KEY_BASE64')))
+          bundle_id = ENV.fetch('IOS_BUNDLE_ID')
+          tester_email = ENV.fetch('TESTER_EMAIL').strip.downcase
+
+          now = Time.now.to_i
+          jwt = JWT.encode({ iss: issuer_id, iat: now, exp: now + 900, aud: 'appstoreconnect-v1' }, private_key, 'ES256', { kid: key_id, typ: 'JWT' })
+
+          def get(path, jwt)
+            uri = URI("https://api.appstoreconnect.apple.com#{path}")
+            req = Net::HTTP::Get.new(uri)
+            req['Authorization'] = "Bearer #{jwt}"
+            response = Net::HTTP.start(uri.hostname, uri.port, use_ssl: true) { |http| http.request(req) }
+            raise "GET #{path} failed (HTTP #{response.code}): #{response.body}" unless response.code.to_i.between?(200, 299)
+            JSON.parse(response.body)
+          end
+
+          app_query = URI.encode_www_form('filter[bundleId]' => bundle_id, 'limit' => 1)
+          app = get("/v1/apps?#{app_query}", jwt).fetch('data').first
+          raise 'App not found' unless app
+
+          build_query = URI.encode_www_form('filter[app]' => app.fetch('id'), 'filter[version]' => '1025', 'limit' => 10)
+          build = get("/v1/builds?#{build_query}", jwt).fetch('data').first
+          raise 'Build 1025 not found' unless build
+          detail_query = URI.encode_www_form('fields[buildBetaDetails]' => 'autoNotifyEnabled,internalBuildState,externalBuildState')
+          detail = get("/v1/builds/#{build.fetch('id')}/buildBetaDetail?#{detail_query}", jwt).fetch('data')
+
+          group_query = URI.encode_www_form(
+            'filter[app]' => app.fetch('id'),
+            'filter[isInternalGroup]' => 'true',
+            'fields[betaGroups]' => 'name,isInternalGroup,hasAccessToAllBuilds',
+            'limit' => 200
+          )
+          groups = get("/v1/betaGroups?#{group_query}", jwt).fetch('data')
+          group = groups.find { |item| item.dig('attributes', 'name') == 'Spicey Internal' } || groups.first
+          raise 'Internal group not found' unless group
+
+          group_builds = get("/v1/betaGroups/#{group.fetch('id')}/relationships/builds?limit=200", jwt).fetch('data')
+          group_testers = get("/v1/betaGroups/#{group.fetch('id')}/betaTesters?#{URI.encode_www_form('fields[betaTesters]' => 'email,state,inviteType', 'limit' => 200)}", jwt).fetch('data')
+          tester = group_testers.find { |item| item.dig('attributes', 'email').to_s.downcase == tester_email }
+
+          puts "BUILD_VERSION=#{build.dig('attributes', 'version')}"
+          puts "BUILD_PROCESSING_STATE=#{build.dig('attributes', 'processingState')}"
+          puts "BUILD_EXPIRED=#{build.dig('attributes', 'expired')}"
+          puts "BUILD_AUDIENCE_TYPE=#{build.dig('attributes', 'buildAudienceType')}"
+          puts "INTERNAL_BUILD_STATE=#{detail.dig('attributes', 'internalBuildState')}"
+          puts "EXTERNAL_BUILD_STATE=#{detail.dig('attributes', 'externalBuildState')}"
+          puts "GROUP_NAME=#{group.dig('attributes', 'name')}"
+          puts "GROUP_HAS_ACCESS_TO_ALL_BUILDS=#{group.dig('attributes', 'hasAccessToAllBuilds')}"
+          puts "GROUP_BUILD_COUNT=#{group_builds.length}"
+          puts "BUILD_1025_IN_GROUP=#{group_builds.any? { |item| item.fetch('id') == build.fetch('id') }}"
+          puts "TESTER_IN_GROUP=#{!tester.nil?}"
+          puts "TESTER_STATE=#{tester&.dig('attributes', 'state')}"
+          puts "TESTER_INVITE_TYPE=#{tester&.dig('attributes', 'inviteType')}"
+          RUBY

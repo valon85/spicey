@@ -2329,7 +2329,7 @@ export default function ContactsMap() {
 
       <div className="spicey-map-shell" style={{ position: 'absolute', inset: '-2px', overflow: 'hidden', background: '#030108' }}>
         <div ref={mapContainer} style={{ position: 'absolute', inset: 0, overflow: 'hidden' }} />
-        {!MAPBOX_TOKEN && false && (
+        {!MAPBOX_TOKEN && (
           <div style={{
             position: 'absolute',
             inset: 0,

@@ -7,8 +7,8 @@ import React from 'react';
 export default function SpiceyLogoText({ height = 120 }) {
   return (
     <img
-      src="https://media.base44.com/images/public/69fe90d3bbe7ad47925e4a0a/55bf52a6a_841b8be5-b1e6-4719-9a32-36fafbb51084.png"
-      alt="SPICEY"
+      src="/spicey-assets/spicey-wordmark-20260722.png"
+      alt="Spicey"
       style={{ height, width: 'auto', objectFit: 'contain', display: 'block' }}
     />
   );

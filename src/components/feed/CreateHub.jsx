@@ -6,7 +6,7 @@ const BTN_SIZE = 44;
 const ORIGIN_BOTTOM = 118;
 
 // Fan spread upward: 150° (upper-left) → 30° (upper-right)
-const ANGLES_DEG = [150, 120, 90, 60, 30];
+const ANGLES_DEG = [158, 132, 106, 80, 54, 28];
 const RADIUS = 155;
 
 function degToRad(d) { return (d * Math.PI) / 180; }
@@ -15,6 +15,7 @@ const ITEM_DEFS = [
   { label: 'Text',   path: '/create-text',   bg: 'linear-gradient(135deg, #FF6B35 0%, #FF2D55 100%)', shadow: 'rgba(255,80,60,0.6)',    icon: 'text' },
   { label: 'Video',  path: '/create-video',  bg: 'linear-gradient(135deg, #B44FFF 0%, #7C3AED 100%)', shadow: 'rgba(180,79,255,0.6)',  icon: 'video' },
   { label: 'Camera', path: '/create',        bg: 'linear-gradient(135deg, #FF4D8D 0%, #C2006B 100%)', shadow: 'rgba(255,45,141,0.65)', icon: 'camera' },
+  { label: 'Short Film', path: '/short-film', bg: 'linear-gradient(135deg, #FF9500 0%, #FF2D8D 50%, #8F3CFF 100%)', shadow: 'rgba(255,45,141,0.72)', icon: 'film' },
   { label: 'Photo',  path: '/create-photo',  bg: 'linear-gradient(135deg, #FF7043 0%, #FF2D8D 100%)', shadow: 'rgba(255,107,67,0.6)',  icon: 'photo' },
   { label: 'Live',   path: '/live',          bg: 'linear-gradient(135deg, #9B59F5 0%, #6D28D9 100%)', shadow: 'rgba(139,92,246,0.6)',  icon: 'live' },
 ];
@@ -47,6 +48,14 @@ function IconSVG({ type }) {
     <svg viewBox="0 0 24 24" {...s} fill="white" style={glow}>
       <path d="M20 5h-3.17L15 3H9L7.17 5H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2zm-8 13a5 5 0 1 1 0-10 5 5 0 0 1 0 10z"/>
       <circle cx="12" cy="13" r="2.2" fill="rgba(255,255,255,0.5)"/>
+    </svg>
+  );
+  if (type === 'film') return (
+    <svg viewBox="0 0 24 24" {...s} fill="none" stroke="white" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" style={glow}>
+      <rect x="3" y="5" width="18" height="14" rx="2.2" />
+      <path d="M7 5v14M17 5v14" />
+      <path d="M5 8h2M5 12h2M5 16h2M17 8h2M17 12h2M17 16h2" />
+      <path d="M11 9.5l4 2.5-4 2.5z" fill="white" stroke="none" />
     </svg>
   );
   if (type === 'photo') return (

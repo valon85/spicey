@@ -451,6 +451,9 @@ export default function Profile() {
     const updated = authUpdateSkipped ? null : await base44.auth.me().catch(() => null);
     setCurrentUser(prev => ({ ...(updated || prev || currentUser), avatar_url }));
     setProfileUser(prev => ({ ...(prev || {}), avatar_url }));
+    window.dispatchEvent(new CustomEvent('spicey-avatar-updated', {
+      detail: { user_id: currentUser.id, avatar_url },
+    }));
     queryClient.invalidateQueries({ queryKey: ['current-user'] });
     queryClient.invalidateQueries({ queryKey: ['profile'] });
   };
@@ -759,7 +762,13 @@ export default function Profile() {
           <div className="spicey-reference-top-right-mask" aria-hidden="true" />
           <div className="spicey-reference-top-logo-mask" aria-hidden="true" />
           <div className="spicey-reference-bottom-nav-mask" aria-hidden="true" />
-          <div className="spicey-reference-script-logo" aria-hidden="true">Spicey</div>
+          <div className="spicey-reference-script-logo" aria-label="Spicey">
+            <img
+              className="spicey-new-wordmark"
+              src="/spicey-assets/spicey-wordmark-20260722.png"
+              alt="Spicey"
+            />
+          </div>
           <div className="spicey-reference-top-controls">
             <button type="button" onClick={() => navigate(-1)} aria-label="Back">
               <ChevronLeft size={20} />

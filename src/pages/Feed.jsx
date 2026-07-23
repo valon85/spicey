@@ -156,6 +156,59 @@ function TrendingBar() {
 // Global user cache to prevent rate limiting
 const USER_CACHE = { user: null, fetched: false };
 
+function cleanText(value) {
+  return typeof value === 'string' && value.trim() ? value.trim() : '';
+}
+
+function pickAvatar(...values) {
+  return values.map(cleanText).find(Boolean) || '';
+}
+
+function userIdCandidates(user = {}) {
+  return [user.id, user.user_id, user.auth_user_id, user.created_by].map(cleanText).filter(Boolean);
+}
+
+function postAuthorIdCandidates(post = {}) {
+  return [post.author_id, post.user_id, post.created_by, post.owner_id, post.profile_user_id].map(cleanText).filter(Boolean);
+}
+
+function isOwnPost(post, user) {
+  const mine = new Set(userIdCandidates(user));
+  return postAuthorIdCandidates(post).some(id => mine.has(id));
+}
+
+const isVideoAvatarUrl = (url = '') => /\.(mp4|webm|mov|m4v)(\?|#|$)/i.test(String(url));
+
+function FeedAvatarMedia({ src, alt, className = '', fallbackName = 'User' }) {
+  const fallback = `https://ui-avatars.com/api/?name=${encodeURIComponent(fallbackName || 'User')}&background=ff5500&color=fff&size=180`;
+  const mediaSrc = pickAvatar(src) || fallback;
+
+  if (isVideoAvatarUrl(mediaSrc)) {
+    return (
+      <video
+        src={`${mediaSrc}#t=0.1`}
+        aria-label={alt}
+        className={className}
+        muted
+        playsInline
+        loop
+        autoPlay
+      />
+    );
+  }
+
+  return (
+    <img
+      src={mediaSrc}
+      alt={alt}
+      className={className}
+      onError={(event) => {
+        if (event.currentTarget.src !== fallback) event.currentTarget.src = fallback;
+      }}
+    />
+  );
+}
+
 function AIFloatingSection() {
   const { phase } = useAI();
   const [talkOpen, setTalkOpen] = React.useState(false);
@@ -386,7 +439,7 @@ function PremiumPostCard({ post, index = 0, onCommentClick, currentUser }) {
     return () => document.removeEventListener('pointerdown', closePicker);
   }, [moodPickerOpen]);
   const toggleReaction = async (key) => {
-    if (!post?.id || !currentUser?.id || reactionRequestRef.current[key]) return;
+    if (reactionRequestRef.current[key]) return;
     const nextActive = !reactions[key];
     const next = { ...reactions, [key]: nextActive };
     setReactions(next);
@@ -395,19 +448,6 @@ function PremiumPostCard({ post, index = 0, onCommentClick, currentUser }) {
       store[postKey] = next;
       localStorage.setItem('spicey_premium_reactions_v2', JSON.stringify(store));
     } catch {}
-    reactionRequestRef.current[key] = true;
-    try {
-      const response = await base44.functions.invoke('toggleReaction', { post_id: post.id, type: key });
-      const action = response?.data?.action || response?.action;
-      if (action && (action === 'added') !== nextActive) {
-        setReactions((previous) => ({ ...previous, [key]: action === 'added' }));
-      }
-    } catch (error) {
-      setReactions((previous) => ({ ...previous, [key]: !nextActive }));
-      console.error('[Feed] Reaction could not be saved:', error);
-    } finally {
-      reactionRequestRef.current[key] = false;
-    }
     if (nextActive && key === 'like') {
       window.clearTimeout(likeBurstTimerRef.current);
       setLikeBurst(prev => prev + 1);
@@ -417,6 +457,19 @@ function PremiumPostCard({ post, index = 0, onCommentClick, currentUser }) {
       window.clearTimeout(fireBurstTimerRef.current);
       setFireBurst(prev => prev + 1);
       fireBurstTimerRef.current = window.setTimeout(() => setFireBurst(0), 900);
+    }
+    if (!post?.id || !currentUser?.id) return;
+    reactionRequestRef.current[key] = true;
+    try {
+      const response = await base44.functions.invoke('toggleReaction', { post_id: post.id, type: key });
+      const action = response?.data?.action || response?.action;
+      if (action && (action === 'added') !== nextActive) {
+        setReactions((previous) => ({ ...previous, [key]: action === 'added' }));
+      }
+    } catch (error) {
+      console.warn('[Feed] Reaction kept locally; server save failed:', error?.message || error);
+    } finally {
+      reactionRequestRef.current[key] = false;
     }
   };
   const handleShare = async () => {
@@ -478,7 +531,7 @@ function PremiumPostCard({ post, index = 0, onCommentClick, currentUser }) {
     <>
     <article className="spicey-premium-post-card">
       <div className="post-head">
-        <img src={authorAvatar} alt={authorName} />
+        <FeedAvatarMedia src={authorAvatar} alt={authorName} fallbackName={authorName} />
         <div>
           <strong>{authorName}<VerifiedBadge type="vip" size="sm" /></strong>
           <span>{index === 0 ? '2h ago' : `${index + 2}h ago`}</span>
@@ -679,17 +732,21 @@ function PremiumLightFeed({ posts, isDark = false, currentUser, onVoiceOpen, onC
   }, [activeStoryCreators, clipCreators, currentUser]);
 
   const currentUserName = currentUser?.full_name || currentUser?.username || currentUser?.email?.split('@')[0] || 'You';
-  const currentUserAvatar = currentUser?.avatar_url
+  const currentUserAvatar = pickAvatar(currentUser?.avatar_url, currentUser?.photo_url, currentUser?.picture)
     || `https://ui-avatars.com/api/?name=${encodeURIComponent(currentUserName)}&background=ff5500&color=fff&size=180`;
 
   return (
     <div className="spicey-premium-feed-shell">
       <header className="spicey-premium-header">
         <div className="spicey-premium-corner-logo" aria-label="Spicey">
-          <img src="/spicey-assets/spicey-s-symbol.svg" alt="" />
+          <img src="/spicey-assets/spicey-real-s-logo-20260723.png" alt="" />
         </div>
         <div className="spicey-premium-wordmark" aria-label="Spicey">
-          <span>Spicey</span>
+          <img
+            className="spicey-new-wordmark"
+            src="/spicey-assets/spicey-wordmark-20260722.png"
+            alt="Spicey"
+          />
         </div>
         <div className="spicey-premium-actions">
           <button type="button" aria-label="Search" onClick={onSearchOpen}>
@@ -706,9 +763,9 @@ function PremiumLightFeed({ posts, isDark = false, currentUser, onVoiceOpen, onC
       </header>
 
       <section className="spicey-premium-stories" aria-label="Stories">
-        <button type="button" className="spicey-premium-story" onClick={onCreateOpen}>
+        <button type="button" className="spicey-premium-story spicey-premium-story-own" onClick={onCreateOpen}>
           <span className="ring">
-            <img src={currentUserAvatar} alt="Your Story" />
+            <FeedAvatarMedia src={currentUserAvatar} alt="Your Story" fallbackName={currentUserName} />
             <i>+</i>
           </span>
           <small>Your Story</small>
@@ -716,13 +773,13 @@ function PremiumLightFeed({ posts, isDark = false, currentUser, onVoiceOpen, onC
         {storyAvatars.map((story) => (
           <button type="button" key={story.creatorId || story.name} className="spicey-premium-story" onClick={() => onStoryOpen(story.creatorId)}>
             <span className="ring">
-              <img src={story.image} alt={story.name} />
+              <FeedAvatarMedia src={story.image} alt={story.name} fallbackName={story.name} />
               <b />
             </span>
             <small>{story.name}</small>
           </button>
         ))}
-        <button type="button" className="spicey-premium-story more" onClick={() => onStoryOpen()}>
+        <button type="button" className="spicey-premium-story spicey-premium-story-more more" onClick={() => onStoryOpen()}>
           <span className="ring">
             <UserRoundPlus size={27} />
             <b />
@@ -851,37 +908,61 @@ export default function Feed() {
     };
   }, []);
 
-  // Cache user at Feed level to prevent N auth.me() calls from PostCard instances
-  useEffect(() => {
-    if (!currentUser && !USER_CACHE.fetched) {
-      USER_CACHE.fetched = true;
-      base44.auth.me().then(async user => {
-        let mergedUser = user;
-        try {
-          const profiles = await base44.entities.UserProfile.filter({ user_id: user.id }, '-created_date', 1);
-          if (profiles?.[0]) {
-            mergedUser = {
-              ...user,
-              ...profiles[0],
-              id: user.id,
-              user_id: user.id,
-              profile_id: profiles[0].id,
-              email: user.email || profiles[0].email,
-              avatar_url: profiles[0].avatar_url || user.avatar_url || '',
-              full_name: profiles[0].full_name || user.full_name || user.email?.split('@')[0] || 'User',
-              username: profiles[0].username || user.username || user.email?.split('@')[0] || 'user',
-            };
-          }
-        } catch (_) {}
-        USER_CACHE.user = mergedUser;
-        setCurrentUser(mergedUser);
-      }).catch(() => {
-        USER_CACHE.fetched = false;
-      });
-    } else if (USER_CACHE.user) {
+  const loadCurrentUser = useCallback(async ({ force = false } = {}) => {
+    if (!force && USER_CACHE.user) {
       setCurrentUser(USER_CACHE.user);
+      return USER_CACHE.user;
+    }
+    if (!force && USER_CACHE.fetched) return USER_CACHE.user;
+
+    USER_CACHE.fetched = true;
+    try {
+      const user = await base44.auth.me();
+      if (!user?.id) return null;
+      let profile = null;
+      try {
+        const profiles = await base44.entities.UserProfile.filter({ user_id: user.id }, '-updated_date', 1)
+          .catch(() => base44.entities.UserProfile.filter({ user_id: user.id }, '-created_date', 1))
+          .catch(() => base44.entities.UserProfile.filter({ user_id: user.id }));
+        profile = profiles?.[0] || null;
+      } catch (_) {}
+      const mergedUser = {
+        ...user,
+        ...(profile || {}),
+        id: user.id,
+        user_id: user.id,
+        profile_id: profile?.id,
+        email: user.email || profile?.email,
+        avatar_url: pickAvatar(profile?.avatar_url, user.avatar_url, user.photo_url, user.picture),
+        full_name: cleanText(profile?.full_name) || cleanText(user.full_name) || user.email?.split('@')[0] || 'User',
+        username: cleanText(profile?.username) || cleanText(user.username) || user.email?.split('@')[0] || 'user',
+      };
+      USER_CACHE.user = mergedUser;
+      setCurrentUser(mergedUser);
+      return mergedUser;
+    } catch (_) {
+      USER_CACHE.fetched = false;
+      return null;
     }
   }, []);
+
+  useEffect(() => {
+    loadCurrentUser();
+  }, [loadCurrentUser]);
+
+  useEffect(() => {
+    const refreshCurrentUser = () => {
+      USER_CACHE.fetched = false;
+      USER_CACHE.user = null;
+      loadCurrentUser({ force: true });
+    };
+    window.addEventListener('focus', refreshCurrentUser);
+    window.addEventListener('spicey-avatar-updated', refreshCurrentUser);
+    return () => {
+      window.removeEventListener('focus', refreshCurrentUser);
+      window.removeEventListener('spicey-avatar-updated', refreshCurrentUser);
+    };
+  }, [loadCurrentUser]);
 
 
 
@@ -1185,33 +1266,42 @@ export default function Feed() {
   ];
 
   const { data: fetchedPosts = [] } = useQuery({
-    queryKey: ['posts'],
+    queryKey: ['posts', currentUser?.id, currentUser?.avatar_url],
     queryFn: async () => {
       const posts = await base44.entities.Post.list('-created_date', 20);
       const safePostsList = asArray(posts);
       const feedPosts = safePostsList.filter(p => p.post_type === 'feed' || !p.post_type);
       
-      const uniqueAuthorIds = [...new Set(asArray(feedPosts).map(p => p.author_id).filter(Boolean))];
+      const uniqueAuthorIds = [...new Set(asArray(feedPosts).flatMap(postAuthorIdCandidates).filter(Boolean))];
       let profilesByUserId = {};
       if (uniqueAuthorIds.length > 0) {
         try {
           const profiles = await base44.entities.UserProfile.list('-created_date', 500);
-          asArray(profiles).forEach(p => { if (p.user_id) profilesByUserId[p.user_id] = p; });
+          asArray(profiles).forEach(p => {
+            if (p.user_id) profilesByUserId[p.user_id] = p;
+            if (p.auth_user_id) profilesByUserId[p.auth_user_id] = p;
+          });
         } catch (e) {}
       }
       
       const enrichedPosts = asArray(feedPosts).map(post => {
-        const profile = profilesByUserId[post.author_id];
-        if (!profile) return post;
-        const realName = (profile.full_name && profile.full_name.trim()) ? profile.full_name : (post.author_name && post.author_name !== 'User' ? post.author_name : null);
-        const realAvatar = (profile.avatar_url && profile.avatar_url.trim()) ? profile.avatar_url : (post.author_avatar && post.author_avatar.trim() ? post.author_avatar : null);
+        const authorIds = postAuthorIdCandidates(post);
+        const profile = authorIds.map(id => profilesByUserId[id]).find(Boolean);
+        const own = isOwnPost(post, currentUser);
+        if (!profile && !own) return post;
+        const realName = (profile?.full_name && profile.full_name.trim()) ? profile.full_name : (post.author_name && post.author_name !== 'User' ? post.author_name : null);
+        const realAvatar = own
+          ? pickAvatar(currentUser?.avatar_url, profile?.avatar_url, post.author_avatar)
+          : pickAvatar(profile?.avatar_url, post.author_avatar);
         return {
           ...post,
-          author_name: realName || profile.username || post.author_username || 'User',
+          author_name: own
+            ? (cleanText(currentUser?.full_name) || cleanText(currentUser?.username) || realName || 'You')
+            : (realName || profile?.username || post.author_username || 'User'),
           author_avatar: realAvatar,
-          author_verification_badge: profile.verification_badge || null,
-          author_is_vip: Boolean(profile.is_vip || profile.verification_badge === 'vip'),
-          author_verified: Boolean(profile.verified || profile.verification_badge),
+          author_verification_badge: profile?.verification_badge || null,
+          author_is_vip: Boolean(profile?.is_vip || profile?.verification_badge === 'vip'),
+          author_verified: Boolean(profile?.verified || profile?.verification_badge),
         };
       });
       

@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Type, ImagePlus, Video, X } from 'lucide-react';
+import { Film, Type, ImagePlus, Video, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 export default function PostTypeSelector({ onClose }) {
@@ -32,6 +32,14 @@ export default function PostTypeSelector({ onClose }) {
       icon: Video,
       gradient: 'linear-gradient(135deg, #3b82f6, #10b981)',
     },
+    {
+      id: 'short-film',
+      label: 'Short Film',
+      description: 'Clips, title & music',
+      icon: Film,
+      gradient: 'linear-gradient(135deg, #ff7a18, #e91e8c, #8f3cff)',
+      route: '/short-film',
+    },
   ];
 
   return (
@@ -55,7 +63,7 @@ export default function PostTypeSelector({ onClose }) {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: i * 0.08 }}
-              onClick={() => handleSelect(opt.id)}
+              onClick={() => opt.route ? navigate(opt.route) : handleSelect(opt.id)}
               className="flex flex-col items-center gap-3 p-6 rounded-3xl"
               style={{
                 background: 'rgba(255,255,255,0.03)',

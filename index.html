@@ -496,6 +496,39 @@
         });
       })();
     </script>
+    <script>
+      (function installSpiceyRuntimeGuards() {
+        if (typeof window.mix === 'function') return;
+
+        function parseHexColor(value) {
+          var hex = String(value || '').trim().replace('#', '');
+          if (hex.length === 3) {
+            hex = hex.split('').map(function (ch) { return ch + ch; }).join('');
+          }
+          if (!/^[0-9a-fA-F]{6}$/.test(hex)) return null;
+          return [
+            parseInt(hex.slice(0, 2), 16),
+            parseInt(hex.slice(2, 4), 16),
+            parseInt(hex.slice(4, 6), 16)
+          ];
+        }
+
+        window.mix = function spiceySafeMix(from, to, amount) {
+          var t = Math.max(0, Math.min(1, Number(amount == null ? 0.5 : amount)));
+          if (typeof from === 'number' && typeof to === 'number') {
+            return from + (to - from) * t;
+          }
+          var a = parseHexColor(from);
+          var b = parseHexColor(to);
+          if (a && b) {
+            return 'rgb(' + a.map(function (part, index) {
+              return Math.round(part + (b[index] - part) * t);
+            }).join(', ') + ')';
+          }
+          return t < 0.5 ? from : to;
+        };
+      })();
+    </script>
   </head>
   <body>
 

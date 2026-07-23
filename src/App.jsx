@@ -24,6 +24,7 @@ import AIGenerator from './pages/AIGenerator.jsx';
 import CreateTextPost from './pages/CreateTextPost';
 import CreateVideoPost from './pages/CreateVideoPost';
 import CreatePhotoPost from './pages/CreatePhotoPost';
+import ShortFilmStudio from './pages/ShortFilmStudio.jsx';
 import CallDiagnostics from './pages/CallDiagnostics';
 import AdminPresetAvatars from './pages/AdminPresetAvatars';
 import AvatarCreator from './pages/AvatarCreator';
@@ -145,7 +146,7 @@ function AppContent() {
   // ─────────────────────────────────────────────────────────────────────────
 
   // Hide BottomNav on chat and creation pages
-  const HIDE_NAV_PATHS = ['/admin', '/live', '/avatar-creator', '/create-story-photo', '/create-story-video', '/create-story-video-upload', '/create-text-story', '/create-photo', '/create-video', '/create-text', '/reels', '/create', '/messages'];
+  const HIDE_NAV_PATHS = ['/admin', '/live', '/avatar-creator', '/create-story-photo', '/create-story-video', '/create-story-video-upload', '/create-text-story', '/create-photo', '/create-video', '/create-text', '/short-film', '/reels', '/create', '/messages'];
   const hideNav = HIDE_NAV_PATHS.some(p => location.pathname.startsWith(p));
 
   React.useEffect(() => {
@@ -229,6 +230,7 @@ function AppContent() {
             <Route path="/create-text" element={<CreateTextPost />} />
             <Route path="/create-video" element={<CreateVideoPost />} />
             <Route path="/create-photo" element={<CreatePhotoPost />} />
+            <Route path="/short-film" element={<ShortFilmStudio />} />
             <Route path="/ai" element={<AIGenerator />} />
             <Route path="/call-diag" element={<CallDiagnostics />} />
             <Route path="/admin/preset-avatars" element={adminPage(<AdminPresetAvatars />)} />
@@ -359,6 +361,7 @@ function AppContent() {
             <Route path="/create-text" element={<CreateTextPost />} />
             <Route path="/create-video" element={<CreateVideoPost />} />
             <Route path="/create-photo" element={<CreatePhotoPost />} />
+            <Route path="/short-film" element={<ShortFilmStudio />} />
             <Route path="/ai" element={<AIGenerator />} />
             <Route path="/call-diag" element={<CallDiagnostics />} />
             <Route path="/admin/preset-avatars" element={adminPage(<AdminPresetAvatars />)} />

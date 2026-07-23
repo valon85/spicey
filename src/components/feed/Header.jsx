@@ -35,9 +35,7 @@ function normalizeSearchUser(user) {
 function LogoWithDebugTap({ navigate, isLight }) {
   const tapCount = React.useRef(0);
   const tapTimer = React.useRef(null);
-  const headerImage = isLight
-    ? 'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=160&h=160&fit=crop&crop=face&q=90'
-    : 'https://media.base44.com/images/public/69fe90d3bbe7ad47925e4a0a/a645abc1a_6ab1672f-73ff-4c98-a1ef-817016549a2f.png';
+  const headerImage = '/spicey-assets/spicey-real-s-logo-20260723.png';
 
   const handleTap = () => {
     tapCount.current += 1;
@@ -54,14 +52,12 @@ function LogoWithDebugTap({ navigate, isLight }) {
     <div className="w-[52px] h-[52px] flex-shrink-0 flex items-center justify-center" style={{ position: 'relative' }} onClick={handleTap}>
       <img
         src={headerImage}
-        alt={isLight ? 'Your profile' : 'Spicey S'}
-        className="w-12 h-12 object-contain"
+        alt="Spicey"
+        className="w-12 h-12 object-contain spicey-original-feed-logo"
         style={{
-          filter: isLight ? 'none' : 'drop-shadow(0 0 10px rgba(255,106,0,0.85)) drop-shadow(0 0 18px rgba(255,45,85,0.45))',
-          transform: isLight ? 'none' : 'scale(1.1)',
+          filter: 'drop-shadow(0 0 10px rgba(255,106,0,0.42)) drop-shadow(0 0 16px rgba(255,45,143,0.28))',
         }}
       />
-      {isLight && <span className="spicey-header-online-dot" />}
     </div>
   );
 }
@@ -111,8 +107,8 @@ function NotificationBell({ isLight, navigate }) {
         }}
       />
       {unreadCount > 0 && (
-        <span className="absolute top-0 right-0 w-[15px] h-[15px] rounded-full bg-gradient-to-br from-[#FF6A00] to-[#FF2D55] text-[8px] font-black flex items-center justify-center text-white pointer-events-none"
-          style={{ boxShadow: '0 2px 6px rgba(255,106,0,0.4)' }}>
+        <span className="absolute top-[1px] right-[1px] min-w-[12px] h-[12px] px-[2px] rounded-full bg-gradient-to-br from-[#FF6A00] to-[#FF2D55] text-[7px] leading-none font-black flex items-center justify-center text-white pointer-events-none"
+          style={{ boxShadow: '0 1px 4px rgba(255,106,0,0.35)' }}>
           {unreadCount > 99 ? '99+' : unreadCount}
         </span>
       )}

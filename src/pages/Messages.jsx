@@ -58,6 +58,7 @@ import NewMessageSheet from '../components/panels/NewMessageSheet.jsx';
 import VerifiedBadge from '../components/shared/VerifiedBadge.jsx';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
+import SpiceyLogoText from '@/components/shared/SpiceyLogoText';
 
 const STORIES = [
   { name: 'Your Story', img: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&q=80', isYou: true },
@@ -445,9 +446,7 @@ export default function Messages() {
 
           {/* SPICEY logo */}
           <div className="messages-logo-center" style={{ position: 'absolute', left: '50%', top: '50%', transform: 'translate(-50%, -50%)', display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' }}>
-            <div className="messages-neon-wordmark" aria-label="SPICEY">
-              <span>SPICEY</span>
-            </div>
+            <SpiceyLogoText height={56} />
           </div>
 
           {/* Filter + menu */}
@@ -467,7 +466,7 @@ export default function Messages() {
             Messages
           </h2>
           {conversations.reduce((total, conversation) => total + Number(conversation.unread || 0), 0) > 0 && (
-            <span style={{ background: 'linear-gradient(135deg, #FF6B35, #e91e8c)', color: 'white', fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 20, boxShadow: '0 2px 8px rgba(255,107,53,0.4)' }}>
+            <span style={{ background: 'linear-gradient(135deg, #FF6B35, #e91e8c)', color: 'white', fontSize: 8, lineHeight: 1, fontWeight: 700, padding: '3px 6px', borderRadius: 10, boxShadow: '0 1px 5px rgba(255,107,53,0.3)' }}>
               {conversations.reduce((total, conversation) => total + Number(conversation.unread || 0), 0)} unread
             </span>
           )}

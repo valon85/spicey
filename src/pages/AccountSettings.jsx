@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ChevronLeft, ChevronRight, User, Lock, Shield, EyeOff, Users, HelpCircle, Flag, AlertTriangle, LogOut, Crown, Settings as SettingsIcon, Database, Bell, X, Key, Languages, FileText, Mail, Rocket } from 'lucide-react';
 import { usePageBackground } from '@/hooks/usePageBackground';
@@ -139,6 +139,19 @@ export default function AccountSettings() {
   const [isPrivate, setIsPrivate] = useState(false);
   const [blockedUsers, setBlockedUsers] = useState([]);
 
+  const refreshProfileUser = useCallback(async (userId = currentUser?.id) => {
+    if (!userId) return;
+    try {
+      const profiles = await base44.entities.UserProfile.filter({ user_id: userId }, '-updated_date', 1)
+        .catch(() => base44.entities.UserProfile.filter({ user_id: userId }, '-created_date', 1))
+        .catch(() => base44.entities.UserProfile.filter({ user_id: userId }));
+      if (profiles[0]) {
+        setProfileUser(profiles[0]);
+        setIsPrivate(profiles[0].is_private === true);
+      }
+    } catch (_) {}
+  }, [currentUser?.id]);
+
   useEffect(() => {
     setIsLight(theme === 'light');
     setIsDarkMode(theme === 'dark');
@@ -165,18 +178,23 @@ export default function AccountSettings() {
         }).catch(() => {
           if (u.email === 'info@spicey.live') setIsVIP(true);
         });
-        base44.entities.UserProfile.filter({ user_id: u.id }).then(profiles => {
-          if (profiles[0]) {
-            setProfileUser(profiles[0]);
-            setIsPrivate(profiles[0].is_private === true);
-          }
-        }).catch(() => {});
+        refreshProfileUser(u.id);
         base44.entities.Block.filter({ blocker_id: u.id }).then(blocks => {
           setBlockedUsers(Array.isArray(blocks) ? blocks : []);
         }).catch(() => {});
       }
     }).catch(() => {});
-  }, []);
+  }, [refreshProfileUser]);
+
+  useEffect(() => {
+    const refresh = () => refreshProfileUser();
+    window.addEventListener('focus', refresh);
+    window.addEventListener('spicey-avatar-updated', refresh);
+    return () => {
+      window.removeEventListener('focus', refresh);
+      window.removeEventListener('spicey-avatar-updated', refresh);
+    };
+  }, [refreshProfileUser]);
 
   const handleDeleteAccount = async () => {
     setDeleting(true);
@@ -243,7 +261,7 @@ export default function AccountSettings() {
             style={{ background: isLight ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.06)' }}>
             <ChevronLeft size={20} style={{ color: isLight ? '#1C1C1E' : 'white' }} />
           </motion.button>
-          <SpiceyLogoText height={80} />
+          <SpiceyLogoText height={38} />
           <div className="w-9 h-9" />
         </div>
       </div>
@@ -274,7 +292,6 @@ export default function AccountSettings() {
               <div className="flex-1">
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                   <span style={{ color: isLight ? '#1C1C1E' : 'white', fontSize: 16, fontWeight: 700 }}>{displayName}</span>
-                  {isVIP && <VerifiedBadge type="vip" size="sm" />}
                 </div>
                 <p style={{ color: isLight ? '#8E8E93' : 'rgba(255,255,255,0.45)', fontSize: 13, margin: '2px 0 6px' }}>@{username}</p>
                 {isVIP && (
@@ -301,37 +318,6 @@ export default function AccountSettings() {
             </div>
           </div>
         </div>
-
-        {isAdmin && (
-          <div style={{ margin: '0 16px 16px' }}>
-            <motion.button
-              whileTap={{ scale: 0.97 }}
-              onClick={() => navigate('/admin/release')}
-              style={{
-                width: '100%',
-                borderRadius: 20,
-                padding: '16px',
-                border: '1px solid rgba(255,107,53,0.28)',
-                background: 'linear-gradient(135deg, rgba(255,107,53,0.18), rgba(233,30,140,0.14), rgba(139,92,246,0.14))',
-                boxShadow: isLight ? '0 8px 24px rgba(255,107,53,0.16)' : '0 10px 30px rgba(233,30,140,0.18)',
-                display: 'flex',
-                alignItems: 'center',
-                cursor: 'pointer',
-              }}
-            >
-              <div className="flex-1 text-left">
-                <p style={{ color: isLight ? '#1C1C1E' : 'white', fontSize: 16, fontWeight: 800, margin: 0 }}>
-                  Publish & Downloads
-                </p>
-                <p style={{ color: isLight ? '#6B7280' : 'rgba(255,255,255,0.48)', fontSize: 12, margin: '3px 0 0' }}>
-                  Web publish, iOS and Android release tools
-                </p>
-              </div>
-              <ChevronRight size={18} style={{ color: isLight ? '#8E8E93' : 'rgba(255,255,255,0.45)' }} />
-            </motion.button>
-          </div>
-        )}
-
         {/* Account */}
         <SectionCard title="Account" icon={User} iconColor="#8b5cf6" isLight={isLight}>
           <SettingsRow icon={User} iconBg="linear-gradient(135deg, #8b5cf6, #5E5CE6)" label="Edit Profile" sub="Update your info and photo" onClick={() => setShowEditProfile(true)} isLight={isLight} />
@@ -346,7 +332,7 @@ export default function AccountSettings() {
               <p className="text-[10.5px] mt-0.5" style={{ color: isLight ? '#8E8E93' : 'rgba(255,255,255,0.35)' }}>{isPrivate ? 'Only followers see your content' : 'Everyone can see your content'}</p>
             </div>
             <motion.button whileTap={{ scale: 0.95 }} onClick={handleTogglePrivate}
-              style={{ width: 40, height: 23, borderRadius: 12, background: isPrivate ? '#34C759' : 'rgba(120,120,128,0.2)', position: 'relative', border: 'none', cursor: 'pointer', flexShrink: 0, transition: 'background 0.25s' }}>
+              style={{ width: 40, height: 23, borderRadius: 12, background: isPrivate ? '#FF6B35' : 'rgba(120,120,128,0.2)', position: 'relative', border: 'none', cursor: 'pointer', flexShrink: 0, transition: 'background 0.25s' }}>
               <motion.div animate={{ x: isPrivate ? 19 : 2 }} transition={{ type: 'spring', stiffness: 400, damping: 30 }}
                 style={{ position: 'absolute', top: 2, width: 19, height: 19, borderRadius: '50%', background: 'white', boxShadow: '0 2px 6px rgba(0,0,0,0.25)' }} />
             </motion.button>
@@ -365,7 +351,7 @@ export default function AccountSettings() {
               <p className="text-[10.5px] mt-0.5" style={{ color: isLight ? '#8E8E93' : 'rgba(255,255,255,0.35)' }}>Switch between light and dark</p>
             </div>
             <motion.button whileTap={{ scale: 0.95 }} onClick={toggleTheme}
-              style={{ width: 40, height: 23, borderRadius: 12, background: isDarkMode ? '#34C759' : 'rgba(120,120,128,0.2)', position: 'relative', border: 'none', cursor: 'pointer', flexShrink: 0, transition: 'background 0.25s' }}>
+              style={{ width: 40, height: 23, borderRadius: 12, background: isDarkMode ? '#FF6B35' : 'rgba(120,120,128,0.2)', position: 'relative', border: 'none', cursor: 'pointer', flexShrink: 0, transition: 'background 0.25s' }}>
               <motion.div animate={{ x: isDarkMode ? 19 : 2 }} transition={{ type: 'spring', stiffness: 400, damping: 30 }}
                 style={{ position: 'absolute', top: 2, width: 19, height: 19, borderRadius: '50%', background: 'white', boxShadow: '0 2px 6px rgba(0,0,0,0.25)' }} />
             </motion.button>
@@ -497,7 +483,7 @@ export default function AccountSettings() {
           {['Likes & Reactions', 'Comments', 'New Followers', 'Direct Messages', 'Live Streams'].map(label => (
             <div key={label} className="flex items-center justify-between" style={{ padding: '12px 14px', borderRadius: 12, background: isLight ? '#F2F2F7' : 'rgba(255,255,255,0.06)' }}>
               <p className="font-semibold text-sm" style={{ color: isLight ? '#1C1C1E' : 'white' }}>{label}</p>
-              <div style={{ width: 40, height: 24, borderRadius: 12, background: '#34C759', position: 'relative' }}>
+              <div style={{ width: 40, height: 24, borderRadius: 12, background: '#FF6B35', position: 'relative' }}>
                 <div style={{ position: 'absolute', right: 2, top: 2, width: 20, height: 20, borderRadius: '50%', background: 'white', boxShadow: '0 1px 4px rgba(0,0,0,0.2)' }} />
               </div>
             </div>

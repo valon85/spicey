@@ -12,21 +12,7 @@ import LocationContentModal from '@/components/map/LocationContentModal';
 const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN || '';
 mapboxgl.accessToken = MAPBOX_TOKEN;
 
-const SPICEY_DARK_MAP_STYLE = 'mapbox://styles/mapbox/navigation-night-v1';
-const SPICEY_WORLD_CENTER = [12, 48];
-
-const applySpiceyWorldAtmosphere = (map) => {
-  try { map.setProjection('globe'); } catch {}
-  try {
-    map.setFog({
-      color: '#05030c',
-      'high-color': '#11162b',
-      'horizon-blend': 0.16,
-      'space-color': '#000007',
-      'star-intensity': 0.72,
-    });
-  } catch {}
-};
+const SPICEY_ORIGINAL_LOGO = '/spicey-assets/spicey-talk-wordmark-original-20260723.png';
 
 const MAP_PREVIEW_PINS = [
   { name: '@sarah.vibes', place: 'Riverside Park', live: true, left: '16%', top: '40%', lat: 40.8007, lng: -73.9702, image: 'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=180&h=180&fit=crop&crop=faces' },
@@ -188,14 +174,6 @@ if (typeof document !== 'undefined') {
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
-function safeRemoveMarker(marker) {
-  try {
-    if (marker && typeof marker.remove === 'function') marker.remove();
-  } catch (error) {
-    console.warn('[MAP] Marker remove skipped:', error?.message || error);
-  }
-}
-
 function timeAgo(d) {
   if (!d) return 'now';
   const s = (Date.now() - new Date(d).getTime()) / 1000;
@@ -734,11 +712,26 @@ function buildCityEl(cityName, postCount, options = {}) {
 // ── Helper: Add custom layers (roads, water, buildings) ───────────────────────
 function addCustomLayers(map) {
   if (!map || !map.getSource('composite')) return;
-  const mapIsLight = false;
-  const waterFill = '#38aee8';
-  const waterLine = '#75d7ff';
-  const landFill = '#120719';
-  const bgFill = '#050917';
+  const queryWantsLight = typeof window !== 'undefined'
+    && ['1', 'true', 'light'].includes(new URLSearchParams(window.location.search).get('lite') || '')
+    || (typeof window !== 'undefined' && ['1', 'true'].includes(new URLSearchParams(window.location.search).get('light') || ''));
+  const mapIsLight = typeof document !== 'undefined'
+    && (queryWantsLight
+      || document.documentElement.classList.contains('light')
+      || document.documentElement.classList.contains('light-mode')
+      || document.body?.classList.contains('light')
+      || document.body?.classList.contains('light-mode')
+      || document.documentElement.getAttribute('data-theme') === 'light'
+      || document.documentElement.getAttribute('data-vip-theme') === 'light'
+      || document.body?.getAttribute('data-theme') === 'light'
+      || document.body?.getAttribute('data-vip-theme') === 'light'
+      || localStorage.getItem('theme') === 'light'
+      || localStorage.getItem('spicey_theme') === 'light'
+      || localStorage.getItem('vip-theme') === 'light');
+  const waterFill = mapIsLight ? '#34c8ff' : '#071a32';
+  const waterLine = mapIsLight ? '#0077ff' : '#143b66';
+  const landFill = mapIsLight ? '#ffffff' : '#120719';
+  const bgFill = mapIsLight ? '#ffffff' : '#050917';
   const forceWaterPaint = () => {
     try {
       const layers = map.getStyle()?.layers || [];
@@ -749,13 +742,13 @@ function addCustomLayers(map) {
         const isWater = /water|waterway|ocean|sea|marine|river|stream|canal|lake/i.test(key);
         if (!isWater) return;
         if (layer.type === 'fill') {
-          try { map.setPaintProperty(id, 'fill-color', waterFill); } catch {}
-          try { map.setPaintProperty(id, 'fill-opacity', 0.68); } catch {}
-          try { map.setPaintProperty(id, 'fill-outline-color', waterLine); } catch {}
+          try { map.setPaintProperty(id, 'fill-color', mapIsLight ? '#00aaff' : waterFill); } catch {}
+          try { map.setPaintProperty(id, 'fill-opacity', mapIsLight ? 1 : 0.96); } catch {}
+          try { map.setPaintProperty(id, 'fill-outline-color', mapIsLight ? '#0077ff' : waterLine); } catch {}
         }
         if (layer.type === 'line') {
-          try { map.setPaintProperty(id, 'line-color', waterLine); } catch {}
-          try { map.setPaintProperty(id, 'line-opacity', mapIsLight ? 0.95 : 0.58); } catch {}
+          try { map.setPaintProperty(id, 'line-color', mapIsLight ? '#0077ff' : waterLine); } catch {}
+          try { map.setPaintProperty(id, 'line-opacity', mapIsLight ? 0.95 : 0.32); } catch {}
           try { map.setPaintProperty(id, 'line-width', ['interpolate', ['linear'], ['zoom'], 0, 0.65, 8, 1.2, 14, 2.2]); } catch {}
         }
       });
@@ -772,7 +765,13 @@ function addCustomLayers(map) {
       });
     }
     map.setTerrain({ source: 'mapbox-dem', exaggeration: 1.55 });
-    map.setFog(null);
+    map.setFog({
+      color: mapIsLight ? '#eef8ff' : '#0b1020',
+      'high-color': mapIsLight ? '#bceaff' : '#231342',
+      'horizon-blend': mapIsLight ? 0.16 : 0.18,
+      'space-color': mapIsLight ? '#f8fbff' : '#050917',
+      'star-intensity': mapIsLight ? 0 : 0.25,
+    });
   } catch {}
 
   // Remove existing custom layers first to avoid duplicates
@@ -795,29 +794,28 @@ function addCustomLayers(map) {
 
         if (layer.type === 'background') {
           try { map.setPaintProperty(id, 'background-color', bgFill); } catch {}
-          try { map.setPaintProperty(id, 'background-opacity', mapIsLight ? 1 : 0.92); } catch {}
         }
         if (layer.type === 'fill' && /water/i.test(key)) {
-          try { map.setPaintProperty(id, 'fill-color', waterFill); } catch {}
-          try { map.setPaintProperty(id, 'fill-opacity', 0.68); } catch {}
-          try { map.setPaintProperty(id, 'fill-outline-color', waterLine); } catch {}
+          try { map.setPaintProperty(id, 'fill-color', mapIsLight ? '#00aaff' : waterFill); } catch {}
+          try { map.setPaintProperty(id, 'fill-opacity', mapIsLight ? 1 : 0.94); } catch {}
+          try { map.setPaintProperty(id, 'fill-outline-color', mapIsLight ? '#0077ff' : waterLine); } catch {}
         }
         if (layer.type === 'line' && /water|river|stream|canal/i.test(key)) {
           try { map.setPaintProperty(id, 'line-color', waterLine); } catch {}
-          try { map.setPaintProperty(id, 'line-opacity', mapIsLight ? 0.86 : 0.58); } catch {}
+          try { map.setPaintProperty(id, 'line-opacity', mapIsLight ? 0.86 : 0.24); } catch {}
         }
         if (layer.type === 'fill' && /land|park|green|wood|grass|national|pitch|cemetery|golf/i.test(key)) {
           try { map.setPaintProperty(id, 'fill-color', landFill); } catch {}
-          try { map.setPaintProperty(id, 'fill-opacity', mapIsLight ? 0.98 : 0.98); } catch {}
+          try { map.setPaintProperty(id, 'fill-opacity', mapIsLight ? 0.98 : 0.94); } catch {}
         }
         if (mapIsLight && layer.type === 'fill' && !/water|building/i.test(key)) {
           try { map.setPaintProperty(id, 'fill-color', '#ffffff'); } catch {}
           try { map.setPaintProperty(id, 'fill-opacity', 0.96); } catch {}
         }
         if (layer.type === 'line' && /admin|boundary|border|country|state/i.test(key)) {
-          try { map.setPaintProperty(id, 'line-color', mapIsLight ? '#ff8adf' : '#ff8a3d'); } catch {}
-          try { map.setPaintProperty(id, 'line-opacity', mapIsLight ? 0.28 : 0.52); } catch {}
-          try { map.setPaintProperty(id, 'line-width', ['interpolate', ['linear'], ['zoom'], 0, 0.45, 3, 0.68, 6, 0.92]); } catch {}
+          try { map.setPaintProperty(id, 'line-color', mapIsLight ? '#ff8adf' : '#6f5cff'); } catch {}
+          try { map.setPaintProperty(id, 'line-opacity', mapIsLight ? 0.28 : 0.26); } catch {}
+          try { map.setPaintProperty(id, 'line-width', ['interpolate', ['linear'], ['zoom'], 0, 0.25, 3, 0.42, 6, 0.72]); } catch {}
         }
       });
     } catch {}
@@ -832,9 +830,9 @@ function addCustomLayers(map) {
       'source-layer': 'water',
       type: 'fill',
       paint: {
-        'fill-color': waterFill,
-        'fill-opacity': 0.68,
-        'fill-outline-color': waterLine,
+        'fill-color': mapIsLight ? '#00aaff' : waterFill,
+        'fill-opacity': mapIsLight ? 1 : 0.94,
+        'fill-outline-color': mapIsLight ? '#0077ff' : waterLine,
       },
     });
   } catch {}
@@ -849,9 +847,9 @@ function addCustomLayers(map) {
       type: 'line',
       minzoom: 0,
       paint: {
-        'line-color': mapIsLight ? '#ff8adf' : '#ff8a3d',
-        'line-width': ['interpolate', ['linear'], ['zoom'], 0, 0.48, 3, 0.72, 6, 0.95],
-        'line-opacity': mapIsLight ? 0.34 : 0.58,
+        'line-color': mapIsLight ? '#ff8adf' : '#6f5cff',
+        'line-width': ['interpolate', ['linear'], ['zoom'], 0, 0.25, 3, 0.45, 6, 0.75],
+        'line-opacity': mapIsLight ? 0.34 : 0.34,
       },
     });
   } catch {}
@@ -865,9 +863,9 @@ function addCustomLayers(map) {
       type: 'line',
       minzoom: 4,
       paint: {
-        'line-color': mapIsLight ? '#ffb15c' : '#9b7cff',
-        'line-width': ['interpolate', ['linear'], ['zoom'], 4, 0.38, 7, 0.68, 9, 0.95],
-        'line-opacity': mapIsLight ? 0.20 : 0.42,
+        'line-color': mapIsLight ? '#ffb15c' : '#7c3cff',
+        'line-width': ['interpolate', ['linear'], ['zoom'], 4, 0.25, 7, 0.55, 9, 0.85],
+        'line-opacity': mapIsLight ? 0.20 : 0.24,
       },
     });
   } catch {}
@@ -1135,7 +1133,6 @@ export default function ContactsMap() {
   const navigate = useNavigate();
   const mapContainer = useRef(null);
   const mapRef = useRef(null);
-  const mapStyleModeRef = useRef(null);
   const markersRef = useRef({});
   const previewMarkersRef = useRef([]);
   const cityMarkersRef = useRef([]);
@@ -1148,13 +1145,12 @@ export default function ContactsMap() {
   const [showPostsModal, setShowPostsModal] = useState(false);
   const [selectedCity, setSelectedCity] = useState(null);
   const [mapReady, setMapReady] = useState(false);
-  const [mapError, setMapError] = useState('');
   const [visibleCities, setVisibleCities] = useState([]);
   const [mapViewMode, setMapViewMode] = useState('neon');
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [locationPanelOpen, setLocationPanelOpen] = useState(false);
-  const [trendingCollapsed, setTrendingCollapsed] = useState(false);
+  const [trendingCollapsed, setTrendingCollapsed] = useState(true);
   const [currentLocation, setCurrentLocation] = useState(null);
   const [gpsStatus, setGpsStatus] = useState('idle');
   const [gpsError, setGpsError] = useState('');
@@ -1164,7 +1160,7 @@ export default function ContactsMap() {
   useEffect(() => { base44.auth.me().then(setMe).catch(() => {}); }, []);
 
   useEffect(() => {
-    setTrendingCollapsed(false);
+    setTrendingCollapsed(true);
   }, []);
 
   // Debug: log GPS status on mount
@@ -1320,32 +1316,43 @@ export default function ContactsMap() {
     }
   }, [myProfile?.share_location]);
 
-  const getIsLightMapTheme = () => {
-    const requestedTheme = new URLSearchParams(window.location.search).get('previewTheme');
-    if (requestedTheme === 'light') return true;
-    if (requestedTheme === 'dark') return false;
-    return document.documentElement.classList.contains('light-mode')
-      || document.body?.classList.contains('light-mode')
-      || document.documentElement.dataset.theme === 'light';
-  };
+  const getIsLightMapTheme = () => (
+    typeof document !== 'undefined'
+      && (((typeof window !== 'undefined') && (
+        ['1', 'true', 'light'].includes(new URLSearchParams(window.location.search).get('lite') || '')
+        || ['1', 'true'].includes(new URLSearchParams(window.location.search).get('light') || '')
+      ))
+        || document.documentElement.classList.contains('light')
+        || document.documentElement.classList.contains('light-mode')
+        || document.body?.classList.contains('light')
+        || document.body?.classList.contains('light-mode')
+        || document.body?.getAttribute('data-theme') === 'light'
+        || document.body?.getAttribute('data-vip-theme') === 'light'
+        || document.documentElement.getAttribute('data-theme') === 'light'
+        || document.documentElement.getAttribute('data-vip-theme') === 'light'
+        || localStorage.getItem('theme') === 'light'
+        || localStorage.getItem('spicey_theme') === 'light'
+        || localStorage.getItem('vip-theme') === 'light')
+  );
 
-  // Keep the night globe identical in both app themes; only the surrounding UI follows the app theme.
+  // Match app theme: light mode keeps Spicey neon UI, but map base becomes white/blue.
   useEffect(() => {
     const check = () => {
       const nextIsLight = getIsLightMapTheme();
       setIsLight(nextIsLight);
       if (mapRef.current && mapReady) {
         if (mapViewMode !== 'satellite') {
-          const desiredStyle = SPICEY_DARK_MAP_STYLE;
-          const desiredMode = 'dark';
-          if (mapStyleModeRef.current !== desiredMode) {
-            mapStyleModeRef.current = desiredMode;
+          const desiredStyle = nextIsLight ? 'mapbox://styles/mapbox/light-v11' : 'mapbox://styles/mapbox/dark-v11';
+          const sprite = mapRef.current.getStyle()?.sprite || '';
+          const isCurrentLight = sprite.includes('light');
+          const isCurrentDark = sprite.includes('dark');
+          if ((nextIsLight && !isCurrentLight) || (!nextIsLight && !isCurrentDark)) {
             mapRef.current.setStyle(desiredStyle);
-            mapRef.current.once('style.load', () => restoreSpiceyMapVisuals(250));
+            mapRef.current.once('style.load', () => setTimeout(() => addCustomLayers(mapRef.current), 250));
             return;
           }
         }
-        restoreSpiceyMapVisuals(250);
+        setTimeout(() => addCustomLayers(mapRef.current), 250);
       }
     };
     check();
@@ -1474,145 +1481,6 @@ export default function ContactsMap() {
 
   const defaultCenter = [-73.9855, 40.758];
 
-  const makeTowerBox = ([lng, lat], width, depth, props = {}) => {
-    const lngStep = width / 2;
-    const latStep = depth / 2;
-    return {
-      type: 'Feature',
-      properties: props,
-      geometry: {
-        type: 'Polygon',
-        coordinates: [[
-          [lng - lngStep, lat - latStep],
-          [lng + lngStep, lat - latStep],
-          [lng + lngStep, lat + latStep],
-          [lng - lngStep, lat + latStep],
-          [lng - lngStep, lat - latStep],
-        ]],
-      },
-    };
-  };
-
-  const makeTowerPoint = ([lng, lat], props = {}) => ({
-    type: 'Feature',
-    properties: props,
-    geometry: { type: 'Point', coordinates: [lng, lat] },
-  });
-
-  const addSpiceyLandmarkTower = (m, lightTheme) => {
-    if (!m.getSource('spicey-landmark-tower')) {
-      const towerCenter = [-73.9855, 40.75815];
-      m.addSource('spicey-landmark-tower', {
-        type: 'geojson',
-        data: {
-          type: 'FeatureCollection',
-          features: [
-            makeTowerBox(towerCenter, 0.00108, 0.00082, {
-              base: 0,
-              height: 170,
-              color: lightTheme ? '#ff7a1a' : '#161018',
-              glow: lightTheme ? '#ff8a00' : '#ff6b00',
-            }),
-            makeTowerBox(towerCenter, 0.00078, 0.0006, {
-              base: 160,
-              height: 270,
-              color: lightTheme ? '#ff2d8e' : '#26101f',
-              glow: '#ff2d8e',
-            }),
-            makeTowerBox(towerCenter, 0.00052, 0.00042, {
-              base: 255,
-              height: 350,
-              color: lightTheme ? '#a020f0' : '#371052',
-              glow: '#ff4fd8',
-            }),
-            makeTowerBox(towerCenter, 0.0002, 0.00018, {
-              base: 345,
-              height: 470,
-              color: lightTheme ? '#ffffff' : '#ff6adf',
-              glow: '#ff4fd8',
-            }),
-          ],
-        },
-      });
-    }
-
-    if (!m.getSource('spicey-landmark-glow')) {
-      m.addSource('spicey-landmark-glow', {
-        type: 'geojson',
-        data: {
-          type: 'FeatureCollection',
-          features: [
-            makeTowerPoint([-73.9855, 40.75815], { size: 46 }),
-            makeTowerPoint([-73.9855, 40.75815], { size: 18 }),
-          ],
-        },
-      });
-    }
-
-    if (!m.getLayer('spicey-landmark-ground-glow')) {
-      m.addLayer({
-        id: 'spicey-landmark-ground-glow',
-        source: 'spicey-landmark-glow',
-        type: 'circle',
-        minzoom: 11,
-        paint: {
-          'circle-radius': ['interpolate', ['linear'], ['zoom'], 11, 22, 15, 54, 18, 96],
-          'circle-color': lightTheme ? '#ff7a1a' : '#ff2d8e',
-          'circle-opacity': ['interpolate', ['linear'], ['zoom'], 11, 0.1, 15, 0.32, 18, 0.46],
-          'circle-blur': 0.78,
-        },
-      });
-    }
-
-    if (!m.getLayer('spicey-landmark-tower-fill')) {
-      m.addLayer({
-        id: 'spicey-landmark-tower-fill',
-        source: 'spicey-landmark-tower',
-        type: 'fill-extrusion',
-        minzoom: 11,
-        paint: {
-          'fill-extrusion-color': ['get', 'color'],
-          'fill-extrusion-height': ['get', 'height'],
-          'fill-extrusion-base': ['get', 'base'],
-          'fill-extrusion-opacity': lightTheme ? 0.94 : 0.98,
-          'fill-extrusion-vertical-gradient': true,
-        },
-      });
-      try { m.setPaintProperty('spicey-landmark-tower-fill', 'fill-extrusion-emissive-strength', lightTheme ? 0.55 : 1); } catch {}
-      try { m.setPaintProperty('spicey-landmark-tower-fill', 'fill-extrusion-flood-light-color', '#ff2d8e'); } catch {}
-      try { m.setPaintProperty('spicey-landmark-tower-fill', 'fill-extrusion-flood-light-intensity', 0.92); } catch {}
-    }
-
-    if (!m.getLayer('spicey-landmark-edge-glow')) {
-      m.addLayer({
-        id: 'spicey-landmark-edge-glow',
-        source: 'spicey-landmark-tower',
-        type: 'line',
-        minzoom: 11,
-        paint: {
-          'line-color': ['get', 'glow'],
-          'line-width': ['interpolate', ['linear'], ['zoom'], 11, 2.2, 15, 5.2, 18, 8],
-          'line-opacity': lightTheme ? 0.65 : 0.9,
-          'line-blur': 1.35,
-        },
-      });
-    }
-  };
-
-  const restoreSpiceyMapVisuals = (delay = 250) => {
-    setTimeout(() => {
-      const m = mapRef.current;
-      if (!m) return;
-      try { addCustomLayers(m); } catch {}
-      applySpiceyWorldAtmosphere(m);
-      try { addSpiceyLandmarkTower(m, getIsLightMapTheme()); } catch {}
-      try {
-        m.resize();
-        if (m.getPitch() < 50 && m.getZoom() > 10) m.easeTo({ pitch: 68, duration: 250 });
-      } catch {}
-    }, delay);
-  };
-
   // ── Init Mapbox ──────────────────────────────────────────────────────────────
   useEffect(() => {
     if (mapRef.current || !mapContainer.current) return;
@@ -1621,31 +1489,22 @@ export default function ContactsMap() {
     const startLight = getIsLightMapTheme();
     setIsLight(startLight);
 
-    let m;
-    try {
-      m = new mapboxgl.Map({
-        container: mapContainer.current,
-        style: SPICEY_DARK_MAP_STYLE,
-        center: SPICEY_WORLD_CENTER,
-        zoom: 2.2,
-        pitch: 0,
-        bearing: 0,
-        projection: 'globe',
-        antialias: true,
-        interactive: true,
-        dragPan: true,
-        dragRotate: true,
-        touchZoomRotate: true,
-        scrollZoom: true,
-      });
-    } catch (error) {
-      console.warn('[MAP] Mapbox init failed:', error);
-      setMapError(error?.message || 'Map could not load');
-      return;
-    }
+    const m = new mapboxgl.Map({
+      container: mapContainer.current,
+      style: startLight ? 'mapbox://styles/mapbox/light-v11' : 'mapbox://styles/mapbox/dark-v11',
+      center: defaultCenter,
+      zoom: 15.15,
+      pitch: 68,
+      bearing: -31,
+      antialias: true,
+      interactive: true,
+      dragPan: true,
+      dragRotate: true,
+      touchZoomRotate: true,
+      scrollZoom: true,
+    });
 
     mapRef.current = m;
-    mapStyleModeRef.current = 'dark';
     if (typeof window !== 'undefined') window.__spiceyMap = m;
     try {
       m.dragPan.enable();
@@ -1655,15 +1514,9 @@ export default function ContactsMap() {
       m.doubleClickZoom.enable();
     } catch {}
 
-    const readyTimer = window.setTimeout(() => {
-      setMapError('Map is taking too long to load');
-    }, 5000);
-
     m.on('load', () => {
-      window.clearTimeout(readyTimer);
-      setMapError('');
-      const initialWaterFill = '#38aee8';
-      const initialWaterOpacity = 0.68;
+      const initialWaterFill = startLight ? '#00aaff' : '#071a32';
+      const initialWaterOpacity = startLight ? 1 : 0.94;
 
       // ── Light mode water / oceans / seas / lakes / rivers ─────────────────────
       try {
@@ -1675,7 +1528,7 @@ export default function ContactsMap() {
           paint: {
             'fill-color': initialWaterFill,
             'fill-opacity': initialWaterOpacity,
-            'fill-outline-color': '#75d7ff',
+            'fill-outline-color': startLight ? '#0077ff' : '#143b66',
           },
         });
       } catch {
@@ -1685,7 +1538,7 @@ export default function ContactsMap() {
             source: 'composite',
             'source-layer': 'water',
             type: 'fill',
-            paint: { 'fill-color': initialWaterFill, 'fill-opacity': initialWaterOpacity, 'fill-outline-color': '#75d7ff' },
+            paint: { 'fill-color': initialWaterFill, 'fill-opacity': initialWaterOpacity, 'fill-outline-color': startLight ? '#0077ff' : '#143b66' },
           });
         } catch {}
       }
@@ -1718,8 +1571,6 @@ export default function ContactsMap() {
         try { m.setPaintProperty('3d-buildings', 'fill-extrusion-flood-light-intensity', startLight ? 0.58 : 0.72); } catch {}
         try { m.setPaintProperty('3d-buildings', 'fill-extrusion-ambient-occlusion-intensity', 0.55); } catch {}
       } catch {}
-
-      addSpiceyLandmarkTower(m, startLight);
 
       try {
         m.addLayer({
@@ -1837,16 +1688,10 @@ export default function ContactsMap() {
       setTimeout(() => {
         try {
           m.resize();
-          applySpiceyWorldAtmosphere(m);
-          m.easeTo({ center: SPICEY_WORLD_CENTER, zoom: 2.2, pitch: 0, bearing: 0, duration: 0 });
+          m.easeTo({ center: defaultCenter, zoom: 15.4, pitch: 68, bearing: -31, duration: 0 });
         } catch {}
       }, 250);
       setMapReady(true);
-    });
-
-    m.on('error', (event) => {
-      console.warn('[MAP] Mapbox error:', event?.error || event);
-      setMapError(event?.error?.message || 'Mapbox could not load the map');
     });
 
     // Keep the map in a strong 3D angle while users zoom around.
@@ -1861,14 +1706,13 @@ export default function ContactsMap() {
     addCustomLayers(m);
 
     return () => {
-      window.clearTimeout(readyTimer);
-      Object.values(markersRef.current).forEach(safeRemoveMarker);
+      Object.values(markersRef.current).forEach(mk => mk.remove());
       markersRef.current = {};
-      previewMarkersRef.current.forEach(safeRemoveMarker);
+      previewMarkersRef.current.forEach(mk => mk.remove());
       previewMarkersRef.current = [];
-      cityMarkersRef.current.forEach(safeRemoveMarker);
+      cityMarkersRef.current.forEach(mk => mk.remove());
       cityMarkersRef.current = [];
-      try { m.remove(); } catch {}
+      m.remove();
       mapRef.current = null;
     };
   }, []);
@@ -1915,7 +1759,7 @@ export default function ContactsMap() {
       const id = '__me__';
       currentIds.add(id);
       if (markersRef.current[id]?.getElement?.()?.dataset?.avatarSrc !== (myAvatarUrl || markersRef.current[id]?.getElement?.()?.dataset?.avatarSrc)) {
-        safeRemoveMarker(markersRef.current[id]);
+        markersRef.current[id].remove();
         delete markersRef.current[id];
       }
       if (!markersRef.current[id]) {
@@ -1935,7 +1779,7 @@ export default function ContactsMap() {
       currentIds.add(id);
       const avatarUrl = getProfileAvatarUrl(p);
       if (markersRef.current[id]?.getElement?.()?.dataset?.avatarSrc !== (avatarUrl || markersRef.current[id]?.getElement?.()?.dataset?.avatarSrc)) {
-        safeRemoveMarker(markersRef.current[id]);
+        markersRef.current[id].remove();
         delete markersRef.current[id];
       }
       if (!markersRef.current[id]) {
@@ -1952,7 +1796,7 @@ export default function ContactsMap() {
     });
 
     Object.keys(markersRef.current).forEach(id => {
-      if (!currentIds.has(id)) { safeRemoveMarker(markersRef.current[id]); delete markersRef.current[id]; }
+      if (!currentIds.has(id)) { markersRef.current[id].remove(); delete markersRef.current[id]; }
     });
   }, [visible, myProfile, currentLocation, locationSharing, mapReady]);
 
@@ -2046,7 +1890,7 @@ export default function ContactsMap() {
   // ── City markers ─────────────────────────────────────────────────────────────
   useEffect(() => {
     if (!mapRef.current || !mapReady) return;
-    cityMarkersRef.current.forEach(safeRemoveMarker);
+    cityMarkersRef.current.forEach(m => m.remove());
     cityMarkersRef.current = [];
     visibleCities.forEach(city => {
       const el = buildCityEl(city.name, cityPostCounts[city.name] || 0, {
@@ -2105,7 +1949,7 @@ export default function ContactsMap() {
   useEffect(() => {
     if (!mapRef.current || !mapReady) return;
 
-    previewMarkersRef.current.forEach(safeRemoveMarker);
+    previewMarkersRef.current.forEach(mk => mk.remove());
     previewMarkersRef.current = MAP_PREVIEW_PINS.map(pin => {
       const username = pin.name.replace('@', '');
       const profile = {
@@ -2128,7 +1972,7 @@ export default function ContactsMap() {
     });
 
     return () => {
-      previewMarkersRef.current.forEach(safeRemoveMarker);
+      previewMarkersRef.current.forEach(mk => mk.remove());
       previewMarkersRef.current = [];
     };
   }, [mapReady]);
@@ -2178,31 +2022,16 @@ export default function ContactsMap() {
     if (!mapRef.current) return;
     const next = mapViewMode === 'neon' ? 'satellite' : 'neon';
     setMapViewMode(next);
-    mapStyleModeRef.current = next === 'satellite' ? 'satellite' : 'dark';
-    mapRef.current.setStyle(next === 'satellite' ? 'mapbox://styles/mapbox/satellite-streets-v12' : SPICEY_DARK_MAP_STYLE);
-    mapRef.current.once('style.load', () => restoreSpiceyMapVisuals(250));
+    const neonStyle = getIsLightMapTheme() ? 'mapbox://styles/mapbox/light-v11' : 'mapbox://styles/mapbox/dark-v11';
+    mapRef.current.setStyle(next === 'satellite' ? 'mapbox://styles/mapbox/satellite-streets-v12' : neonStyle);
+    mapRef.current.once('styledata', () => setTimeout(() => addCustomLayers(mapRef.current), 250));
   };
 
   const zoomWorld = () => {
     if (!mapRef.current) return;
     setSelected(null);
     setSelectedCity(null);
-    const map = mapRef.current;
-    setMapViewMode('neon');
-    mapStyleModeRef.current = 'dark';
-    map.setStyle(SPICEY_DARK_MAP_STYLE);
-    map.once('style.load', () => {
-      try { addCustomLayers(map); } catch {}
-      applySpiceyWorldAtmosphere(map);
-      map.flyTo({
-        center: SPICEY_WORLD_CENTER,
-        zoom: 2.2,
-        pitch: 0,
-        bearing: 0,
-        speed: 0.72,
-        curve: 1.2,
-      });
-    });
+    mapRef.current.flyTo({ center: [-23, 28], zoom: 2.2, pitch: 0, bearing: 0, speed: 0.85 });
   };
 
   const searchResults = useMemo(() => {
@@ -2267,8 +2096,10 @@ export default function ContactsMap() {
   };
 
   const ui = {
-    pageBg: isLight ? '#ffffff' : '#030105',
-    canvasFilter: 'none',
+    pageBg: isLight
+      ? 'radial-gradient(circle at 18% 8%, rgba(255,138,0,0.16), transparent 30%), radial-gradient(circle at 88% 18%, rgba(255,46,157,0.16), transparent 32%), radial-gradient(circle at 54% 92%, rgba(124,60,255,0.12), transparent 34%), #ffffff'
+      : '#030105',
+    canvasFilter: isLight ? 'saturate(1.42) contrast(1.02) brightness(1.16)' : 'saturate(1.65) contrast(1.16) brightness(0.64)',
     topShade: isLight
       ? 'linear-gradient(180deg, rgba(255,255,255,0.72) 0%, rgba(255,255,255,0.08) 22%, rgba(255,255,255,0.02) 66%, rgba(255,255,255,0.70) 100%)'
       : 'radial-gradient(circle at 50% 26%, transparent 0%, rgba(0,0,0,0.04) 44%, rgba(0,0,0,0.12) 74%, rgba(0,0,0,0.30) 100%), linear-gradient(180deg, rgba(0,0,0,0.16) 0%, transparent 22%, transparent 72%, rgba(0,0,0,0.42) 100%)',
@@ -2289,46 +2120,28 @@ export default function ContactsMap() {
   };
 
   return (
-    <div className="spicey-map-page" style={{ position: 'fixed', inset: 0, width: '100vw', height: '100dvh', background: ui.pageBg, zIndex: 0, overflow: 'hidden', isolation: 'isolate' }}>
+    <div style={{ position: 'fixed', inset: 0, display: 'flex', flexDirection: 'column', background: ui.pageBg, zIndex: 0, overflow: 'hidden' }}>
       <style>{`
-        .spicey-map-page, .spicey-map-shell { border: 0 !important; outline: 0 !important; }
-        .spicey-map-shell, .spicey-map-shell .mapboxgl-map,
-        .spicey-map-shell .mapboxgl-canvas-container,
-        .spicey-map-shell .mapboxgl-canvas { width: 100% !important; height: 100% !important; }
         .spicey-map-shell .mapboxgl-canvas { filter: ${ui.canvasFilter}; }
-        .spicey-map-shell .mapboxgl-map { background: #030108; border: 0 !important; }
-        .spicey-map-shell .mapboxgl-canvas-container { background: #030108; }
+        .spicey-map-shell .mapboxgl-map { background: ${isLight ? '#f8fbff' : '#050917'}; }
         .spicey-map-scroll::-webkit-scrollbar { display: none; }
-        @media (max-width: 600px) {
-          .spicey-map-logo-row { height: 44px !important; }
-          .spicey-map-logo-word { font-size: 16px !important; }
-          .spicey-map-search-row { grid-template-columns: minmax(0, 1fr) 34px 34px !important; gap: 5px !important; }
-          .spicey-map-search-pill { height: 34px !important; border-radius: 17px !important; padding: 0 10px !important; gap: 6px !important; font-size: 10px !important; }
-          .spicey-map-search-pill svg { width: 14px !important; height: 14px !important; }
-          .spicey-map-action { width: 34px !important; height: 34px !important; border-radius: 11px !important; }
-          .spicey-map-action svg { width: 15px !important; height: 15px !important; }
-          .spicey-map-live-card { width: 126px !important; min-height: 44px !important; margin-top: 7px !important; border-radius: 12px !important; padding: 0 8px !important; grid-template-columns: 20px 1fr 11px !important; gap: 4px !important; }
-          .spicey-map-live-card svg { width: 14px !important; height: 14px !important; }
-          .spicey-map-live-card span { font-size: 9px !important; }
-          .spicey-map-control-rack { right: 8px !important; top: 116px !important; width: 36px !important; padding: 3px !important; border-radius: 18px !important; }
-          .spicey-map-control-rack button { width: 28px !important; height: 28px !important; margin-bottom: 3px !important; }
-          .spicey-map-control-rack svg { width: 14px !important; height: 14px !important; }
-          .spicey-map-trending { left: 10px !important; right: 10px !important; bottom: calc(72px + env(safe-area-inset-bottom)) !important; border-radius: 18px !important; padding: 10px !important; }
-          .spicey-map-trending-head { margin-bottom: 8px !important; }
-          .spicey-map-trending-title { font-size: 14px !important; gap: 6px !important; }
-          .spicey-map-trending-title svg { width: 17px !important; height: 17px !important; }
-          .spicey-map-trending-seeall { padding: 5px 7px !important; border-radius: 10px !important; font-size: 12px !important; }
-          .spicey-map-trending-seeall svg { width: 14px !important; height: 14px !important; }
-          .spicey-map-scroll { grid-auto-columns: 82px !important; gap: 6px !important; }
-          .spicey-map-city-card { min-width: 82px !important; height: 94px !important; border-radius: 10px !important; }
-          .spicey-map-city-copy { left: 8px !important; right: 6px !important; bottom: 8px !important; }
-          .spicey-map-city-name { font-size: 13px !important; }
-          .spicey-map-city-live { font-size: 10px !important; margin-top: 2px !important; }
-        }
       `}</style>
 
-      <div className="spicey-map-shell" style={{ position: 'absolute', inset: '-2px', overflow: 'hidden', background: '#030108' }}>
+      <div className="spicey-map-shell" style={{ position: 'absolute', inset: 0, overflow: 'hidden' }}>
         <div ref={mapContainer} style={{ position: 'absolute', inset: 0, overflow: 'hidden' }} />
+        {isLight && (
+          <div style={{
+            position: 'absolute',
+            inset: 0,
+            zIndex: 2,
+            pointerEvents: 'none',
+            background:
+              'radial-gradient(circle at 12% 8%, rgba(255,138,0,0.22), transparent 30%), radial-gradient(circle at 92% 14%, rgba(255,46,157,0.20), transparent 32%), radial-gradient(circle at 52% 95%, rgba(124,60,255,0.16), transparent 34%), linear-gradient(180deg, rgba(255,255,255,0.20), rgba(255,255,255,0.04) 46%, rgba(255,255,255,0.16))',
+            filter: 'blur(0.2px)',
+            mixBlendMode: 'multiply',
+            opacity: 0.86,
+          }} />
+        )}
         {!MAPBOX_TOKEN && (
           <div style={{
             position: 'absolute',
@@ -2358,60 +2171,6 @@ export default function ContactsMap() {
             </div>
           </div>
         )}
-        {(!MAPBOX_TOKEN || !mapReady || mapError) && (
-          <div style={{
-            position: 'absolute',
-            inset: 0,
-            zIndex: 2,
-            overflow: 'hidden',
-            background: 'radial-gradient(circle at 50% 42%, rgba(255,45,157,.14), transparent 34%), radial-gradient(circle at 28% 68%, rgba(255,106,0,.10), transparent 28%), linear-gradient(rgba(255,45,157,.08) 1px, transparent 1px), linear-gradient(90deg, rgba(139,44,255,.08) 1px, transparent 1px), #02030a',
-            backgroundSize: 'auto, auto, 28px 28px, 28px 28px, auto',
-          }}>
-            <div style={{
-              position: 'absolute',
-              inset: 0,
-              background: 'linear-gradient(180deg,rgba(0,0,0,.22) 0%,rgba(0,0,0,.03) 27%,rgba(0,0,0,.05) 72%,rgba(0,0,0,.32) 100%)',
-            }} />
-            {MAP_PREVIEW_PINS.map((pin) => (
-              <button
-                key={pin.name}
-                type="button"
-                onClick={() => setSelected(pin)}
-                style={{
-                  position: 'absolute',
-                  left: pin.left,
-                  top: pin.top,
-                  width: 126,
-                  border: 0,
-                  padding: 0,
-                  background: 'transparent',
-                  transform: 'translate(-50%, -50%)',
-                  cursor: 'pointer',
-                  zIndex: 4,
-                }}
-              >
-                <span style={{ position: 'relative', display: 'block', width: 62, height: 62, margin: '0 auto' }}>
-                  <span style={{ position: 'absolute', inset: 0, borderRadius: '50%', padding: 3, background: 'conic-gradient(from 20deg,#ff6a00,#ff2e9d,#7c3cff,#ff6a00)', boxShadow: '0 0 20px rgba(255,46,157,0.72), 0 10px 24px rgba(0,0,0,0.52)' }}>
-                    <img src={pin.image} alt="" style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover', border: '2px solid #0a0611' }} />
-                  </span>
-                  <span style={{ position: 'absolute', right: -4, bottom: -2, minWidth: pin.live ? 39 : 24, height: 22, padding: pin.live ? '0 7px' : 0, borderRadius: pin.live ? 6 : 11, display: 'grid', placeItems: 'center', color: '#fff', background: pin.live ? 'linear-gradient(135deg,#ff176f,#ff2e9d)' : 'linear-gradient(135deg,#7c3cff,#b22cff)', boxShadow: '0 0 12px rgba(255,46,157,.7)', fontSize: 11, fontWeight: 900 }}>
-                    {pin.live ? 'LIVE' : pin.count}
-                  </span>
-                </span>
-                <span style={{ display: 'block', marginTop: 7, padding: '7px 10px 8px', borderRadius: 12, color: '#fff', background: 'rgba(10,5,15,.91)', border: '1px solid rgba(255,46,157,.24)', boxShadow: '0 8px 22px rgba(0,0,0,.48)', backdropFilter: 'blur(10px)' }}>
-                  <span style={{ display: 'block', fontSize: 11, lineHeight: 1.15, fontWeight: 900 }}>{pin.name}</span>
-                  <span style={{ display: 'block', marginTop: 4, color: 'rgba(255,255,255,.58)', fontSize: 10, lineHeight: 1.15 }}>{pin.place}</span>
-                </span>
-              </button>
-            ))}
-            <div style={{ position: 'absolute', left: '50%', top: '58%', width: 62, height: 76, transform: 'translate(-50%,-50%)', zIndex: 3, filter: 'drop-shadow(0 0 18px rgba(255,74,0,.8))' }}>
-              <div style={{ width: 58, height: 58, borderRadius: '50% 50% 50% 12px', transform: 'rotate(-45deg)', display: 'grid', placeItems: 'center', background: 'linear-gradient(135deg,#ff7a00 8%,#ff295f 58%,#c522ff)', border: '2px solid rgba(255,181,74,.9)' }}>
-                <span style={{ color: '#fff', fontSize: 30, lineHeight: 1, fontWeight: 1000, fontStyle: 'italic', transform: 'rotate(45deg)', textShadow: '0 0 8px rgba(255,255,255,.8)' }}>S</span>
-              </div>
-              <div style={{ position: 'absolute', left: 22, bottom: 0, width: 14, height: 8, borderRadius: '50%', background: '#ff7a00', boxShadow: '0 0 15px 5px rgba(255,106,0,.7)' }} />
-            </div>
-          </div>
-        )}
         <div style={{
           position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 3,
           background: ui.topShade,
@@ -2431,16 +2190,13 @@ export default function ContactsMap() {
         })}
       </div>
 
-      <div style={{ position: 'relative', zIndex: 20, padding: 'max(8px, env(safe-area-inset-top)) 14px 0' }}>
-        <div className="spicey-map-logo-row" style={{ height: 86, display: 'flex', justifyContent: 'center', alignItems: 'center', overflow: 'visible' }}>
-          <div className="spicey-map-logo-word" aria-label="Spicey" style={{ position: 'relative', color: '#fff', fontSize: 'clamp(22px, 7vw, 31px)', fontWeight: 500, letterSpacing: '0.34em', lineHeight: 1, textIndent: '0.34em', textShadow: '-18px 0 15px rgba(255,106,0,0.78), 18px 0 15px rgba(255,46,157,0.82), 0 0 9px rgba(255,255,255,0.68)' }}>
-            SPICEY
-            <span style={{ position: 'absolute', left: '-18%', right: '-18%', top: '50%', height: 2, transform: 'translateY(-50%)', zIndex: -1, background: 'linear-gradient(90deg, transparent, #ff6a00 20%, #fff 50%, #ff2e9d 80%, transparent)', filter: 'blur(2px)', boxShadow: '0 0 15px rgba(255,45,157,0.76)' }} />
-          </div>
+      <div style={{ position: 'relative', zIndex: 20, padding: 'max(2px, env(safe-area-inset-top)) 12px 0' }}>
+        <div style={{ height: 108, display: 'flex', justifyContent: 'center', alignItems: 'center', overflow: 'visible' }}>
+          <img src={SPICEY_ORIGINAL_LOGO} alt="Spicey" style={{ width: 'min(260px, 58vw)', height: 78, objectFit: 'contain', objectPosition: 'center', transformOrigin: 'center', filter: 'drop-shadow(0 0 14px rgba(255,106,0,0.62)) drop-shadow(0 0 24px rgba(255,46,157,0.58)) drop-shadow(0 0 18px rgba(139,44,255,0.28))' }} />
         </div>
 
-        <div className="spicey-map-search-row" style={{ display: 'grid', gridTemplateColumns: '1fr 54px 54px', gap: 10, alignItems: 'center', marginTop: 0 }}>
-          <motion.div className="spicey-map-search-pill" whileTap={{ scale: 0.98 }} onClick={() => setSearchOpen(true)} style={{ height: 54, borderRadius: 27, background: 'rgba(15,16,24,0.92)', border: searchOpen ? '1.6px solid rgba(255,46,157,0.72)' : '1px solid rgba(255,255,255,0.16)', boxShadow: searchOpen ? '0 16px 30px rgba(255,46,157,0.28)' : 'inset 0 1px 0 rgba(255,255,255,0.06), 0 12px 26px rgba(0,0,0,0.34)', display: 'flex', alignItems: 'center', gap: 10, padding: '0 16px', color: 'rgba(255,255,255,0.54)', fontSize: 14, fontWeight: 500, cursor: 'text', textAlign: 'left' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 42px 42px', gap: 7, alignItems: 'center', marginTop: 0 }}>
+          <motion.div whileTap={{ scale: 0.98 }} onClick={() => setSearchOpen(true)} style={{ height: 40, borderRadius: 20, background: ui.panelBg, border: searchOpen ? '1.6px solid rgba(255,255,255,0.72)' : ui.border, boxShadow: searchOpen ? '0 16px 30px rgba(255,46,157,0.28), inset 0 1.5px 0 rgba(255,255,255,0.58), inset 0 -7px 14px rgba(70,0,90,0.22)' : ui.button3d, display: 'flex', alignItems: 'center', gap: 8, padding: '0 11px', color: ui.muted, fontSize: 13, fontWeight: 500, cursor: 'text', textAlign: 'left' }}>
             <Search onClick={(e) => { e.stopPropagation(); searchMap(); }} style={{ width: 20, height: 20, color: searchOpen ? '#ff2e9d' : ui.muted, cursor: 'pointer' }} />
             {searchOpen ? (
               <input
@@ -2463,11 +2219,11 @@ export default function ContactsMap() {
               </button>
             )}
           </motion.div>
-          <motion.button className="spicey-map-action" whileTap={{ scale: 0.94 }} onClick={() => setLocationPanelOpen(v => !v)} style={{ height: 54, width: 54, borderRadius: 20, display: 'grid', placeItems: 'center', background: 'rgba(33,9,14,0.88)', border: '1px solid rgba(255,82,24,0.66)', boxShadow: '0 12px 28px rgba(0,0,0,0.34), inset 0 1px 0 rgba(255,255,255,0.06)', color: '#ff5b2e' }}>
-            <SlidersHorizontal style={{ width: 24, height: 24 }} />
+          <motion.button whileTap={{ scale: 0.94 }} onClick={() => setLocationPanelOpen(v => !v)} style={{ height: 42, width: 42, borderRadius: 16, display: 'grid', placeItems: 'center', background: ui.controlBg, border: '1.4px solid rgba(255,255,255,0.62)', boxShadow: ui.button3d, color: '#fff' }}>
+            <SlidersHorizontal style={{ width: 20, height: 20 }} />
           </motion.button>
-          <motion.button className="spicey-map-action" whileTap={{ scale: 0.94 }} onClick={centerMap} style={{ height: 54, width: 54, borderRadius: 20, display: 'grid', placeItems: 'center', background: 'rgba(33,5,38,0.90)', border: '1px solid rgba(255,46,210,0.52)', boxShadow: '0 12px 28px rgba(0,0,0,0.34), inset 0 1px 0 rgba(255,255,255,0.06)', color: '#ff3be0' }}>
-            <Crosshair style={{ width: 25, height: 25 }} />
+          <motion.button whileTap={{ scale: 0.94 }} onClick={centerMap} style={{ height: 42, width: 42, borderRadius: 16, display: 'grid', placeItems: 'center', background: ui.controlBgPurple, border: '1.4px solid rgba(255,255,255,0.62)', boxShadow: ui.button3d, color: '#fff' }}>
+            <Crosshair style={{ width: 21, height: 21 }} />
           </motion.button>
         </div>
 
@@ -2535,7 +2291,7 @@ export default function ContactsMap() {
           )}
         </AnimatePresence>
 
-        <motion.button className="spicey-map-live-card" whileTap={{ scale: 0.98 }} onClick={() => setActiveFilter('live')} style={{ marginTop: 16, width: 174, minHeight: 68, borderRadius: 18, background: 'rgba(14,9,20,0.88)', border: '1px solid rgba(255,82,48,0.28)', boxShadow: '0 14px 32px rgba(0,0,0,0.42)', display: 'grid', gridTemplateColumns: '32px 1fr 15px', alignItems: 'center', gap: 7, padding: '0 13px', textAlign: 'left' }}>
+        <motion.button whileTap={{ scale: 0.98 }} onClick={() => setActiveFilter('live')} style={{ marginTop: 8, width: 150, minHeight: 52, borderRadius: 16, background: ui.liveBg, border: '1.4px solid rgba(255,255,255,0.58)', boxShadow: ui.button3d, display: 'grid', gridTemplateColumns: '28px 1fr 15px', alignItems: 'center', gap: 6, padding: '0 11px', textAlign: 'left' }}>
           <Radio style={{ color: '#fff', width: 20, height: 20, filter: 'drop-shadow(0 0 9px rgba(255,255,255,0.55))' }} />
           <span>
             <span style={{ display: 'block', color: ui.text, fontSize: 12, fontWeight: 800 }}>Live Around You</span>
@@ -2544,13 +2300,13 @@ export default function ContactsMap() {
           <ChevronRight style={{ color: 'rgba(255,255,255,0.56)', width: 15, height: 15 }} />
         </motion.button>
 
-        <div className="spicey-map-control-rack" style={{ position: 'absolute', right: 14, top: 180, zIndex: 24, width: 52, padding: 5, borderRadius: 26, background: 'rgba(10,8,16,0.82)', border: '1px solid rgba(255,255,255,0.10)', boxShadow: '0 18px 38px rgba(0,0,0,0.52)', backdropFilter: 'blur(14px)' }}>
+        <div style={{ position: 'absolute', right: 12, top: 154, zIndex: 24, width: 46, padding: 4, borderRadius: 23, background: ui.rackBg, border: ui.border, boxShadow: ui.card3d, backdropFilter: 'blur(14px)' }}>
           {[
             { Icon: Layers, action: toggleMapLayers, active: mapViewMode === 'satellite' },
             { Icon: Navigation, action: centerMap, active: true },
             { Icon: Globe2, action: zoomWorld, active: false },
           ].map(({ Icon, action, active }, i) => (
-            <motion.button key={i} whileTap={{ scale: 0.92 }} onClick={action} style={{ width: 42, height: 42, borderRadius: '50%', display: 'grid', placeItems: 'center', marginBottom: i === 2 ? 0 : 6, background: active ? 'linear-gradient(135deg,#5b22e8,#a42cff)' : 'rgba(255,255,255,0.025)', border: '1px solid rgba(255,255,255,0.09)', color: i === 1 ? '#7f38ff' : '#fff', cursor: 'pointer', boxShadow: active ? '0 0 18px rgba(139,44,255,0.42)' : 'inset 0 1px 0 rgba(255,255,255,0.10)' }}>
+            <motion.button key={i} whileTap={{ scale: 0.92 }} onClick={action} style={{ width: 38, height: 38, borderRadius: '50%', display: 'grid', placeItems: 'center', marginBottom: i === 2 ? 0 : 5, background: active ? 'radial-gradient(circle at 30% 15%, rgba(255,255,255,0.46), transparent 28%), linear-gradient(135deg,#ff8a00,#ff2e9d,#7c3cff)' : (isLight ? 'rgba(255,255,255,0.18)' : 'rgba(255,255,255,0.035)'), border: isLight ? '1px solid rgba(255,255,255,0.44)' : '1px solid rgba(255,255,255,0.06)', color: '#fff', cursor: 'pointer', boxShadow: active ? ui.button3d : 'inset 0 1px 0 rgba(255,255,255,0.18)' }}>
               <Icon style={{ width: 20, height: 20 }} />
             </motion.button>
           ))}
@@ -2558,33 +2314,38 @@ export default function ContactsMap() {
       </div>
 
       <motion.div
-        className="spicey-map-trending"
         animate={{ y: trendingCollapsed ? 238 : 0 }}
         transition={{ type: 'spring', damping: 26, stiffness: 260 }}
-        style={{ position: 'absolute', left: 14, right: 14, bottom: 'calc(80px + env(safe-area-inset-bottom))', zIndex: 22, borderRadius: 24, padding: '16px 14px 14px', background: 'linear-gradient(180deg,rgba(15,5,18,.92),rgba(5,2,9,.96))', border: '1px solid rgba(255,46,157,.32)', boxShadow: '0 18px 48px rgba(0,0,0,.55)', backdropFilter: 'blur(18px)' }}
+        style={{ position: 'absolute', left: 14, right: 14, bottom: 'calc(80px + env(safe-area-inset-bottom))', zIndex: 22, borderRadius: 24, padding: '16px 14px 14px', background: ui.cardBg, border: ui.border, boxShadow: ui.card3d, backdropFilter: 'blur(18px)' }}
       >
-        <div className="spicey-map-trending-head" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
-          <div className="spicey-map-trending-title" style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
+        <button
+          onClick={() => setTrendingCollapsed(v => !v)}
+          style={{ position: 'absolute', left: '50%', top: -16, transform: 'translateX(-50%)', width: 74, height: 26, borderRadius: 14, border: isLight ? '1px solid rgba(255,255,255,0.62)' : '1px solid rgba(255,46,157,0.34)', background: isLight ? 'radial-gradient(circle at 25% 0%, rgba(255,255,255,0.55), transparent 30%), linear-gradient(135deg,#ff8a00,#ff2e9d,#7c3cff)' : 'rgba(10,4,18,0.92)', color: isLight ? '#fff' : '#ff2e9d', fontSize: 11, fontWeight: 900, display: 'grid', placeItems: 'center', cursor: 'pointer', boxShadow: ui.button3d }}
+        >
+          {trendingCollapsed ? 'Cities ↑' : 'Hide ↓'}
+        </button>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
             <Flame style={{ width: 21, height: 21, color: '#fff', fill: '#fff', filter: 'drop-shadow(0 0 8px rgba(255,255,255,0.55))' }} />
             <span style={{ color: ui.text, fontSize: 18, fontWeight: 900 }}>Trending Cities</span>
           </div>
-          <button className="spicey-map-trending-seeall" onClick={zoomWorld} style={{ border: 0, background: 'rgba(255,255,255,0.16)', color: '#fff', borderRadius: 13, padding: '6px 8px', fontSize: 15, fontWeight: 800, display: 'flex', alignItems: 'center', gap: 4, cursor: 'pointer' }}>See all <ChevronRight style={{ width: 18, height: 18 }} /></button>
+          <button onClick={zoomWorld} style={{ border: 0, background: 'rgba(255,255,255,0.16)', color: '#fff', borderRadius: 13, padding: '6px 8px', fontSize: 15, fontWeight: 800, display: 'flex', alignItems: 'center', gap: 4, cursor: 'pointer' }}>See all <ChevronRight style={{ width: 18, height: 18 }} /></button>
         </div>
         <div className="spicey-map-scroll" style={{ display: 'grid', gridAutoFlow: 'column', gridAutoColumns: 'minmax(126px, 1fr)', gap: 10, overflowX: 'auto', scrollbarWidth: 'none', paddingBottom: 2 }}>
           {TRENDING_CITIES.map(city => (
-            <motion.button className="spicey-map-city-card" key={city.name} whileTap={{ scale: 0.97 }} onClick={() => openTrendingCity(city)} style={{ minWidth: 126, height: 170, borderRadius: 15, overflow: 'hidden', position: 'relative', border: '1.5px solid rgba(255,46,157,0.78)', background: '#08020d', padding: 0, textAlign: 'left', boxShadow: '0 0 18px rgba(255,46,157,0.16)', cursor: 'pointer' }}>
+            <motion.button key={city.name} whileTap={{ scale: 0.97 }} onClick={() => openTrendingCity(city)} style={{ minWidth: 126, height: 170, borderRadius: 15, overflow: 'hidden', position: 'relative', border: '1.5px solid rgba(255,46,157,0.78)', background: '#08020d', padding: 0, textAlign: 'left', boxShadow: '0 0 18px rgba(255,46,157,0.16)', cursor: 'pointer' }}>
               <img src={city.image} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', filter: 'saturate(1.3) contrast(1.06)' }} />
               <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, transparent 24%, rgba(0,0,0,0.24) 58%, rgba(0,0,0,0.84) 100%)' }} />
-              <div className="spicey-map-city-copy" style={{ position: 'absolute', left: 12, right: 10, bottom: 12 }}>
-                <div className="spicey-map-city-name" style={{ color: '#fff', fontSize: 17, fontWeight: 900 }}>{city.name}</div>
-                <div className="spicey-map-city-live" style={{ color: 'rgba(255,255,255,0.62)', fontSize: 13, fontWeight: 700, marginTop: 4 }}>{city.live}</div>
+              <div style={{ position: 'absolute', left: 12, right: 10, bottom: 12 }}>
+                <div style={{ color: '#fff', fontSize: 17, fontWeight: 900 }}>{city.name}</div>
+                <div style={{ color: 'rgba(255,255,255,0.62)', fontSize: 13, fontWeight: 700, marginTop: 4 }}>{city.live}</div>
               </div>
             </motion.button>
           ))}
         </div>
       </motion.div>
 
-      <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', pointerEvents: 'none', zIndex: 29 }}>
+      <div style={{ flex: 1, position: 'relative', overflow: 'hidden', pointerEvents: 'none' }}>
 
         {/* Profile card */}
         <AnimatePresence>

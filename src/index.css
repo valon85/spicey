@@ -1723,16 +1723,21 @@ html[data-vip-theme] .spicey-premium-post-card .post-social-events button {
 }
 
 .spicey-premium-feed-page .spicey-premium-story .ring > img,
+.spicey-premium-feed-page .spicey-premium-story .ring > video,
 .spicey-premium-light-feed .spicey-premium-story .ring > img,
+.spicey-premium-light-feed .spicey-premium-story .ring > video,
 .spicey-premium-dark-feed .spicey-premium-story .ring > img,
-.spicey-premium-post-card .post-head > img {
+.spicey-premium-dark-feed .spicey-premium-story .ring > video,
+.spicey-premium-post-card .post-head > img,
+.spicey-premium-post-card .post-head > video {
   flex: 0 0 auto !important;
   aspect-ratio: 1 / 1 !important;
   border-radius: 9999px !important;
   object-fit: cover !important;
 }
 
-.spicey-premium-post-card .post-head > img {
+.spicey-premium-post-card .post-head > img,
+.spicey-premium-post-card .post-head > video {
   width: 44px !important;
   min-width: 44px !important;
   max-width: 44px !important;
@@ -3081,19 +3086,20 @@ body.light-mode .spicey-stat-pill.spicey-stat-pill-inside,
 
 .spicey-premium-corner-logo {
   position: relative;
-  width: 26px;
-  height: 26px;
+  width: 32px;
+  height: 32px;
   overflow: hidden;
-  border-radius: 0;
+  border-radius: 10px;
   background: transparent;
-  box-shadow: none;
+  box-shadow: 0 0 0 1px rgba(255,255,255,0.07), 0 8px 18px rgba(255,45,143,0.18);
 }
 
 .spicey-premium-corner-logo img {
   width: 100%;
   height: 100%;
-  object-fit: contain;
-  filter: drop-shadow(0 5px 10px rgba(255,45,143,0.18));
+  object-fit: cover;
+  object-position: center;
+  filter: saturate(1.12) contrast(1.06);
 }
 
 .spicey-premium-avatar-wrap {
@@ -3314,11 +3320,13 @@ body.light-mode .spicey-stat-pill.spicey-stat-pill-inside,
   box-shadow: 0 8px 17px rgba(255,45,143,0.18);
 }
 
-.spicey-premium-story img {
+.spicey-premium-story img,
+.spicey-premium-story video {
   width: 67px;
   height: 67px;
   border-radius: 50%;
   object-fit: cover;
+  object-position: center 38%;
   border: 0;
 }
 
@@ -3624,12 +3632,14 @@ body.light-mode .spicey-stat-pill.spicey-stat-pill-inside,
   margin-bottom: 12px;
 }
 
-.spicey-premium-post-card .post-head > img {
+.spicey-premium-post-card .post-head > img,
+.spicey-premium-post-card .post-head > video {
   width: 50px;
   height: 50px;
   padding: 2px;
   border-radius: 50%;
   object-fit: cover;
+  object-position: center 38%;
   background: linear-gradient(135deg, #ff6a00, #ff2d8f, #8b2cff);
 }
 
@@ -4435,7 +4445,8 @@ html:not(.light-mode) .spicey-comment-input::placeholder {
   box-shadow: 0 0 0 1px rgba(255,106,0,0.22), 0 0 18px rgba(255,45,143,0.25);
 }
 
-.spicey-premium-dark-feed .spicey-premium-story img {
+.spicey-premium-dark-feed .spicey-premium-story img,
+.spicey-premium-dark-feed .spicey-premium-story video {
   width: 58px;
   height: 58px;
   border-width: 2px;
@@ -4547,7 +4558,8 @@ html:not(.light-mode) .spicey-comment-input::placeholder {
   text-shadow: 0 2px 12px rgba(0,0,0,0.74);
 }
 
-.spicey-premium-dark-feed .spicey-premium-post-card .post-head > img {
+.spicey-premium-dark-feed .spicey-premium-post-card .post-head > img,
+.spicey-premium-dark-feed .spicey-premium-post-card .post-head > video {
   width: 44px;
   height: 44px;
   border: 2px solid rgba(255, 45, 143, 0.78);
@@ -4603,7 +4615,8 @@ html:not(.light-mode) .spicey-comment-input::placeholder {
 }
 
 .spicey-premium-dark-feed.spicey-photo-color-on .spicey-premium-trending .trend-row button img,
-.spicey-premium-dark-feed.spicey-photo-color-on .spicey-premium-story img {
+.spicey-premium-dark-feed.spicey-photo-color-on .spicey-premium-story img,
+.spicey-premium-dark-feed.spicey-photo-color-on .spicey-premium-story video {
   filter: saturate(1.08) contrast(1.04) brightness(0.96);
 }
 
@@ -4621,7 +4634,8 @@ html:not(.light-mode) .spicey-comment-input::placeholder {
 }
 
 .spicey-premium-dark-feed.spicey-photo-color-off .spicey-premium-trending .trend-row button img,
-.spicey-premium-dark-feed.spicey-photo-color-off .spicey-premium-story img {
+.spicey-premium-dark-feed.spicey-photo-color-off .spicey-premium-story img,
+.spicey-premium-dark-feed.spicey-photo-color-off .spicey-premium-story video {
   filter: saturate(1.02) contrast(1.02) brightness(0.95);
 }
 
@@ -8346,4 +8360,668 @@ html[data-vip-theme] body .spicey-talk-chat-ui .talk-ai-identity h1 span {
   box-shadow: none !important;
   backdrop-filter: none !important;
   -webkit-backdrop-filter: none !important;
+}
+
+/* July 2026 brand wordmark — shared by the live Feed and Profile headers. */
+.spicey-new-wordmark {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: center;
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+.spicey-premium-feed-page .spicey-premium-wordmark {
+  width: min(128px, 34vw) !important;
+  min-width: 0 !important;
+  height: 31px !important;
+  transform: none !important;
+  filter: none !important;
+}
+
+.spicey-premium-feed-page .spicey-premium-wordmark::before,
+.spicey-premium-feed-page .spicey-premium-wordmark::after {
+  display: none !important;
+  content: none !important;
+}
+
+.spicey-reference-script-logo {
+  width: min(190px, 47vw) !important;
+  height: 54px !important;
+  top: calc(var(--profile-crop-top, 46px) + 10px) !important;
+  transform: translateX(-50%) !important;
+  background: none !important;
+  filter: none !important;
+  text-shadow: none !important;
+}
+
+/* Feed brand icon: use the real uploaded Spicey S in every feed header. */
+.spicey-premium-feed-page .spicey-premium-header {
+  grid-template-columns: 70px minmax(0, 1fr) auto !important;
+}
+
+.spicey-premium-feed-page .spicey-premium-actions {
+  align-items: center !important;
+  gap: 8px !important;
+}
+
+.spicey-premium-feed-page .spicey-premium-corner-logo {
+  width: 68px !important;
+  height: 68px !important;
+  flex: 0 0 68px !important;
+  border-radius: 0 !important;
+  overflow: visible !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.spicey-premium-feed-page .spicey-premium-corner-logo img,
+.spicey-ng-logo-slot img.spicey-original-feed-logo,
+.spicey-light-reference-feed .spicey-ng-logo-slot img.spicey-original-feed-logo {
+  width: 100% !important;
+  height: 100% !important;
+  padding: 0 !important;
+  border-radius: 0 !important;
+  object-fit: contain !important;
+  object-position: center !important;
+  background: transparent !important;
+  filter: saturate(1.12) contrast(1.06) drop-shadow(0 0 10px rgba(255,106,0,0.20)) drop-shadow(0 0 12px rgba(255,45,143,0.16)) !important;
+  box-shadow: none !important;
+}
+
+.spicey-ng-logo-slot img.spicey-original-feed-logo,
+.spicey-light-reference-feed .spicey-ng-logo-slot img.spicey-original-feed-logo {
+  width: 62px !important;
+  height: 62px !important;
+}
+
+.spicey-premium-feed-page .spicey-premium-story .ring > img,
+.spicey-premium-feed-page .spicey-premium-story .ring > video,
+.spicey-premium-feed-page .spicey-premium-post-card .post-head > img,
+.spicey-premium-feed-page .spicey-premium-post-card .post-head > video {
+  object-position: center 34% !important;
+}
+
+.spicey-premium-feed-page .spicey-premium-story-own,
+.spicey-premium-feed-page .spicey-premium-story-more {
+  width: 56px !important;
+}
+
+.spicey-premium-feed-page .spicey-premium-story-own .ring,
+.spicey-premium-feed-page .spicey-premium-story-more .ring {
+  width: 52px !important;
+  height: 52px !important;
+}
+
+.spicey-premium-feed-page .spicey-premium-story-own .ring > img,
+.spicey-premium-feed-page .spicey-premium-story-own .ring > video {
+  width: 51px !important;
+  height: 51px !important;
+}
+
+.spicey-premium-feed-page .spicey-premium-story-more .ring > svg {
+  width: 22px !important;
+  height: 22px !important;
+}
+
+.spicey-premium-feed-page .spicey-premium-story-own .ring > i {
+  right: -2px !important;
+  bottom: 2px !important;
+  width: 20px !important;
+  height: 20px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 0 !important;
+  font-size: 18px !important;
+  line-height: 18px !important;
+  border-width: 1.5px !important;
+}
+.spicey-short-film {
+  width: min(100vw, 430px);
+  min-height: 100dvh;
+  margin: 0 auto;
+  padding: max(18px, env(safe-area-inset-top, 0px)) 16px max(22px, env(safe-area-inset-bottom, 0px));
+  color: #fff;
+  background:
+    radial-gradient(circle at 20% 4%, rgba(255,122,24,.16), transparent 30%),
+    radial-gradient(circle at 86% 8%, rgba(233,30,140,.18), transparent 32%),
+    linear-gradient(180deg, #050509, #080411 46%, #050509);
+  overflow-x: hidden;
+}
+
+.spicey-short-film-header {
+  display: grid;
+  grid-template-columns: 42px 1fr 42px;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.spicey-short-film-header button {
+  width: 42px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  color: #fff;
+  background: rgba(255,255,255,.07);
+  border: 1px solid rgba(255,255,255,.12);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.10);
+}
+
+.spicey-short-film-header svg {
+  width: 18px;
+  height: 18px;
+}
+
+.spicey-short-film-header div {
+  display: grid;
+  justify-items: center;
+  gap: 2px;
+}
+
+.spicey-short-film-header span {
+  color: #ff8a18;
+  font-size: 10px;
+  font-weight: 950;
+  letter-spacing: .22em;
+}
+
+.spicey-short-film-header strong {
+  font-size: 16px;
+  font-weight: 950;
+}
+
+.spicey-short-film-preview {
+  position: relative;
+  padding: 1px;
+  border-radius: 28px;
+  background: var(--film-look);
+  box-shadow: 0 18px 46px rgba(0,0,0,.44), 0 0 28px rgba(233,30,140,.16);
+}
+
+.spicey-short-film-screen {
+  position: relative;
+  height: min(62vh, 520px);
+  min-height: 420px;
+  overflow: hidden;
+  border-radius: 27px;
+  background: #090610;
+}
+
+.spicey-short-film-screen video {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+}
+
+.spicey-short-film-screen:after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(180deg, rgba(0,0,0,.66), transparent 28%, transparent 58%, rgba(0,0,0,.74)),
+    radial-gradient(circle at 70% 20%, rgba(255,45,143,.18), transparent 34%);
+}
+
+.spicey-film-letterbox {
+  position: absolute;
+  left: 0;
+  right: 0;
+  z-index: 2;
+  height: 42px;
+  background: rgba(0,0,0,.82);
+}
+
+.spicey-film-letterbox.top { top: 0; }
+.spicey-film-letterbox.bottom { bottom: 0; }
+
+.spicey-film-title-card {
+  position: absolute;
+  z-index: 3;
+  left: 18px;
+  right: 18px;
+  bottom: 64px;
+}
+
+.spicey-film-title-card small {
+  color: #ffb13d;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+}
+
+.spicey-film-title-card h1 {
+  margin: 6px 0 4px;
+  font-size: clamp(28px, 9vw, 42px);
+  line-height: .96;
+  font-weight: 950;
+  letter-spacing: 0;
+  text-shadow: 0 10px 28px rgba(0,0,0,.7);
+}
+
+.spicey-film-title-card p {
+  margin: 0;
+  max-width: 250px;
+  color: rgba(255,255,255,.78);
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+.spicey-film-play-pill {
+  position: absolute;
+  z-index: 3;
+  left: 16px;
+  top: 56px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 11px;
+  border-radius: 999px;
+  color: #fff;
+  background: rgba(0,0,0,.42);
+  border: 1px solid rgba(255,255,255,.14);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  font-size: 12px;
+  font-weight: 850;
+}
+
+.spicey-film-play-pill svg {
+  width: 14px;
+  height: 14px;
+  fill: currentColor;
+}
+
+.spicey-short-film-limits {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  margin: 10px 2px 0;
+  padding-bottom: 1px;
+  scrollbar-width: none;
+}
+
+.spicey-short-film-limits::-webkit-scrollbar {
+  display: none;
+}
+
+.spicey-short-film-limits span {
+  flex: 0 0 auto;
+  padding: 6px 10px;
+  border-radius: 999px;
+  color: rgba(255,255,255,.78);
+  background: linear-gradient(135deg, rgba(255,122,24,.18), rgba(233,30,140,.13), rgba(143,60,255,.16));
+  border: 1px solid rgba(255,255,255,.10);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.08);
+  font-size: 11px;
+  font-weight: 850;
+}
+
+.spicey-short-film-empty {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 8px;
+  color: #fff;
+  background:
+    radial-gradient(circle at 50% 36%, rgba(255,45,143,.24), transparent 30%),
+    linear-gradient(135deg, rgba(255,122,24,.12), rgba(143,60,255,.16));
+}
+
+.spicey-short-film-empty svg {
+  width: 42px;
+  height: 42px;
+}
+
+.spicey-short-film-empty span {
+  font-size: 17px;
+  font-weight: 950;
+}
+
+.spicey-short-film-empty small {
+  max-width: 230px;
+  color: rgba(255,255,255,.58);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.spicey-short-film-fields,
+.spicey-short-film-tools,
+.spicey-short-film-timeline {
+  margin-top: 14px;
+  padding: 14px;
+  border-radius: 22px;
+  background: rgba(255,255,255,.055);
+  border: 1px solid rgba(255,255,255,.10);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.08);
+}
+
+.spicey-short-film-fields {
+  display: grid;
+  gap: 10px;
+}
+
+.spicey-short-film-fields label {
+  display: grid;
+  gap: 7px;
+}
+
+.spicey-short-film-fields span,
+.spicey-tool-title span {
+  color: rgba(255,255,255,.62);
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.spicey-short-film-fields input {
+  height: 42px;
+  padding: 0 13px;
+  border-radius: 14px;
+  color: #fff;
+  background: rgba(0,0,0,.28);
+  border: 1px solid rgba(255,255,255,.10);
+  outline: none;
+  font-size: 14px;
+}
+
+.spicey-tool-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 11px;
+}
+
+.spicey-tool-title svg {
+  width: 16px;
+  height: 16px;
+  color: #ff8a18;
+}
+
+.spicey-tool-title > button {
+  margin-left: auto;
+  height: 30px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 0 10px;
+  border-radius: 999px;
+  color: #fff;
+  background: linear-gradient(135deg, #ff7a18, #ff2d8f);
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.spicey-tool-title > button svg {
+  color: #fff;
+  width: 13px;
+  height: 13px;
+}
+
+.spicey-film-look-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 9px;
+}
+
+.spicey-film-look-grid button {
+  min-height: 52px;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 8px 10px;
+  border-radius: 16px;
+  color: #fff;
+  background: rgba(0,0,0,.22);
+  border: 1px solid rgba(255,255,255,.09);
+}
+
+.spicey-film-look-grid button.active {
+  border-color: rgba(255,255,255,.28);
+  box-shadow: 0 0 18px rgba(233,30,140,.22);
+}
+
+.spicey-film-look-grid i {
+  width: 28px;
+  height: 28px;
+  flex: 0 0 auto;
+  border-radius: 10px;
+  background: var(--look);
+}
+
+.spicey-film-look-grid span {
+  font-size: 12px;
+  font-weight: 850;
+}
+
+.spicey-film-music-row {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+  scrollbar-width: none;
+}
+
+.spicey-film-music-row::-webkit-scrollbar {
+  display: none;
+}
+
+.spicey-film-music-row button {
+  flex: 0 0 auto;
+  height: 36px;
+  padding: 0 13px;
+  border-radius: 999px;
+  color: rgba(255,255,255,.78);
+  background: rgba(0,0,0,.24);
+  border: 1px solid rgba(255,255,255,.09);
+  font-size: 12px;
+  font-weight: 850;
+}
+
+.spicey-film-music-row button.active {
+  color: #fff;
+  background: linear-gradient(135deg, rgba(255,122,24,.9), rgba(233,30,140,.86));
+  border-color: rgba(255,255,255,.24);
+}
+
+.spicey-film-clips {
+  display: grid;
+  gap: 10px;
+}
+
+.spicey-film-clips article {
+  display: grid;
+  grid-template-columns: 64px minmax(0, 1fr) 34px;
+  align-items: center;
+  gap: 10px;
+  padding: 8px;
+  border-radius: 18px;
+  background: rgba(0,0,0,.22);
+  border: 1px solid rgba(255,255,255,.08);
+}
+
+.spicey-film-clips article.active {
+  border-color: rgba(255,122,24,.52);
+  box-shadow: 0 0 18px rgba(255,122,24,.16);
+}
+
+.spicey-film-clips video {
+  width: 64px;
+  height: 78px;
+  object-fit: cover;
+  border-radius: 13px;
+  background: #050509;
+}
+
+.spicey-film-clips div {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+
+.spicey-film-clips small {
+  color: #ff8a18;
+  font-size: 10px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+}
+
+.spicey-film-clips strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.spicey-film-clips span {
+  color: rgba(255,255,255,.52);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.spicey-film-clips article > button {
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  color: rgba(255,255,255,.7);
+  background: rgba(255,255,255,.06);
+}
+
+.spicey-film-clips article > button svg {
+  width: 15px;
+  height: 15px;
+}
+
+.spicey-short-film-actions {
+  position: sticky;
+  bottom: 0;
+  z-index: 5;
+  display: grid;
+  grid-template-columns: .85fr 1.15fr;
+  gap: 10px;
+  margin: 14px -4px 0;
+  padding: 12px 4px 0;
+  background: linear-gradient(180deg, transparent, #050509 38%);
+}
+
+.spicey-short-film-actions button {
+  height: 48px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border-radius: 17px;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 950;
+}
+
+.spicey-short-film-actions button:first-child {
+  background: rgba(255,255,255,.07);
+  border: 1px solid rgba(255,255,255,.12);
+}
+
+.spicey-short-film-actions button:last-child {
+  background: linear-gradient(135deg, #ff7a18, #ff2d8f 58%, #8f3cff);
+  box-shadow: 0 12px 28px rgba(233,30,140,.30);
+}
+
+.spicey-short-film-actions button:disabled {
+  opacity: .45;
+}
+
+.spicey-short-film-actions svg {
+  width: 17px;
+  height: 17px;
+}
+
+.spicey-short-film .spin {
+  animation: spicey-spin 1s linear infinite;
+}
+
+/* Keep feed story/reel avatars from being clipped at the top. */
+.spicey-premium-feed-page .spicey-premium-stories,
+.spicey-premium-light-feed .spicey-premium-stories,
+.spicey-premium-dark-feed .spicey-premium-stories {
+  padding-top: 12px !important;
+  margin-top: -4px !important;
+  min-height: 104px !important;
+}
+
+.spicey-premium-feed-page .spicey-premium-story,
+.spicey-premium-light-feed .spicey-premium-story,
+.spicey-premium-dark-feed .spicey-premium-story {
+  flex-basis: 66px !important;
+  width: 66px !important;
+}
+
+.spicey-premium-feed-page .spicey-premium-story .ring,
+.spicey-premium-light-feed .spicey-premium-story .ring,
+.spicey-premium-dark-feed .spicey-premium-story .ring {
+  width: 64px !important;
+  height: 64px !important;
+  box-shadow: 0 8px 16px rgba(255,45,143,0.16), 0 0 12px rgba(139,44,255,0.12) !important;
+}
+
+.spicey-premium-feed-page .spicey-premium-story .ring > img,
+.spicey-premium-feed-page .spicey-premium-story .ring > video,
+.spicey-premium-light-feed .spicey-premium-story .ring > img,
+.spicey-premium-light-feed .spicey-premium-story .ring > video,
+.spicey-premium-dark-feed .spicey-premium-story .ring > img,
+.spicey-premium-dark-feed .spicey-premium-story .ring > video {
+  width: 58px !important;
+  height: 58px !important;
+}
+
+.spicey-premium-feed-page .spicey-premium-story-own,
+.spicey-premium-feed-page .spicey-premium-story-more {
+  width: 52px !important;
+  flex-basis: 52px !important;
+}
+
+.spicey-premium-feed-page .spicey-premium-story-own .ring,
+.spicey-premium-feed-page .spicey-premium-story-more .ring {
+  width: 48px !important;
+  height: 48px !important;
+}
+
+.spicey-premium-feed-page .spicey-premium-story-own .ring > img,
+.spicey-premium-feed-page .spicey-premium-story-own .ring > video {
+  width: 43px !important;
+  height: 43px !important;
+}
+
+/* Thin premium story ring: pink/orange/purple, less bulky. */
+.spicey-premium-feed-page .spicey-premium-story .ring,
+.spicey-premium-light-feed .spicey-premium-story .ring,
+.spicey-premium-dark-feed .spicey-premium-story .ring {
+  padding: 1.5px !important;
+  background: linear-gradient(135deg, #ff7a18 0%, #ff2d8d 48%, #8f3cff 100%) !important;
+  box-shadow: 0 5px 10px rgba(255,45,141,0.10), 0 0 8px rgba(143,60,255,0.10) !important;
+}
+
+.spicey-premium-feed-page .spicey-premium-story .ring > img,
+.spicey-premium-feed-page .spicey-premium-story .ring > video,
+.spicey-premium-light-feed .spicey-premium-story .ring > img,
+.spicey-premium-light-feed .spicey-premium-story .ring > video,
+.spicey-premium-dark-feed .spicey-premium-story .ring > img,
+.spicey-premium-dark-feed .spicey-premium-story .ring > video {
+  width: calc(100% - 3px) !important;
+  height: calc(100% - 3px) !important;
+  border: 1px solid rgba(255,255,255,0.9) !important;
 }

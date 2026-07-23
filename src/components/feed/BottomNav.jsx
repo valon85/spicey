@@ -171,11 +171,11 @@ export default function BottomNav() {
             <MessageCircle className="w-[26px] h-[26px]" style={iconStyle(isMsgs)} />
             {unreadCount > 0 && (
               <span style={{
-                position: 'absolute', top: 2, right: 6, minWidth: 18, height: 18,
-                padding: '0 5px', borderRadius: 10, display: 'flex', alignItems: 'center',
+                position: 'absolute', top: 4, right: 8, minWidth: 13, height: 13,
+                padding: '0 3px', borderRadius: 7, display: 'flex', alignItems: 'center',
                 justifyContent: 'center', background: 'linear-gradient(135deg,#ff3b30,#ff2d8d)',
-                color: '#fff', fontSize: 10, fontWeight: 900, border: 'none',
-                boxShadow: '0 0 10px rgba(255,45,120,.85)'
+                color: '#fff', fontSize: 7, lineHeight: 1, fontWeight: 900, border: 'none',
+                boxShadow: '0 0 6px rgba(255,45,120,.65)'
               }}>{unreadCount > 99 ? '99+' : unreadCount}</span>
             )}
           </NavBtn>

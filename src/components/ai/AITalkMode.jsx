@@ -934,77 +934,6 @@ export default function AITalkMode({ onClose }) {
       flexDirection: 'column',
       overflow: 'hidden'
     }}>
-      <div className={`spicey-talk-chat-ui ${isLight ? 'is-light' : 'is-dark'} ${inputFocused ? 'is-keyboard' : ''}`}>
-        <div className="talk-bg-wave talk-bg-wave-left" />
-        <div className="talk-bg-wave talk-bg-wave-right" />
-
-        <div className="talk-phone-status" aria-hidden="true">
-          <span>9:41</span>
-          <span className="talk-phone-icons">▮▮▮ ◖◗ ▰</span>
-        </div>
-
-        <header className="talk-ref-header">
-          <button type="button" className="talk-round-btn talk-back" onClick={handleClose} aria-label="Back">‹</button>
-          <button type="button" className="talk-round-btn talk-menu" onClick={() => setShowVoicePicker(true)} aria-label="Voice menu">•••</button>
-        </header>
-
-        <section className="talk-ai-identity">
-          <div className="talk-ai-orb">
-            <img src="/spicey-assets/spicey-s-symbol.svg" alt="" />
-          </div>
-          <h1>Spicey AI <span>✓</span></h1>
-          <p><i /> Online</p>
-          <b>Today</b>
-        </section>
-
-        <main className="talk-message-stream">
-          {chatMessages.map((message, index) => (
-            <div key={`${message.role}-${index}`} className={`talk-message-row ${message.role === 'user' ? 'is-user' : 'is-ai'}`}>
-              {message.role === 'assistant' && (
-                <span className="talk-message-avatar">
-                  <img src="/spicey-assets/spicey-s-symbol.svg" alt="" />
-                </span>
-              )}
-              <div className="talk-bubble">
-                <span>{message.text}</span>
-                <small>{message.time}{message.role === 'user' ? ' ✓✓' : ''}</small>
-              </div>
-            </div>
-          ))}
-          {status === 'thinking' && (
-            <div className="talk-message-row is-ai">
-              <span className="talk-message-avatar"><img src="/spicey-assets/spicey-s-symbol.svg" alt="" /></span>
-              <div className="talk-bubble talk-thinking"><span>Thinking...</span><small>now</small></div>
-            </div>
-          )}
-        </main>
-
-        <form
-          className="talk-ref-input"
-          onSubmit={(event) => {
-            event.preventDefault();
-            sendTextMessage();
-          }}
-        >
-          <button type="button" className="talk-plus-btn" onClick={() => setShowLangPicker(true)} aria-label="Language">+</button>
-          <div className="talk-input-pill">
-            <input
-              value={textInput}
-              onChange={(event) => setTextInput(event.target.value)}
-              onFocus={() => setInputFocused(true)}
-              onBlur={() => setInputFocused(false)}
-              placeholder="Type a message..."
-            />
-            <button type="button" className={`talk-mini-mic ${status === 'listening' ? 'active' : ''}`} onClick={handleCircleClick} aria-label="Microphone">
-              <Mic size={22} />
-            </button>
-          </div>
-          <button type="submit" className="talk-spark-btn" aria-label="Send">
-            <Sparkles size={24} />
-          </button>
-        </form>
-      </div>
-
       {isLight && <div style={{
         position: 'absolute',
         inset: 0,
@@ -1058,41 +987,32 @@ export default function AITalkMode({ onClose }) {
         <div style={{
           display: 'inline-flex',
           alignItems: 'center',
-          gap: 10,
+          gap: 0,
           color: isLight ? '#24112f' : '#fff',
           fontSize: 15,
           fontWeight: 900,
           letterSpacing: 1.8,
-          padding: '6px 12px 6px 6px',
-          borderRadius: 999,
-          background: isLight ? 'rgba(255,255,255,0.68)' : 'rgba(0,0,0,0.72)',
-          border: isLight ? '1px solid rgba(255,255,255,0.86)' : '1px solid rgba(255,255,255,0.12)',
-          boxShadow: isLight ? '0 12px 28px rgba(233,30,140,0.18)' : 'none',
-          backdropFilter: 'blur(14px) saturate(1.14)',
-          WebkitBackdropFilter: 'blur(14px) saturate(1.14)'
+          padding: 0,
+          borderRadius: 0,
+          background: 'transparent',
+          border: 'none',
+          boxShadow: 'none',
+          backdropFilter: 'none',
+          WebkitBackdropFilter: 'none'
         }}>
           <img
-            src="/spicey-assets/spicey-s-symbol.svg"
-            alt=""
+            src="/spicey-assets/spicey-talk-wordmark-original-20260723.png"
+            alt="Spicey"
             style={{
-              width: 38,
-              height: 38,
+              width: 198,
+              height: 64,
               objectFit: 'contain',
               objectPosition: 'center',
               filter: isLight
-                ? 'drop-shadow(0 0 9px rgba(255,45,143,0.28))'
-                : 'drop-shadow(0 0 8px rgba(255,45,143,0.40))',
+                ? 'drop-shadow(0 0 10px rgba(255,45,143,0.22))'
+                : 'drop-shadow(0 0 14px rgba(255,45,143,0.42)) drop-shadow(0 0 10px rgba(139,44,255,0.26))',
             }}
           />
-          <span style={{
-            whiteSpace: 'nowrap',
-            fontStyle: 'italic',
-            background: 'linear-gradient(92deg, #ff8a00 0%, #ff2d8f 46%, #b733ff 100%)',
-            WebkitBackgroundClip: 'text',
-            backgroundClip: 'text',
-            color: 'transparent',
-            textShadow: isLight ? 'none' : '0 0 1px rgba(255,255,255,0.18)'
-          }}>SPICEY AI</span>
         </div>
         <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
           <button onClick={() => setShowVoicePicker(true)} style={pillStyle('#FF6A00')}>
